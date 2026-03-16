@@ -70,16 +70,38 @@ finishing-a-branch
 
 ## Installation
 
-### Claude Code (Global)
-```bash
-# Copy skills to ~/.claude/skills/
-cp -r skills/* ~/.claude/skills/
-
-# Or symlink
-ln -s $(pwd)/skills ~/.claude/skills/ai-augmented-developer
+### Claude Code
+```
+/plugin install https://github.com/suportly/ai-augmented-developer
 ```
 
-### Per Project (`.claude/skills/`)
+### Cursor
+```
+/add-plugin https://github.com/suportly/ai-augmented-developer
+```
+
+### Gemini CLI
+```bash
+gemini extensions install https://github.com/suportly/ai-augmented-developer
+```
+
+### Codex
+```bash
+git clone https://github.com/suportly/ai-augmented-developer.git ~/.codex/ai-augmented-developer
+mkdir -p ~/.agents/skills
+ln -s ~/.codex/ai-augmented-developer/skills ~/.agents/skills/ai-augmented-developer
+```
+See full instructions in [`.codex/INSTALL.md`](.codex/INSTALL.md).
+
+### OpenCode
+```bash
+git clone https://github.com/suportly/ai-augmented-developer.git ~/.config/opencode/ai-augmented-developer
+mkdir -p ~/.config/opencode/skills
+ln -s ~/.config/opencode/ai-augmented-developer/skills ~/.config/opencode/skills/ai-augmented-developer
+```
+See full instructions in [`.opencode/INSTALL.md`](.opencode/INSTALL.md).
+
+### Manual (any project)
 ```bash
 mkdir -p .claude/skills
 cp -r /path/to/ai-augmented-developer/skills/* .claude/skills/

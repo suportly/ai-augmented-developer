@@ -1,0 +1,30 @@
+# Gemini CLI Tool Mapping
+
+Skills use Claude Code tool names. When you encounter these in a skill, use your platform equivalent:
+
+| Skill references | Gemini CLI equivalent |
+|-----------------|----------------------|
+| `Read` (file reading) | `read_file` |
+| `Write` (file creation) | `write_file` |
+| `Edit` (file editing) | `replace` |
+| `Bash` (run commands) | `run_shell_command` |
+| `Grep` (search file content) | `grep_search` |
+| `Glob` (search files by name) | `glob` |
+| `TodoWrite` (task tracking) | `write_todos` |
+| `Skill` tool (invoke a skill) | `activate_skill` |
+| `WebSearch` | `google_web_search` |
+| `WebFetch` | `web_fetch` |
+| `Agent` tool (dispatch subagent) | No equivalent — Gemini CLI does not support subagents |
+
+## No Subagent Support
+
+Gemini CLI has no equivalent to Claude Code's `Agent`/`Task` tool. Skills that rely on subagent dispatch (`subagent-driven-development`) will fall back to single-session execution step by step.
+
+## Additional Gemini CLI Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_directory` | List files and subdirectories |
+| `save_memory` | Persist facts to GEMINI.md across sessions |
+| `ask_user` | Request structured input from the user |
+| `enter_plan_mode` / `exit_plan_mode` | Switch to read-only research mode before making changes |

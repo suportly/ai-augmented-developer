@@ -1,0 +1,6 @@
+{
+  "name": "ai-augmented-developer",
+  "description": "Complete development workflow for AI-augmented full-stack projects: TDD, planning, debugging, Django + React + Celery + LiteLLM patterns, autodev pipeline, and deployment skills.",
+  "version": "1.0.0",
+  "contextFileName": "GEMINI.md"
+}
