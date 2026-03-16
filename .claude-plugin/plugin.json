@@ -1,0 +1,13 @@
+{
+  "name": "ai-augmented-developer",
+  "description": "Complete development workflow for AI-augmented full-stack projects: TDD, planning, debugging, Django + React + Celery + LiteLLM patterns, autodev pipeline, and deployment skills.",
+  "version": "1.0.0",
+  "author": {
+    "name": "alairjt",
+    "email": "alairjt@gmail.com"
+  },
+  "homepage": "https://github.com/suportly/ai-augmented-developer",
+  "repository": "https://github.com/suportly/ai-augmented-developer",
+  "license": "MIT",
+  "keywords": ["skills", "tdd", "django", "react", "celery", "litellm", "ai", "autodev", "debugging", "workflows"]
+}
