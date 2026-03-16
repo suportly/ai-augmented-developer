@@ -9,5 +9,6 @@
   "homepage": "https://github.com/suportly/ai-augmented-developer",
   "repository": "https://github.com/suportly/ai-augmented-developer",
   "license": "MIT",
-  "keywords": ["skills", "tdd", "django", "react", "celery", "litellm", "ai", "autodev", "debugging", "workflows"]
+  "keywords": ["skills", "tdd", "django", "react", "celery", "litellm", "ai", "autodev", "debugging", "workflows"],
+  "commands": "./commands/"
 }

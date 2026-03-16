@@ -12,5 +12,6 @@
   "license": "MIT",
   "keywords": ["skills", "tdd", "django", "react", "celery", "litellm", "ai", "autodev", "debugging", "workflows"],
   "skills": "./skills/",
-  "agents": "./agents/"
+  "agents": "./agents/",
+  "commands": "./commands/"
 }

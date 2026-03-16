@@ -51,6 +51,8 @@ Tell Codex:
 Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai-augmented-developer/refs/heads/main/.codex/INSTALL.md
 ```
 
+**Detailed docs:** [docs/README.codex.md](docs/README.codex.md)
+
 ### OpenCode
 
 Tell OpenCode:
@@ -58,6 +60,8 @@ Tell OpenCode:
 ```
 Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai-augmented-developer/refs/heads/main/.opencode/INSTALL.md
 ```
+
+**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
 
 ### Verify Installation
 
