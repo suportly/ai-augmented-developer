@@ -109,6 +109,14 @@ Start a new session in your chosen platform and ask for something that should tr
 - **django-patterns** — Conventions for apps, models, serializers, views, and URLs
 - **celery-async** — Background task patterns, scheduling, retry logic, and debugging
 
+### Commands (5 total)
+
+- `/brainstorm` — Start a brainstorming session
+- `/write-plan` — Write an implementation plan from an approved spec
+- `/execute-plan` — Execute a plan using subagent-driven development
+- `/speckit` — Run the full SpecKit pipeline (specify → plan → implement → PR)
+- `/debug` — Start systematic debugging
+
 ### Agents (3 total)
 
 - **spec-document-reviewer** — Validates specs for completeness, clarity, and testability
