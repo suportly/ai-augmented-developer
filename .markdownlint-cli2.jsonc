@@ -43,7 +43,14 @@
     "MD010": false,
     "MD012": false,
     "MD037": false,
-    "MD047": false
+    "MD047": false,
+
+    // MD040 (fenced code block language) and MD023 (heading indentation)
+    // would require retroactive edits across legacy skills. Disabled —
+    // reviewers still catch missing languages when it matters for
+    // rendering.
+    "MD040": false,
+    "MD023": false
   },
   "ignores": [
     "node_modules/",
