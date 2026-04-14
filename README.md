@@ -33,6 +33,9 @@ aiadev install --preset django-drf-react  # full-stack web preset
 # or
 aiadev install --preset mobile-ops        # operational runbooks for Cloud Run + Expo
 
+# Pick your coding IDE with --platform (claude-code default, cursor also wired).
+aiadev install --preset lean --platform cursor
+
 # CI-friendly variant: every variable on the command line, no prompts.
 aiadev install --preset lean --non-interactive --vars PROJECT_NAME=MyApp
 
