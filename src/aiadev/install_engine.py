@@ -34,13 +34,16 @@ from .install_manifest import (
     save as save_manifest,
 )
 from .placeholders import find_unresolved, substitute
-from .platforms import claude_code, cursor
+from .platforms import claude_code, codex, cursor, gemini, opencode
 
 MANIFEST_REL_PATH = Path(".aiadev") / "installed.yaml"
 
 _PLATFORMS = {
     "claude_code": claude_code,
     "cursor": cursor,
+    "codex": codex,
+    "opencode": opencode,
+    "gemini": gemini,
 }
 
 
