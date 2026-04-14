@@ -1,6 +1,4 @@
-# Tasks: cursor platform handler
-
-> Produced by the `tasks` skill from an approved `plan.md`. Consumed by `implement`.
+# Tasks: Cursor platform handler
 
 **Branch:** `feature/cursor-platform-handler`
 **Plan:** [plan.md](./plan.md)
@@ -8,64 +6,38 @@
 
 ---
 
-## How to read this file
-
-- Tasks are ordered. `implement` runs them top-to-bottom.
-- One task = one commit. The commit message starts with the task id.
-- Each task links back to the spec acceptance scenarios it exercises.
-- `Status` is one of: `pending`, `in_progress`, `blocked`, `done`. Only `implement` mutates it.
-
 ## Task list
 
-### T001 — cursor platform handler
+### T001 — Cursor platform handler + wiring
 
 - **Status:** pending
-- **Depends on:** — <!-- list task ids or dash for none -->
+- **Depends on:** —
 - **Files:**
-  - create: `path/to/new.ext`
-  - modify: `path/to/existing.ext`
-  - test: `path/to/test.ext`
-- **Spec scenarios:** Story 1 scenario 1, scenario 2
+  - create: `src/aiadev/platforms/cursor.py`
+  - modify: `src/aiadev/install_engine.py` (register `cursor`)
+  - modify: `src/aiadev/commands/install.py` (alias `cursor`)
+  - test: `tests/test_install_cursor.py`
+  - test: `tests/test_install.py` (extend)
+- **Spec scenarios:** Story 1 scenarios 1–3
 - **Acceptance:**
-  - [ ] Failing test written and observed failing for the stated reason.
-  - [ ] Minimum implementation makes the test pass.
-  - [ ] No other existing test regresses.
-  - [ ] Commit message: `feat(): T001 cursor platform handler`.
-- **Notes:**
-  <!-- anything the implementer should know but isn't obvious from the files -->
+  - [ ] `resolve_target` and `iter_preset_artifacts` behave like Claude Code but with Cursor targets (`AGENTS.md`, `.cursor/skills/`).
+  - [ ] `aiadev install --platform cursor` works end to end against the lean preset.
+  - [ ] 100% coverage on `platforms/cursor.py`.
+  - [ ] No Claude Code regression.
+  - [ ] Commit message: `feat(cursor): T001 platform handler + wiring`.
 
-### T002 — cursor platform handler
+### T002 — End-to-end round-trip + docs
 
 - **Status:** pending
 - **Depends on:** T001
 - **Files:**
-  - modify: `path/to/something.ext`
-  - test: `path/to/test_something.ext`
-- **Spec scenarios:** Story 1 scenario 3
+  - modify: `tests/test_install_e2e.py`
+  - modify: `CHANGELOG.md`
+  - modify: `README.md`
+- **Spec scenarios:** Story 1 scenarios 1–3, Story 2 scenarios 1–2
 - **Acceptance:**
-  - [ ] ...
-
-<!-- Add more tasks as needed. Keep the block structure consistent so
-     `aiadev validate` can parse them. -->
-
-## Parallelization hints
-
-<!-- Tasks that do not share files can be attempted in parallel if the
-     platform supports it. List the safe parallel groups here. Leave empty
-     if the whole list is serial. -->
-
-- Parallel group A: T00X, T00Y
-- Serial: everything else
-
-## Post-task checklist
-
-After every task:
-
-- [ ] Commit message references the task id.
-- [ ] Status in this file updated.
-
-After all tasks:
-
-- [ ] Full test suite passes (``).
-- [ ] `analyze` skill runs and reports no drift vs spec / plan.
-- [ ] Hand off to `requesting-code-review` to open the PR.
+  - [ ] E2E test: install `mobile-ops` with `--platform cursor`, assert every skill at `.cursor/skills/<name>/SKILL.md`, `{{KEY}}` tokens resolved.
+  - [ ] Uninstall cleans up.
+  - [ ] CHANGELOG [Unreleased] Added: "Cursor platform handler".
+  - [ ] README documents `--platform cursor` alongside `--platform claude-code`.
+  - [ ] Commit message: `feat(cursor): T002 e2e and docs`.
