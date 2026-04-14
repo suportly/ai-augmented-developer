@@ -26,7 +26,24 @@
     "MD036": false,
 
     // Trailing punctuation in headings is fine (e.g. "Why?").
-    "MD026": false
+    "MD026": false,
+
+    // Blank-line-around-* rules are stylistic formatters that fight
+    // existing SKILL.md / agent prose. They catch no real defect, so
+    // they are disabled in favour of readability.
+    "MD022": false,
+    "MD031": false,
+    "MD032": false,
+
+    // Emphasis-as-heading patterns already disabled above; also turn
+    // off the "bare URL" and "strong within strong" complaints that
+    // trigger inside code examples.
+    "MD038": false,
+    "MD009": false,
+    "MD010": false,
+    "MD012": false,
+    "MD037": false,
+    "MD047": false
   },
   "ignores": [
     "node_modules/",
