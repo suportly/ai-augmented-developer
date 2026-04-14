@@ -16,9 +16,45 @@ There's a bunch more to it, but that's the core of the system. And because the s
 
 ## Installation
 
-**Note:** Installation differs by platform. Claude Code and Cursor have built-in plugin support. Codex and OpenCode require manual setup.
+### Recommended — via the `aiadev` CLI
 
-### Claude Code
+From v0.3 onward the supported path is the Python CLI, which renders a
+preset (variables substituted, files placed) into the current project:
+
+```bash
+# 1. Install the CLI (editable install from a clone, or a release tag)
+pip install -e git+https://github.com/suportly/ai-augmented-developer.git#egg=aiadev
+
+# 2. Install a preset into your project
+cd your-project
+aiadev install --preset lean              # framework-only pipeline
+# or
+aiadev install --preset django-drf-react  # full-stack web preset
+# or
+aiadev install --preset mobile-ops        # operational runbooks for Cloud Run + Expo
+
+# CI-friendly variant: every variable on the command line, no prompts.
+aiadev install --preset lean --non-interactive --vars PROJECT_NAME=MyApp
+
+# Re-run to update; drift from hand-edits is flagged as conflict
+# unless you pass --force.
+aiadev install --preset lean
+
+# Preview without writing.
+aiadev install --preset lean --dry-run
+
+# Remove everything the install wrote.
+aiadev install --preset lean --uninstall
+```
+
+`aiadev doctor` then verifies the repo is in good shape.
+
+### Platform-specific plugins (unchanged from v0.2)
+
+The legacy plugin install paths still work; they drop the skills catalog
+into your agent without creating an install manifest.
+
+#### Claude Code
 
 ```bash
 /plugin marketplace add suportly/ai-augmented-developer

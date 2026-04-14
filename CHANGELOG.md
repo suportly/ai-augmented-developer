@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `aiadev install --preset <name>` now renders a preset into the consumer project. Replaces the v0.2 stub. Features:
+  - **Interactive prompts** for every variable declared by `preset.yaml` (uses `click.prompt`). Previous values from the install manifest become the prompt's default on re-installs; preset-declared defaults fill in for new installs.
+  - **Non-interactive mode** (`--non-interactive`) fails loudly if a required variable is missing. Accepts `--vars KEY=VAL,KEY2=VAL2` (multiple invocations allowed; later overrides earlier; commas-in-values handled by repeating `--vars`).
+  - **Idempotent re-install**: sha256 of every installed file is recorded in `.aiadev/installed.yaml`. Re-running the command skips files that are still identical, rewrites files when variables change, and flags drift (hand-edited files) as conflicts unless `--force` is passed.
+  - **Dry run** (`--dry-run`) prints the planned actions without touching the filesystem.
+  - **Uninstall** (`--uninstall`) removes every file listed in the manifest for that preset. Drifted files block the uninstall unless `--force`.
+  - **`--allow-unresolved`** escape hatch for partially-declared presets: writes files with literal `{{KEY}}` tokens still in them and surfaces the missing keys in the output.
+  - **Rich output**: coloured table with `write / skip / remove / conflict` columns, plus a conflict hint pointing at `--force`.
+- `AIADEV_ROOT` environment variable + package-location fallback so the CLI works from any directory once `pip install -e .` (or a PyPI release, future) has been done. Before v0.3 the CLI required the user to `cd` into the framework tree.
+- New modules:
+  - `src/aiadev/placeholders.py` — single-pass substitution with regex (no Jinja2); 100% covered.
+  - `src/aiadev/install_manifest.py` — atomic YAML IO, sha256 helpers, schema-validated.
+  - `src/aiadev/platforms/claude_code.py` — target-path policy for Claude Code (`.claude/skills/<name>/`, `CLAUDE.md` at root, etc). Cursor/Codex/OpenCode/Gemini to follow in v0.4 with the same two-function contract.
+  - `src/aiadev/install_engine.py` — orchestrator. 98% covered.
+  - `src/aiadev/variable_prompt.py` — collection + `--vars` parsing. 100% covered.
+- `schemas/install-manifest.schema.json` — JSON Schema for the per-project manifest.
+- `tests/fixtures/mini-preset/` — one-skill fixture driving the engine round-trip tests.
+- CI workflow gains an `install-e2e` job on Python 3.12 running the round-trip suite.
+
 ### Fixed
 
 - `skills/test-driven-development/SKILL.md`, `presets/django-drf-react/skills/run-tests/SKILL.md`, and `presets/django-drf-react/skills/deploy/SKILL.md` had leftover project-specific path references. Replaced with the generic `<mobile-dir>` placeholder.
