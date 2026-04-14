@@ -90,7 +90,7 @@ src/aiadev/commands/install.py                    (modified — preset path reso
 |---|---|---|---|
 | `git` not on PATH in some environments | Low | Medium | Detect and fail with a clear message naming the missing tool |
 | Concurrent `aiadev extension add` corrupts the registry | Low | Low | Atomic write (tempfile + os.replace); same pattern as install_manifest |
-| Extension contains malicious skill content | Real | Out of scope for MVP — the user accepts content the moment they `aiadev extension add`. Documented in the spec's "Open risks". |
+| Extension contains malicious skill content | High | High | Out of scope for MVP — the user accepts content the moment they `aiadev extension add`. Documented in the spec's "Open risks". |
 
 ## Complexity tracking
 
