@@ -17,19 +17,19 @@
 
 ### T001 — Placeholder substitution module
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/placeholders.py`
   - test: `tests/test_placeholders.py`
 - **Spec scenarios:** Story 1 scenario 1, Story 3 scenario 3
 - **Acceptance:**
-  - [ ] `substitute(text, {"FOO": "bar"})` replaces every `{{FOO}}` with `bar`.
-  - [ ] `substitute` is a pure function (no IO, no mutation of inputs).
-  - [ ] `find_unresolved(text)` returns a sorted list of `{{KEY}}` tokens that remain.
-  - [ ] Edge tests: repeated placeholder, empty values dict, values containing `{{` literal, nested placeholders (`{{{{FOO}}}}`) left alone.
-  - [ ] 100% line coverage for this module.
-  - [ ] Commit message: `feat(install): T001 placeholder substitution`.
+  - [x] `substitute(text, {"FOO": "bar"})` replaces every `{{FOO}}` with `bar`.
+  - [x] `substitute` is a pure function (no IO, no mutation of inputs).
+  - [x] `find_unresolved(text)` returns a sorted list of `{{KEY}}` tokens that remain.
+  - [x] Edge tests: repeated placeholder, empty values dict, values containing `{{` literal, nested placeholders (`{{{{FOO}}}}`) left alone.
+  - [x] 100% line coverage for this module (19 tests, all passing).
+  - [x] Commit message: `feat(install): T001 placeholder substitution`.
 
 ### T002 — Manifest schema and IO
 
