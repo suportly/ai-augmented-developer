@@ -15,16 +15,31 @@ ArtifactRole = Literal["agent_file", "constitution", "skill"]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
-def resolve_target(role: ArtifactRole, name: str, project_root: Path) -> Path:
+def user_scope_supported(role: ArtifactRole) -> bool:
+    """Only skills are installable at user scope; see claude_code.py."""
+    return role == "skill"
+
+
+def resolve_target(
+    role: ArtifactRole,
+    name: str,
+    install_root: Path,
+    *,
+    scope: str = "project",
+) -> Path:
     """Return the absolute destination path for an artifact under Cursor."""
+    if scope == "user" and not user_scope_supported(role):
+        raise ValueError(
+            f"role {role!r} is not installable at user scope; engine should filter first"
+        )
     if role == "agent_file":
-        return project_root / "AGENTS.md"
+        return install_root / "AGENTS.md"
     if role == "constitution":
-        return project_root / "constitution.md"
+        return install_root / "constitution.md"
     if role == "skill":
         if not name:
             raise ValueError("skill artifact requires a non-empty name")
-        return project_root / ".cursor" / "skills" / name / "SKILL.md"
+        return install_root / ".cursor" / "skills" / name / "SKILL.md"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 

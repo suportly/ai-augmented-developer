@@ -25,21 +25,43 @@ ArtifactRole = Literal["agent_file", "constitution", "skill"]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
-def resolve_target(role: ArtifactRole, name: str, project_root: Path) -> Path:
+def user_scope_supported(role: ArtifactRole) -> bool:
+    """Return whether an artifact role makes sense under ``--scope user``.
+
+    Agent files and constitutions carry project-specific variables and
+    cannot migrate to a user-level install. Skills are the only
+    shareable role; everything else is skipped with a note when the
+    user requests ``--scope user``.
+    """
+    return role == "skill"
+
+
+def resolve_target(
+    role: ArtifactRole,
+    name: str,
+    install_root: Path,
+    *,
+    scope: str = "project",
+) -> Path:
     """Return the absolute destination path for an artifact.
 
-    ``name`` is only used for ``skill`` artifacts (it becomes the
-    directory name under ``.claude/skills/``). For ``agent_file`` and
-    ``constitution`` it is ignored and may be an empty string.
+    ``install_root`` is the project directory under ``--scope project``
+    (the default) or ``Path.home()`` under ``--scope user``. The caller
+    (engine) is responsible for computing it from the scope; the
+    handler only applies the per-platform layout beneath it.
     """
+    if scope == "user" and not user_scope_supported(role):
+        raise ValueError(
+            f"role {role!r} is not installable at user scope; engine should filter first"
+        )
     if role == "agent_file":
-        return project_root / "CLAUDE.md"
+        return install_root / "CLAUDE.md"
     if role == "constitution":
-        return project_root / "constitution.md"
+        return install_root / "constitution.md"
     if role == "skill":
         if not name:
             raise ValueError("skill artifact requires a non-empty name")
-        return project_root / ".claude" / "skills" / name / "SKILL.md"
+        return install_root / ".claude" / "skills" / name / "SKILL.md"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 

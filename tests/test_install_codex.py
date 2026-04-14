@@ -31,6 +31,20 @@ class TestResolveTarget:
             codex.resolve_target("mystery", "x", tmp_path)  # type: ignore[arg-type]
 
 
+class TestUserScope:
+    def test_supports_only_skills(self) -> None:
+        assert codex.user_scope_supported("skill") is True
+        assert codex.user_scope_supported("agent_file") is False
+
+    def test_user_scope_skill_path(self, tmp_path: pathlib.Path) -> None:
+        target = codex.resolve_target("skill", "hello", tmp_path, scope="user")
+        assert target == tmp_path / ".codex" / "skills" / "hello" / "SKILL.md"
+
+    def test_user_scope_rejects_agent_file(self, tmp_path: pathlib.Path) -> None:
+        with pytest.raises(ValueError, match="not installable at user scope"):
+            codex.resolve_target("agent_file", "", tmp_path, scope="user")
+
+
 class TestIterPresetArtifacts:
     def test_fixture(self) -> None:
         artifacts = list(codex.iter_preset_artifacts(FIXTURES))
