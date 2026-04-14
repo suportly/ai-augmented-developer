@@ -51,6 +51,13 @@ aiadev install --preset lean --dry-run
 
 # Remove everything the install wrote.
 aiadev install --preset lean --uninstall
+
+# User-scope install: skills land under ~/.codex/skills/, etc. so every
+# project on this machine can pick them up. Agent files and constitutions
+# stay project-local (they carry project-specific variables) and are
+# reported as skipped.
+aiadev install --preset mobile-ops --platform codex --scope user \
+    --non-interactive --vars PROJECT_NAME=Demo,APP_NAME=Demo,...
 ```
 
 `aiadev doctor` then verifies the repo is in good shape.

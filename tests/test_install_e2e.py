@@ -257,6 +257,89 @@ def test_codex_platform_round_trip(
     assert not (project / ".aiadev").exists()
 
 
+def test_user_scope_round_trip_with_fake_home(
+    aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> None:
+    """Install mobile-ops at --scope user end-to-end under a fake HOME.
+
+    Exercises every moving piece of the per-home install model: the
+    engine's scope branching, the handler user-scope target paths, and
+    the CLI --scope flag. The real $HOME is never touched because we
+    monkeypatch HOME and Path.home to tmp_path.
+    """
+    fake_home = tmp_path / "fake-home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: fake_home))
+
+    project = tmp_path / "unused-project"
+    project.mkdir()
+    runner = CliRunner()
+
+    install = _invoke_install(
+        runner,
+        project,
+        "--preset",
+        "mobile-ops",
+        "--platform",
+        "codex",
+        "--scope",
+        "user",
+        "--non-interactive",
+        "--vars",
+        (
+            "PROJECT_NAME=UserScope"
+            ",APP_NAME=DemoApp"
+            ",BACKEND_DIR=backend"
+            ",MOBILE_DIR=mobile"
+            ",ADMIN_DIR=admin"
+            ",BACKEND_ASGI_MODULE=backend.asgi"
+            ",CELERY_APP=backend"
+            ",GCP_PROJECT=demo-gcp"
+            ",GCP_REGION=us-central1"
+            ",ARTIFACT_REPO=demo"
+            ",BACKEND_SERVICE=api"
+            ",ADMIN_SERVICE=admin"
+            ",CLOUD_SQL_INSTANCE=demo-gcp:us-central1:demo"
+            ",PROD_API_URL=api.example.com"
+            ",PROD_ADMIN_URL=admin.example.com"
+        ),
+    )
+    assert install.exit_code == 0, install.output
+
+    # Every skill landed under ~/.codex/skills/ (fake_home, not the real one).
+    for skill in ("build-android", "deploy-backend", "ota-update"):
+        assert (fake_home / ".codex" / "skills" / skill / "SKILL.md").is_file()
+
+    # No agent file or constitution was written — user scope skips them.
+    assert not (fake_home / "AGENTS.md").exists()
+    assert not (fake_home / "CLAUDE.md").exists()
+    assert not (fake_home / "constitution.md").exists()
+    # Nothing landed in the project either.
+    assert not (project / ".codex").exists()
+    assert not (project / "AGENTS.md").exists()
+
+    # Manifest is at ~/.aiadev/, not at project/.aiadev/.
+    assert (fake_home / ".aiadev" / "installed.yaml").is_file()
+    assert not (project / ".aiadev").exists()
+
+    # Uninstall removes every trace.
+    uninstall = _invoke_install(
+        runner,
+        project,
+        "--preset",
+        "mobile-ops",
+        "--platform",
+        "codex",
+        "--scope",
+        "user",
+        "--uninstall",
+    )
+    assert uninstall.exit_code == 0, uninstall.output
+    assert not (fake_home / ".codex").exists()
+    assert not (fake_home / ".aiadev").exists()
+
+
 def test_module_entrypoint_round_trip(
     aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:
