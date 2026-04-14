@@ -232,15 +232,22 @@ def _perform_uninstall(
         target.unlink()
         report.removed.append(target)
 
-    # Also clean up now-empty skill directories we created.
+    # Also clean up now-empty skill directories we created, walking up
+    # each skill's path toward the project root so ancestor dirs like
+    # `.cursor/skills/` and `.cursor/` disappear when empty.
     if report.conflicts:
         return report
 
     for entry in existing.files:
-        if entry.role == "skill":
-            parent = (project_root / entry.path).parent
-            if parent.is_dir() and not any(parent.iterdir()):
+        if entry.role != "skill":
+            continue
+        parent = (project_root / entry.path).parent
+        while parent.is_dir() and parent != project_root:
+            try:
                 parent.rmdir()
+            except OSError:
+                break  # directory not empty; stop climbing.
+            parent = parent.parent
 
     manifest.remove(preset_name)
     manifest_path = _manifest_path(project_root)
