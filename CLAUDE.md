@@ -92,19 +92,21 @@ specs/               # Feature specs and implementation plans
 │   └── tasks.md
 ```
 
-## Seven Principles (Constitution Check)
+## Constitution
 
-Before any implementation, verify:
+Framework-level articles live in [`constitution.md`](./constitution.md):
 
-| # | Principle | Check |
-|---|-----------|-------|
-| I | Data-Driven Architecture | Data is real and traceable to a source |
-| II | Provider Pattern | External integrations use Provider interface |
-| III | API-First | All endpoints under `/api/v1/<app>/` |
-| IV | Async-First | Long operations use Celery tasks |
-| V | Privacy by Design | Sensitive data encrypted, no logging of secrets |
-| VI | Docker-Native | Works in existing containers without changes |
-| VII | Simplicity | Follows Model→Serializer→Service→View pattern |
+- I. Spec-first
+- II. Test-first
+- III. Simplicity (YAGNI)
+- IV. Evidence over claims
+- V. Provider pattern
+- VI. Privacy by design
+- VII. Attribution
+
+Every plan must tick the Constitution Check in [`templates/plan-template.md`](./templates/plan-template.md) before any task runs. Waivers go in the plan's **Complexity tracking** table.
+
+Stack-specific articles (API-First under `/api/v1/<app>/`, async-first via Celery, Docker-native) move to `presets/django-drf-react/constitution.md` in phase 4 of the v0.2 refactor. Until that lands, treat them as active defaults for any Django + React work in this repo.
 
 ## Workflow
 

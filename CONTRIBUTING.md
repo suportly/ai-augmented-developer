@@ -6,7 +6,7 @@ Thanks for taking the time to contribute. This document explains how to propose 
 
 1. **Open an issue first** for anything larger than a typo or a one-line fix. Describe the problem and the intended outcome before writing code or new skills.
 2. **One concern per PR.** A PR that fixes a bug and refactors unrelated skills is harder to review and more likely to regress things.
-3. **Follow the constitution.** Once `constitution.md` lands in v0.2, every PR that affects skills, templates, or the CLI must either pass the constitution check or document the waiver in `Complexity Tracking`.
+3. **Follow the constitution.** Every PR that affects skills, templates, or the CLI must either pass the constitution check in its plan, or document the waiver in `Complexity Tracking`. Read [`constitution.md`](./constitution.md) before proposing architectural changes.
 4. **Cite prior art.** If you adapt a skill or template from another project, update `CREDITS.md`.
 
 ## Types of contributions
@@ -31,6 +31,25 @@ Checklist for a skill PR:
 - [ ] If the skill prescribes a workflow, it is invokable from a fresh context without the agent needing to read any other file first.
 - [ ] No contradictions with existing skills. In particular, `skills/using-ai-augmented-developer/SKILL.md` governs the meta-rules.
 - [ ] At least one concrete example of usage.
+
+### The `[NEEDS CLARIFICATION]` marker
+
+When writing a spec or plan, any ambiguity you cannot resolve on your own
+is marked inline:
+
+```markdown
+The import job should retry [NEEDS CLARIFICATION: how many times? the
+original PRD doesn't say, and we saw two different values in Slack].
+```
+
+Rules:
+
+- Every marker must include a precise question after the colon. A bare
+  `[NEEDS CLARIFICATION]` is not useful.
+- The `clarify` skill surfaces these markers to the user and edits them
+  out once answered.
+- A spec or plan that still contains a marker is **not approved** and
+  must not be handed off to `implement`. CI enforces this from phase 6a.
 
 ### New templates or presets
 

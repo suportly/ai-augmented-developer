@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Governance baseline: `CREDITS.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `VERSION`, `.editorconfig`.
 - Attribution to `obra/superpowers`, `github/spec-kit`, `contains-studio/agents`, and StriveX internal playbooks.
 - `skills/implement/` — replaces `speckit` + `subagent-driven-development` with a single execution skill focused on plan + tasks already approved.
+- `constitution.md` at the repo root: seven framework-level articles (Spec-first, Test-first, Simplicity, Evidence over claims, Provider pattern, Privacy by design, Attribution) with statement / rationale / test / waiver structure, plus amendment process.
+- `templates/` directory with the canonical artifacts produced by the pipeline skills: `spec-template.md`, `plan-template.md`, `tasks-template.md`, `checklist-template.md`, `constitution-template.md`, `agent-file-template.md`, and `commands/command-template.md`. Placeholders use `{{UPPER_SNAKE}}`. Section headings are stable so validators can parse them.
+- `[NEEDS CLARIFICATION: <question>]` marker documented in `CONTRIBUTING.md` and `spec-template.md`. Consumed by the upcoming `clarify` skill (phase 3) and enforced by CI from phase 6a.
+- Optional `handoffs:` frontmatter schema documented in `templates/commands/command-template.md` — preserves the StriveX convention so Claude Code UIs can surface next-step buttons.
 
 ### Changed
 
