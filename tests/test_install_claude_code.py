@@ -30,6 +30,25 @@ class TestResolveTarget:
             cc.resolve_target("mystery", "x", tmp_path)  # type: ignore[arg-type]
 
 
+class TestUserScope:
+    def test_user_scope_supports_only_skills(self) -> None:
+        assert cc.user_scope_supported("skill") is True
+        assert cc.user_scope_supported("agent_file") is False
+        assert cc.user_scope_supported("constitution") is False
+
+    def test_user_scope_skill_path_under_home(self, tmp_path: pathlib.Path) -> None:
+        target = cc.resolve_target("skill", "hello", tmp_path, scope="user")
+        assert target == tmp_path / ".claude" / "skills" / "hello" / "SKILL.md"
+
+    def test_user_scope_rejects_agent_file(self, tmp_path: pathlib.Path) -> None:
+        with pytest.raises(ValueError, match="not installable at user scope"):
+            cc.resolve_target("agent_file", "", tmp_path, scope="user")
+
+    def test_user_scope_rejects_constitution(self, tmp_path: pathlib.Path) -> None:
+        with pytest.raises(ValueError, match="not installable at user scope"):
+            cc.resolve_target("constitution", "", tmp_path, scope="user")
+
+
 class TestIterPresetArtifacts:
     def test_yields_agent_file_and_skills_from_fixture(self) -> None:
         artifacts = list(cc.iter_preset_artifacts(FIXTURES))

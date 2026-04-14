@@ -38,6 +38,20 @@ class TestResolveTarget:
             cursor.resolve_target("mystery", "x", tmp_path)  # type: ignore[arg-type]
 
 
+class TestUserScope:
+    def test_supports_only_skills(self) -> None:
+        assert cursor.user_scope_supported("skill") is True
+        assert cursor.user_scope_supported("agent_file") is False
+
+    def test_user_scope_skill_path(self, tmp_path: pathlib.Path) -> None:
+        target = cursor.resolve_target("skill", "hello", tmp_path, scope="user")
+        assert target == tmp_path / ".cursor" / "skills" / "hello" / "SKILL.md"
+
+    def test_user_scope_rejects_agent_file(self, tmp_path: pathlib.Path) -> None:
+        with pytest.raises(ValueError, match="not installable at user scope"):
+            cursor.resolve_target("agent_file", "", tmp_path, scope="user")
+
+
 class TestIterPresetArtifacts:
     def test_yields_agent_and_skill_from_fixture(self) -> None:
         artifacts = list(cursor.iter_preset_artifacts(FIXTURES))

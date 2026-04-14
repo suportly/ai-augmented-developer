@@ -14,15 +14,29 @@ ArtifactRole = Literal["agent_file", "constitution", "skill"]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
-def resolve_target(role: ArtifactRole, name: str, project_root: Path) -> Path:
+def user_scope_supported(role: ArtifactRole) -> bool:
+    return role == "skill"
+
+
+def resolve_target(
+    role: ArtifactRole,
+    name: str,
+    install_root: Path,
+    *,
+    scope: str = "project",
+) -> Path:
+    if scope == "user" and not user_scope_supported(role):
+        raise ValueError(
+            f"role {role!r} is not installable at user scope; engine should filter first"
+        )
     if role == "agent_file":
-        return project_root / "GEMINI.md"
+        return install_root / "GEMINI.md"
     if role == "constitution":
-        return project_root / "constitution.md"
+        return install_root / "constitution.md"
     if role == "skill":
         if not name:
             raise ValueError("skill artifact requires a non-empty name")
-        return project_root / ".gemini" / "skills" / name / "SKILL.md"
+        return install_root / ".gemini" / "skills" / name / "SKILL.md"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 
