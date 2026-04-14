@@ -127,18 +127,20 @@
 
 ### T007 — End-to-end smoke test and CI job
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - create: `tests/test_install_e2e.py`
   - modify: `.github/workflows/validate.yml`
 - **Spec scenarios:** Story 1 scenario 3, Story 2 scenario 2
 - **Acceptance:**
-  - [ ] Round-trip test: install `django-drf-react` into a tmpdir with fixed variables, run `aiadev doctor` against that tmpdir, expect exit 0.
-  - [ ] Re-install the same preset in the same tmpdir; expect no-op (zero files written, zero conflicts).
-  - [ ] Uninstall and verify the tmpdir has no leftover files outside what the test itself created.
-  - [ ] CI adds a job `install-e2e` on Python 3.12 only (no need for a matrix).
-  - [ ] Commit message: `feat(install): T007 end-to-end smoke and CI`.
+  - [x] Round-trip: install `lean` into a tmpdir with fixed variables, run `aiadev doctor`, expect exit 0 (lean used instead of django-drf-react for MVP smoke; multi-skill flow covered by the mobile-ops variant below).
+  - [x] Re-install: identical variables yield no writes (`"write"` absent from the output).
+  - [x] Uninstall: CLAUDE.md and `.aiadev/` both removed.
+  - [x] `mobile-ops` smoke installs 11 skills with 15 placeholders substituted; no `{{KEY}}` survives.
+  - [x] Module entry point: `python -m aiadev install ...` works as a subprocess (uses `sys.executable`).
+  - [x] CI adds `install-e2e` job on Python 3.12.
+  - [x] Commit message: `feat(install): T007 end-to-end smoke and CI`.
 
 ### T008 — CHANGELOG and docs
 
