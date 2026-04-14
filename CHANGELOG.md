@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0] - 2026-04-14
+
+Working `aiadev install` shipped. Replaces the v0.2 stub end to end.
+
 ### Added
 
 - `aiadev install --preset <name>` now renders a preset into the consumer project. Replaces the v0.2 stub. Features:
@@ -139,6 +145,7 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/alairjt/ai-augmented-developer/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/alairjt/ai-augmented-developer/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/alairjt/ai-augmented-developer/releases/tag/v0.1.0
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/suportly/ai-augmented-developer/releases/tag/v0.1.0
