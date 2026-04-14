@@ -1,0 +1,25 @@
+# sdist contents.
+#
+# The wheel pulls package data from src/aiadev/_assets/ via the
+# pyproject.toml `package-data` section. The sdist needs the same
+# files declared explicitly because setuptools does not auto-include
+# arbitrary directories.
+
+include README.md
+include CHANGELOG.md
+include CREDITS.md
+include CONTRIBUTING.md
+include SECURITY.md
+include VERSION
+include LICENSE
+
+# Bundled framework assets.
+recursive-include src/aiadev/_assets *.md *.json *.yaml *.yml
+
+# Source for editable installs / development reference (also documents
+# what the wheel ships).
+recursive-include templates *.md
+recursive-include schemas *.json
+recursive-include skills *.md
+recursive-include presets *.md *.yaml *.json
+recursive-include agents *.md

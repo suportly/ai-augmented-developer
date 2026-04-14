@@ -14,3 +14,7 @@ build/
 # Local IDE/Claude Code state; not framework content
 .claude/
 .venv/
+# Build artefacts populated by scripts/sync_assets.py; the source of
+# truth lives at the repo root and is shipped in the wheel via
+# pyproject.toml package-data + MANIFEST.in.
+src/aiadev/_assets/

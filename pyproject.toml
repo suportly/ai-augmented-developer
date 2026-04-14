@@ -32,21 +32,38 @@ dependencies = [
 dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",
+  "build>=1.2",
 ]
 
 [project.scripts]
 aiadev = "aiadev.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/alairjt/ai-augmented-developer"
-Issues = "https://github.com/alairjt/ai-augmented-developer/issues"
-Changelog = "https://github.com/alairjt/ai-augmented-developer/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/suportly/ai-augmented-developer"
+Issues = "https://github.com/suportly/ai-augmented-developer/issues"
+Changelog = "https://github.com/suportly/ai-augmented-developer/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Bundle the framework's non-Python assets inside the wheel under
+# src/aiadev/_assets/ . They are populated by `python scripts/sync_assets.py`
+# before `python -m build`. The runtime resolves them via paths.py's
+# package-bundled-assets fallback so `pip install aiadev` works without
+# the framework checkout on disk.
+aiadev = [
+  "_assets/constitution.md",
+  "_assets/templates/**/*",
+  "_assets/schemas/**/*",
+  "_assets/skills/**/*",
+  "_assets/presets/**/*",
+  "_assets/agents/**/*",
+]
 
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
