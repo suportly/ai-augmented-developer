@@ -1,6 +1,4 @@
-# Implementation plan: cursor platform handler
-
-> Produced by the `plan` skill from an approved `spec.md`. This file describes **how** the spec will be realized. Do not rewrite `spec.md` into `plan.md`.
+# Implementation plan: Cursor platform handler
 
 **Branch:** `feature/cursor-platform-handler`
 **Date:** 2026-04-14
@@ -11,89 +9,66 @@
 
 ## Summary
 
-<!-- One paragraph, no more. "We will do X by doing Y, landing in Z files.
-     Work is split into N tasks over approximately M hours." -->
+Add a second platform module (`platforms/cursor.py`) next to `platforms/claude_code.py`, wire it into the install engine's `_PLATFORMS` dict and the CLI's alias map, and prove round-trip behaviour with unit + e2e tests. Total scope: ~6 hours.
 
 ## Technical context
 
 | Field | Value |
 |---|---|
-| Active preset |  |
-| Language / runtime |  |
-| Primary dependencies |  |
-| Storage |  |
-| Testing framework |  |
-| Target platform(s) |  |
-| Performance budget | N/A |
-| Security considerations |  |
+| Language / runtime | Python 3.11+ |
+| Primary dependencies | existing only |
+| Storage | no new files beyond what v0.3 already writes |
+| Testing | pytest + CliRunner |
+| Target platform | Cursor IDE |
+| Performance budget | same as v0.3 (< 2s) |
 
 ## Constitution check
 
-> One row per applicable article from `constitution.md`. `N/A` is allowed
-> if the article does not apply to this plan. Every `FAIL` must have a
-> corresponding row in **Complexity tracking** below.
-
 | Article | Applies? | Status | Evidence |
 |---|---|---|---|
-| I. Spec-first | Yes | PASS / FAIL / N/A | `spec.md` approved on YYYY-MM-DD |
-| II. Test-first | Yes | PASS / FAIL / N/A | all tasks begin with a failing test |
-| III. Simplicity | Yes | PASS / FAIL / N/A | no new abstraction without second caller |
-| IV. Evidence over claims | Yes | PASS / FAIL / N/A | PR test plan enumerates commands |
-| V. Provider pattern | Yes / No | PASS / FAIL / N/A | see file X |
-| VI. Privacy by design | Yes / No | PASS / FAIL / N/A | no new sensitive logs; encrypted fields listed |
-| VII. Attribution | Yes / No | PASS / FAIL / N/A | no adapted material, or `CREDITS.md` updated |
-| Preset-specific articles | List | ... | ... |
+| I. Spec-first | Yes | PASS | `spec.md` approved |
+| II. Test-first | Yes | PASS | every task starts with a failing test |
+| III. Simplicity | Yes | PASS | no new abstraction beyond the existing platform contract |
+| IV. Evidence over claims | Yes | PASS | CI matrix covers the new tests |
+| V. Provider pattern | No | N/A | no external service |
+| VI. Privacy by design | Yes | PASS | no new data classes or logs |
+| VII. Attribution | Yes | PASS | original code |
 
 ## Architecture decisions
 
-<!-- Short ADR-style notes. Format:
-     Decision: <what>
-     Rationale: <why this over the alternatives>
-     Trade-offs: <what we give up> -->
+**Decision:** Cursor reuses the exact same two-function contract as Claude Code (`resolve_target` + `iter_preset_artifacts`).
+**Rationale:** The contract was designed to be platform-agnostic in v0.3. If Cursor exposes anything requiring more surface, extend the contract before adding a third platform; do not one-off it.
 
--
+**Decision:** Agent file is `AGENTS.md` at project root. Skills at `.cursor/skills/<name>/SKILL.md`.
+**Rationale:** `CLAUDE.md` + `AGENTS.md` lets a project configure both IDEs side by side.
 
 ## Project structure changes
 
 ```text
-<show the directory delta as a diff-style listing>
-path/to/new/file.ext         (new)
-path/to/modified/file.ext    (modified)
-path/to/removed/file.ext     (removed)
+src/aiadev/platforms/cursor.py                    (new)
+tests/test_install_cursor.py                      (new)
+src/aiadev/install_engine.py                      (modified — register cursor)
+src/aiadev/commands/install.py                    (modified — add alias)
+tests/test_install_e2e.py                         (modified — add cursor round-trip)
 ```
 
 ## Phase breakdown
 
-> Each phase is a checkpoint. Within a phase, tasks are independent enough
-> that order does not matter — across phases, order does matter.
+### Phase 1 — Platform handler
 
-### Phase 1 — 
+- Create `platforms/cursor.py` with `resolve_target` + `iter_preset_artifacts`.
+- 100% coverage on the new module.
 
--
+### Phase 2 — Engine / CLI wiring
 
-### Phase 2 — 
+- Add `cursor` to `_PLATFORMS` in `install_engine.py` and `_PLATFORM_ALIASES` in `commands/install.py`.
+- CLI accepts `--platform cursor`.
 
--
+### Phase 3 — End-to-end smoke + docs
 
-## Risks and mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-|  | Low / Med / High | Low / Med / High |  |
+- Extend `tests/test_install_e2e.py` with a Cursor round-trip.
+- Update CHANGELOG [Unreleased] + README.
 
 ## Complexity tracking
 
-> Required when any Constitution Check row is `FAIL`. Empty table if no waivers.
-
-| Article waived | Reason | Alternatives considered | Reviewer |
-|---|---|---|---|
-| | | | |
-
-## Hand-off to `tasks`
-
-The next skill is `tasks`. It consumes this plan and produces `tasks.md`.
-Pre-conditions before hand-off:
-
-- [ ] Constitution Check is fully populated, no blank rows.
-- [ ] Complexity tracking is filled or empty-and-justified.
-- [ ] Project structure delta is accurate.
+Empty.
