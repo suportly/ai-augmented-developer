@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`aiadev install --scope user`** — install a preset's skills at the current user's home directory so every project picks them up without per-project symlinks. Skills go to `~/.<platform>/skills/<name>/SKILL.md` for each wired platform (`.claude`, `.cursor`, `.codex`, `.opencode`, `.gemini`). Manifest lives at `~/.aiadev/installed.yaml`, separate from any project-scope manifest so idempotency and uninstall stay correct under mixed installs.
+- `InstallReport.skipped_unsupported` — list of human-readable notes covering artifacts the platform refuses to install under the current scope. Under `--scope user` this flags every preset-declared agent file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`) and `constitution.md`, which carry project-specific variables and stay project-local.
+- Each platform handler grew a `user_scope_supported(role)` predicate. `resolve_target` now takes `install_root` (instead of the old `project_root`) plus a `scope=` keyword so the engine can route paths from either `$HOME` or the project directory.
+- End-to-end user-scope round-trip test (`test_user_scope_round_trip_with_fake_home`) installs the 11-skill `mobile-ops` preset against a `monkeypatch`-ed fake `$HOME`, asserts no project-side writes and no real-home pollution, then uninstalls clean.
+- CLI `--project-root` is ignored under `--scope user` with a soft note — documented in `--help`.
+
+### Changed
+
+- `install_engine.install(...)` takes a new `scope: str = "project"` keyword. Default preserves v0.5 behaviour exactly.
+- `_perform_uninstall` and all internal helpers use `install_root` instead of `project_root` so the same code path covers both scopes.
+- Report header in the CLI now shows the scope alongside the mode (`install (scope: user)`).
 
 ## [0.5.0] - 2026-04-14
 
