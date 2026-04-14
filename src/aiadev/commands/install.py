@@ -12,6 +12,7 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 
+from ..extensions import ExtensionError, find_preset as find_extension_preset
 from ..install_engine import InstallError, InstallMode, install as run_install
 from ..install_manifest import ManifestError
 from ..paths import FrameworkNotFound, find_framework_root, presets_dir
@@ -121,10 +122,32 @@ def install_command(
         raise SystemExit(2) from exc
 
     preset_path = presets_dir(framework_root) / preset_name
-    if not preset_path.is_dir():
+    extension_hit: tuple[str, pathlib.Path] | None = None
+    try:
+        extension_hit = find_extension_preset(preset_name)
+    except ExtensionError as exc:
+        console.print(f"[yellow]warning:[/yellow] extension lookup failed: {exc}")
+
+    if preset_path.is_dir():
+        # Built-in always wins. Note when an extension is shadowed.
+        if extension_hit is not None:
+            console.print(
+                f"[yellow]note:[/yellow] extension "
+                f"[cyan]{extension_hit[0]}[/cyan] also provides preset "
+                f"[cyan]{preset_name}[/cyan]; built-in takes precedence."
+            )
+    elif extension_hit is not None:
+        preset_path = extension_hit[1]
         console.print(
-            f"[red]error:[/red] preset {preset_name!r} not found under "
-            f"{presets_dir(framework_root).relative_to(framework_root)}"
+            f"[blue]preset:[/blue] [cyan]{preset_name}[/cyan] from extension "
+            f"[cyan]{extension_hit[0]}[/cyan]"
+        )
+    else:
+        console.print(
+            f"[red]error:[/red] preset {preset_name!r} not found in built-ins "
+            f"({presets_dir(framework_root).relative_to(framework_root)}) or "
+            "in any installed extension. Run `aiadev extension add <url>` to "
+            "register one."
         )
         raise SystemExit(2)
 
