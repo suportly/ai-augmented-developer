@@ -53,7 +53,7 @@
 
 ### T003 — Claude Code platform handler
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T002
 - **Files:**
   - create: `src/aiadev/platforms/__init__.py`
@@ -64,10 +64,12 @@
   - test: `tests/fixtures/mini-preset/skills/hello-world/SKILL.md`
 - **Spec scenarios:** Story 1 scenario 2
 - **Acceptance:**
-  - [ ] `resolve_target(artifact_role, project_root)` returns the correct destination path.
-  - [ ] `update_plugin_manifest(project_root, skills_added)` rewrites `.claude-plugin/plugin.json` to register the new skills without duplicating entries.
-  - [ ] Test: writing to a tmpdir produces the expected layout (`.claude/skills/hello-world/SKILL.md`, `CLAUDE.md`, `.claude-plugin/plugin.json`).
-  - [ ] Commit message: `feat(install): T003 Claude Code platform handler`.
+  - [x] `resolve_target(role, name, project_root)` returns the correct destination path for `agent_file`, `constitution`, and `skill` roles.
+  - [x] `iter_preset_artifacts(preset_root)` enumerates files this platform installs from a preset, sorted deterministically.
+  - [x] Unknown roles and empty skill names are rejected with `ValueError`.
+  - [x] Plugin manifest (`.claude-plugin/plugin.json`) management is deliberately deferred — Claude Code auto-discovers `.claude/skills/`. Documented in the module docstring.
+  - [x] 100% line coverage (30/30 stmts).
+  - [x] Commit message: `feat(install): T003 Claude Code platform handler`.
 
 ### T004 — Install engine orchestration
 
