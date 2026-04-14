@@ -198,6 +198,65 @@ def test_cursor_platform_round_trip(
     assert not (project / ".aiadev").exists()
 
 
+def test_codex_platform_round_trip(
+    aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path
+) -> None:
+    """Install mobile-ops for Codex end-to-end; verify layout + uninstall."""
+    project = tmp_path / "codex-project"
+    project.mkdir()
+    runner = CliRunner()
+
+    install = _invoke_install(
+        runner,
+        project,
+        "--preset",
+        "mobile-ops",
+        "--platform",
+        "codex",
+        "--non-interactive",
+        "--vars",
+        (
+            "PROJECT_NAME=CodexDemo"
+            ",APP_NAME=DemoApp"
+            ",BACKEND_DIR=backend"
+            ",MOBILE_DIR=mobile"
+            ",ADMIN_DIR=admin"
+            ",BACKEND_ASGI_MODULE=backend.asgi"
+            ",CELERY_APP=backend"
+            ",GCP_PROJECT=demo-gcp"
+            ",GCP_REGION=us-central1"
+            ",ARTIFACT_REPO=demo"
+            ",BACKEND_SERVICE=api"
+            ",ADMIN_SERVICE=admin"
+            ",CLOUD_SQL_INSTANCE=demo-gcp:us-central1:demo"
+            ",PROD_API_URL=api.example.com"
+            ",PROD_ADMIN_URL=admin.example.com"
+        ),
+    )
+    assert install.exit_code == 0, install.output
+    assert (project / "AGENTS.md").is_file()
+    assert not (project / "CLAUDE.md").exists()
+    assert not (project / "GEMINI.md").exists()
+    assert not (project / ".cursor").exists()
+    assert not (project / ".claude").exists()
+
+    for skill in ("build-android", "deploy-backend", "ota-update"):
+        assert (project / ".codex" / "skills" / skill / "SKILL.md").is_file()
+
+    for skill_file in (project / ".codex" / "skills").rglob("SKILL.md"):
+        import re
+
+        assert re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", skill_file.read_text(encoding="utf-8")) is None
+
+    uninstall = _invoke_install(
+        runner, project, "--preset", "mobile-ops", "--platform", "codex", "--uninstall"
+    )
+    assert uninstall.exit_code == 0, uninstall.output
+    assert not (project / "AGENTS.md").exists()
+    assert not (project / ".codex").exists()
+    assert not (project / ".aiadev").exists()
+
+
 def test_module_entrypoint_round_trip(
     aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:

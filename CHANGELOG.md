@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Three new platform handlers** wired into `aiadev install`:
+  - `--platform codex` — `AGENTS.md` + `.codex/skills/<name>/SKILL.md`.
+  - `--platform opencode` — `AGENTS.md` + `.opencode/skills/<name>/SKILL.md`.
+  - `--platform gemini` — `GEMINI.md` + `.gemini/skills/<name>/SKILL.md` (distinct agent-file name so it does not collide with Cursor/Codex/OpenCode's `AGENTS.md`).
+- Each platform module is self-contained at ~30 lines with 100% unit coverage (11 cases each).
+- Coexistence tested: installing multiple IDEs against the same project sees `AGENTS.md` as a skip on every run after the first (sha256 match), while the per-platform skills directories stay isolated.
+- End-to-end round-trip for Codex mirrors the Claude Code and Cursor e2e tests (11-skill `mobile-ops` preset, 15 placeholders, uninstall hygiene).
+
+### Caveats
+
+- Per-home install flows (symlinks under `~/.codex/`, `~/.config/opencode/`, `gemini extensions install`) are still documented in the platform-specific `INSTALL.md` files. `aiadev install` writes the per-project layout; some IDEs may need one-line configuration to discover `.codex/skills/` or `.opencode/skills/` depending on the user's setup. A unified per-home install path is v0.6 scope.
 
 ## [0.4.0] - 2026-04-14
 
