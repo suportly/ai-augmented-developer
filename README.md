@@ -139,11 +139,11 @@ Start a new session in your chosen platform and ask for something that should tr
 
 ## Contributing
 
-Skills live directly in this repository. To contribute:
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full workflow (issue-first, one concern per PR, skill frontmatter rules). Bug reports and security issues follow [SECURITY.md](./SECURITY.md). Changes are logged in [CHANGELOG.md](./CHANGELOG.md).
 
-1. Fork the repository
-2. Create a branch for your skill or fix
-3. Submit a PR
+## Credits
+
+This framework builds on prior work from `obra/superpowers`, `github/spec-kit`, `contains-studio/agents`, and internal StriveX playbooks. See [CREDITS.md](./CREDITS.md) for the full attribution list.
 
 ## License
 
