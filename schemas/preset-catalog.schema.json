@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/preset-catalog.schema.json",
+  "title": "Preset catalog",
+  "description": "Registry of presets shipped with or endorsed by the framework.",
+  "type": "object",
+  "required": ["version", "presets"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "type": "string",
+      "description": "Catalog format version. Bump on breaking changes."
+    },
+    "presets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "summary", "stability"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" },
+          "path": { "type": "string" },
+          "summary": { "type": "string", "maxLength": 240 },
+          "use_when": { "type": "string" },
+          "maintained_by": { "type": "string" },
+          "stability": {
+            "type": "string",
+            "enum": ["experimental", "beta", "stable", "deprecated"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

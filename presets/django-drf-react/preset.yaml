@@ -1,0 +1,55 @@
+# Preset manifest for django-drf-react.
+# Consumed by `aiadev install --preset django-drf-react` (phase 5). Until
+# the CLI ships, this file is also readable to contributors as the single
+# source of truth for what the preset installs.
+
+name: django-drf-react
+version: 1.0.0
+description: >
+  Full-stack Django 5.2 + DRF + React 18 + TypeScript preset with Celery
+  async, LiteLLM providers, PostgreSQL, and Cloud Run deployment
+  conventions.
+
+# Variables the user is prompted for at `aiadev install --interactive`.
+# Each placeholder `{{UPPER_SNAKE}}` inside this preset's files will be
+# substituted with the user's answer.
+variables:
+  - name: PROJECT_NAME
+    prompt: Project display name
+    required: true
+  - name: BACKEND_DIR
+    prompt: Path to the Django project directory (relative to repo root)
+    default: backend
+  - name: FRONTEND_DIR
+    prompt: Path to the React project directory (relative to repo root)
+    default: frontend
+  - name: GCP_PROJECT
+    prompt: GCP project id for Cloud Run deployments
+    default: ""
+  - name: GCP_REGION
+    prompt: GCP region for Cloud Run
+    default: southamerica-east1
+
+# Files this preset contributes. Paths are relative to the preset root.
+provides:
+  agent_file: CLAUDE.md            # rendered to the project's root CLAUDE.md
+  constitution: constitution.md    # rendered to the project's constitution/preset.md
+  skills:
+    - skills/django-patterns
+    - skills/ai-integration
+    - skills/celery-async
+    - skills/autodev-pipeline
+    - skills/deploy
+    - skills/run-tests
+
+# Constitution articles added by this preset, for display in `aiadev doctor`.
+adds_articles:
+  - DJR-1 — API-First
+  - DJR-2 — Async-First
+  - DJR-3 — Docker-native
+  - DJR-4 — Model → Serializer → Service → View
+  - DJR-5 — Encrypted fields for credentials
+
+# Inherited articles this preset tightens (not removes).
+tightens:
+  - II — Test-first (integration test required for endpoints and Celery tasks)

@@ -1,0 +1,22 @@
+{
+  "$schema": "./catalog.schema.json",
+  "version": "1",
+  "presets": [
+    {
+      "name": "lean",
+      "path": "presets/lean",
+      "summary": "Framework-only preset: pipeline skills + constitution, no stack opinions.",
+      "use_when": "Stack is exotic or you want the pipeline without built-in stack skills.",
+      "maintained_by": "ai-augmented-developer core",
+      "stability": "stable"
+    },
+    {
+      "name": "django-drf-react",
+      "path": "presets/django-drf-react",
+      "summary": "Django 5.2 + DRF + React 18 + TypeScript + Celery + Cloud Run.",
+      "use_when": "Full-stack web app with Python backend and React frontend.",
+      "maintained_by": "ai-augmented-developer core",
+      "stability": "stable"
+    }
+  ]
+}

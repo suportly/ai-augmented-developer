@@ -67,8 +67,15 @@ def iter_skill_files(args: list[str]) -> Iterable[pathlib.Path]:
         for arg in args:
             yield pathlib.Path(arg)
         return
+    # Root catalog.
     for path in sorted((ROOT / "skills").rglob("SKILL.md")):
         yield path
+    # Every preset ships its own skills/; validate those too.
+    presets_root = ROOT / "presets"
+    if presets_root.is_dir():
+        for preset_skills in sorted(presets_root.glob("*/skills")):
+            for path in sorted(preset_skills.rglob("SKILL.md")):
+                yield path
 
 
 def main(argv: list[str]) -> int:

@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/PULL_REQUEST_TEMPLATE.md` — PR template with the Constitution Check, Complexity Tracking, and explicit Test Plan with evidence (Article IV).
 - `.markdownlint-cli2.jsonc` — project-wide markdownlint config.
 
+### Generic / preset split (phase 4)
+
+- `presets/` directory introduced. Six skills moved from `skills/` to `presets/django-drf-react/skills/` (`git mv` preserves history): `django-patterns`, `ai-integration`, `celery-async`, `autodev-pipeline`, `deploy`, `run-tests`.
+- `presets/django-drf-react/CLAUDE.md` — stack-specific agent file rendered from the preset.
+- `presets/django-drf-react/constitution.md` — five preset articles extending the root constitution (API-First, Async-First, Docker-native, Model→Serializer→Service→View, Encrypted fields) plus one tightening of Article II (integration tests required for endpoints and Celery tasks).
+- `presets/django-drf-react/preset.yaml` — manifest with variables (`PROJECT_NAME`, `BACKEND_DIR`, `FRONTEND_DIR`, `GCP_PROJECT`, `GCP_REGION`) and provided artifacts.
+- `presets/lean/` — minimal preset with pipeline only; no stack opinions.
+- `presets/catalog.json` + `schemas/preset-catalog.schema.json` — machine-readable registry of presets.
+- Root `CLAUDE.md` rewritten as stack-agnostic: it now links to `constitution.md` and the skill map, and explicitly defers stack conventions to the active preset.
+- Root `skills/` now contains 14 generic skills; the Project Skills section of the README is replaced by a "Stack skills (via presets)" pointer.
+- `scripts/validate_skills.py` now also walks `presets/*/skills/` so preset skills are validated alongside the root catalog.
+- `scripts/migrate-to-0.2.sh` — dry-run-by-default helper that grep-detects references to removed v0.1 skills and proposes symlinks to install the `django-drf-react` preset for v0.1 consumers. Run with `--apply` to act.
+
+BREAKING CHANGE: Projects that relied on importing the stack skills from `skills/django-patterns/` (and siblings) must either install the `django-drf-react` preset or move the files into their own project. The migration script covers the common case.
+
 ### Changed
 
 - `skills/using-ai-augmented-developer/SKILL.md` rewritten: removed the "1% / ABSOLUTELY MUST / NOT NEGOTIABLE" tone, removed the directive that blocked clarifying questions, and clarified that the skill rule only gates **write actions** (not research or questions).
@@ -66,7 +81,8 @@ See [implementation plan](https://github.com/alairjt/ai-augmented-developer/blob
 
 ### Planned breaking changes still on the v0.2.0 roadmap
 
-- Root `CLAUDE.md` rewritten as stack-agnostic; Django-specific content moved to `presets/django-drf-react/` (phase 4).
+- Bundled agent catalog import (phase 8a).
+- Python CLI `aiadev` (phase 5) — will materialize preset installs that today still rely on the migration script.
 
 A migration script (`scripts/migrate-to-0.2.sh`) will be provided to install the Django preset automatically for users on v0.1.
 

@@ -89,7 +89,7 @@ Start a new session in your chosen platform and ask for something that should tr
 
 ## What's Inside
 
-### Skills (20 total)
+### Skills (14 generic + preset)
 
 **Pipeline**
 - **specify** — Natural-language demand → numbered `spec.md` with `[NEEDS CLARIFICATION]` markers for ambiguity.
@@ -107,15 +107,20 @@ Start a new session in your chosen platform and ask for something that should tr
 - **systematic-debugging** — 4-phase root-cause investigation before any fix.
 - **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch.
 - **finishing-a-branch** — PR creation, merge decision, cleanup.
+- **frontend-design** — Production-grade UI with distinctive, non-generic aesthetics.
 
-**Project Skills**
-- **run-tests** — Run the full test suite across all project layers
-- **frontend-design** — Production-grade UI with distinctive, non-generic aesthetics
-- **deploy** — Deploy to cloud infrastructure or mobile app stores
-- **ai-integration** — Integrate AI providers, streaming responses, and autonomous agents
-- **autodev-pipeline** — Build and use the proactive auto-development pipeline
-- **django-patterns** — Conventions for apps, models, serializers, views, and URLs
-- **celery-async** — Background task patterns, scheduling, retry logic, and debugging
+**Stack skills (via presets)**
+
+Stack-specific skills live under `presets/<preset>/skills/` and load only when that preset is active. The bundled `django-drf-react` preset ships:
+
+- **django-patterns** — App / model / serializer / view / URL conventions.
+- **ai-integration** — LiteLLM + Claude Agent SDK providers.
+- **celery-async** — Background task patterns, scheduling, retries.
+- **autodev-pipeline** — Proactive auto-development pipeline.
+- **deploy** — Cloud Run + EAS deployment runbooks.
+- **run-tests** — pytest backend + Jest frontend entry point.
+
+A minimal `lean` preset is also available for projects with an exotic stack. See `presets/catalog.json` for the full list.
 
 ### Commands
 

@@ -1,121 +1,36 @@
 # AI-Augmented Developer
 
-You are working with the AI-Augmented Developer framework — a structured development workflow for full-stack projects combining Django + React + AI.
+You are working inside the **AI-Augmented Developer** framework repository itself. If you reached this file from a consumer project, its `CLAUDE.md` should link back here for the framework-level rules; the consumer's own preset file carries the stack-specific guidance.
 
-## Start Here
+## The rule
 
-**Before writing any code**, invoke the appropriate skill:
+Invoke the appropriate skill **before any action that writes code or state**. Clarifying questions and exploration do not require a skill.
 
 | What you're doing | Skill to invoke |
-|-------------------|----------------|
+|---|---|
 | User described a demand, no `spec.md` yet | `specify` |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | `clarify` |
 | Spec is clean, no `plan.md` yet | `plan` |
 | Plan approved, no `tasks.md` yet | `tasks` |
 | Tasks ready, time to build | `implement` |
 | Drift suspected between spec / plan / code | `analyze` |
-| Focused quality pass (security/perf/a11y/i18n) | `checklist` |
+| Focused quality pass (security / perf / a11y / i18n / privacy / observability) | `checklist` |
 | Amending `constitution.md` | `constitution` |
-| Implementing any feature or fix | `test-driven-development` |
+| Writing test-backed code inside `implement` | `test-driven-development` |
 | Hit a bug or test failure | `systematic-debugging` |
 | Ready to open a PR | `requesting-code-review` |
 | Code review approved | `finishing-a-branch` |
-| Adding AI (LiteLLM/Claude SDK) | `ai-integration` |
-| New Django app/model/view/URL | `django-patterns` |
-| New Celery task or async flow | `celery-async` |
-| AutoDev pipeline feature | `autodev-pipeline` |
-| UI component or page | `frontend-design` |
-| Running tests | `run-tests` |
-| Deploying to production | `deploy` |
-
-## Core Principles
-
-1. **Design before code** — Always brainstorm first. No code without an approved spec.
-2. **TDD mandatory** — Write failing test → implement → verify passing. No exceptions.
-3. **Subagents for quality** — Spec review + code quality review on every task.
-4. **Async-first** — Operations > 2 seconds go to Celery. Never block the request cycle.
-5. **Provider Pattern** — All external integrations use the Provider Pattern.
-6. **API-First** — All endpoints under `/api/v1/<app>/`. Frontend consumes via TanStack Query.
-7. **Security by default** — Sensitive data encrypted. All endpoints authenticated. User isolation enforced.
-8. **YAGNI** — Build only what's needed. Minimum complexity for current requirements.
-9. **Evidence over claims** — Verify before declaring success. "Tests pass" means you ran them.
-
-## Tech Stack
-
-### Backend
-- Python 3.12 + Django 5.2 + Django REST Framework
-- Celery 5 + Redis (async task queue)
-- PostgreSQL 16
-- LiteLLM (Gemini 2.5 Pro/Flash, Groq Llama, Anthropic Claude)
-- Claude Agent SDK (`claude_agent_sdk`) for autonomous code execution
-
-### Frontend
-- React 18 + TypeScript 5 (strict mode)
-- Material UI v5
-- TanStack Query v5 (server state)
-- Framer Motion (animations)
-- Vite
-
-### Mobile
-- React Native + Expo
-- EAS Build (cloud iOS, local Android)
-- EAS Update (OTA for JS-only changes)
-
-### Infrastructure
-- Docker + Docker Compose
-- Nginx (reverse proxy, SSE support)
-- GCP Cloud Run
-
-## Project Layout
-
-```
-backend/
-├── config/          # Django settings, URLs, Celery config
-├── accounts/        # User authentication and profiles
-├── ai/              # AI service (LiteLLM), prompts, usage tracking
-├── gitdata/         # Git provider sync (GitHub, GitLab)
-├── integrations/    # External integrations (Jira, Linear, Discord)
-├── autodev/         # Proactive auto-development pipeline
-├── articles/        # AI-generated tech articles
-├── gamification/    # Developer gamification, XP, leaderboard
-├── billing/         # Credits, Stripe, subscriptions
-├── notifications/   # Real-time notification system
-└── shared/          # Shared utilities, managers, base models
-
-frontend/src/
-├── pages/           # Route-level page components
-├── components/      # Reusable UI components
-├── hooks/           # TanStack Query hooks
-├── types/           # TypeScript interfaces
-├── utils/           # API client, helpers
-└── contexts/        # React contexts
-
-specs/               # Feature specs and implementation plans
-├── YYYY-MM-DD-<feature>/
-│   ├── spec.md
-│   ├── plan.md
-│   └── tasks.md
-```
+| UI or component work | `frontend-design` |
 
 ## Constitution
 
-Framework-level articles live in [`constitution.md`](./constitution.md):
+See [`constitution.md`](./constitution.md) for the seven framework articles (Spec-first, Test-first, Simplicity, Evidence over claims, Provider pattern, Privacy by design, Attribution). Every plan ships with a Constitution Check; waivers go in the plan's Complexity Tracking table.
 
-- I. Spec-first
-- II. Test-first
-- III. Simplicity (YAGNI)
-- IV. Evidence over claims
-- V. Provider pattern
-- VI. Privacy by design
-- VII. Attribution
-
-Every plan must tick the Constitution Check in [`templates/plan-template.md`](./templates/plan-template.md) before any task runs. Waivers go in the plan's **Complexity tracking** table.
-
-Stack-specific articles (API-First under `/api/v1/<app>/`, async-first via Celery, Docker-native) move to `presets/django-drf-react/constitution.md` in phase 4 of the v0.2 refactor. Until that lands, treat them as active defaults for any Django + React work in this repo.
+Consumer projects add preset-specific articles via their preset's `constitution.md` (see `presets/django-drf-react/constitution.md` for an example). Presets may tighten the framework rules but cannot weaken them.
 
 ## Workflow
 
-```
+```text
 specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  implement
                                                                 │
                                                   test-driven-development (per task)
@@ -127,36 +42,32 @@ specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  imple
                                                   requesting-code-review
                                                                 ↓ (review approved)
                                                          finishing-a-branch
-                                                                ↓ (PR merged)
-                                                              deploy
 ```
 
-## Commands Quick Reference
+## What lives where
+
+- [`skills/`](./skills) — framework-generic skills that apply to any stack.
+- [`presets/<preset>/skills/`](./presets) — stack-specific skills loaded only when that preset is active.
+- [`templates/`](./templates) — canonical artifact shapes produced by the pipeline skills.
+- [`schemas/`](./schemas) — JSON Schemas for skill frontmatter, preset catalog, and other machine-checkable contracts.
+- [`scripts/`](./scripts) — provisional validators until `aiadev` ships (phase 5 of the v0.2 refactor).
+- [`agents/`](./agents) — bundled subagent definitions.
+
+## Repository-local commands
+
+This repository is Markdown-heavy with Python-only tooling; it does not need the stack commands a Django or React project would. Everything below assumes a clean clone.
 
 ```bash
-# Backend tests
-cd backend && pytest --tb=short
+# Validate every SKILL.md against the schema
+python3 scripts/validate_skills.py
 
-# Frontend tests
-cd frontend && npx jest --no-coverage
-
-# TypeScript check
-cd frontend && npx tsc --noEmit
-
-# Linting
-cd backend && ruff check .
-cd frontend && npm run lint
-
-# Start dev (backend)
-cd backend && source venv/bin/activate
-watchfiles 'daphne -b 0.0.0.0 -p 8000 config.asgi:application' .
-
-# Start dev (frontend)
-cd frontend && npm run dev
-
-# Celery worker
-celery -A config worker -l info
-
-# Celery beat (scheduled tasks)
-celery -A config beat -l info
+# Lint the Markdown (install markdownlint-cli2 locally if you want
+# to match CI; CI runs it on every push)
+npx markdownlint-cli2 '**/*.md'
 ```
+
+For stack-specific commands (`pytest`, `npm run dev`, `celery -A config worker`, `docker compose up`), switch to the consumer project and read its `CLAUDE.md`, which will have been rendered from a preset.
+
+## When you change this file
+
+Root `CLAUDE.md` edits are reviewed alongside `constitution.md` and `README.md` changes — the three should stay coherent. If a change is really about the Django stack, it belongs in `presets/django-drf-react/CLAUDE.md`, not here.
