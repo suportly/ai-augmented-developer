@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.5.0] - 2026-04-14
+
+Final three platform handlers: Codex, OpenCode, Gemini. All five advertised platforms are now wired.
+
 ### Added
 
 - **Three new platform handlers** wired into `aiadev install`:
@@ -16,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each platform module is self-contained at ~30 lines with 100% unit coverage (11 cases each).
 - Coexistence tested: installing multiple IDEs against the same project sees `AGENTS.md` as a skip on every run after the first (sha256 match), while the per-platform skills directories stay isolated.
 - End-to-end round-trip for Codex mirrors the Claude Code and Cursor e2e tests (11-skill `mobile-ops` preset, 15 placeholders, uninstall hygiene).
+- README documents the five-value `--platform` option with per-platform install examples.
 
 ### Caveats
 
@@ -171,7 +178,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.1.0...v0.2.0
