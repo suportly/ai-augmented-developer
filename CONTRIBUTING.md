@@ -122,11 +122,20 @@ Breaking changes go in the footer: `BREAKING CHANGE: <description>`.
 
 ## Release process
 
-Releases are cut from `main` after the CI workflow is green:
+The full release runbook lives at [`docs/RELEASING.md`](./docs/RELEASING.md). It covers the one-time PyPI trusted-publisher setup, the routine release flow (bump `VERSION`, promote `CHANGELOG`, tag, publish a GitHub release that triggers the workflow), the failure modes, and the post-publish smoke test.
 
-1. Update `VERSION` and move `[Unreleased]` entries to a new dated section in `CHANGELOG.md`.
-2. Tag `vX.Y.Z` and create a GitHub release with the changelog excerpt.
-3. If the CLI has shipped, `aiadev` is published to PyPI via the release workflow.
+Short version of the routine flow once `main` is green:
+
+```bash
+echo "X.Y.Z" > VERSION                # bump
+$EDITOR CHANGELOG.md                  # move [Unreleased] to [X.Y.Z]
+git commit -am "chore(release): X.Y.Z"
+git tag -a vX.Y.Z -m "Release X.Y.Z — <one line>"
+git push origin main && git push origin vX.Y.Z
+gh release create vX.Y.Z --title "vX.Y.Z — <one line>" --notes-file <(awk ...)
+```
+
+The publish workflow runs on the release event and uploads the wheel + sdist to <https://pypi.org/project/aiadev/>.
 
 ## Code of conduct
 
