@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `skills/test-driven-development/SKILL.md`, `presets/django-drf-react/skills/run-tests/SKILL.md`, and `presets/django-drf-react/skills/deploy/SKILL.md` had leftover `StriveXMobile` path references that escaped the phase-8b scrub. Replaced with the generic `<mobile-dir>` placeholder.
-- `agents/README.md` and root `CLAUDE.md` referenced the pre-rename `strivex-stack` preset and "phase N of the v0.2 refactor" language that is no longer accurate after the release. Rewritten to point at `mobile-ops` and to drop completed-phase callouts.
+- `skills/test-driven-development/SKILL.md`, `presets/django-drf-react/skills/run-tests/SKILL.md`, and `presets/django-drf-react/skills/deploy/SKILL.md` had leftover project-specific path references. Replaced with the generic `<mobile-dir>` placeholder.
+- `agents/README.md` and root `CLAUDE.md` referenced pre-rename preset names and "phase N of the v0.2 refactor" language no longer accurate after the release. Rewritten to point at the current preset names and to drop completed-phase callouts.
+- Scrubbed residual project-specific attribution from `CREDITS.md`, `CHANGELOG.md`, `README.md`, and `schemas/skill-frontmatter.schema.json`. The framework is deliberately generic; prior internal work is acknowledged only as "prior internal playbooks" without naming a project.
 
 ## [0.2.0] - 2026-04-14
 
@@ -54,7 +55,7 @@ Seven new skills replacing the brainstorming/writing-plans/speckit cluster. All 
   - `constitution.md` adding five preset articles (API-First, Async-First, Docker-native, Model→Serializer→Service→View, Encrypted fields) plus a tightening of Article II (integration tests required for endpoints and Celery tasks).
   - `skills/` — the six stack skills moved from root `skills/`.
   - `preset.yaml` with five variables (`PROJECT_NAME`, `BACKEND_DIR`, `FRONTEND_DIR`, `GCP_PROJECT`, `GCP_REGION`).
-- `presets/mobile-ops/` — 11 operational runbook skills for the "Cloud Run backend + Expo mobile on EAS + React admin" shape, adapted from internal StriveX playbooks and genericized end to end (no project-specific identifier survives in the preset). Parameterized with 15 placeholders.
+- `presets/mobile-ops/` — 11 operational runbook skills for the "Cloud Run backend + Expo mobile on EAS + React admin" shape. Fully generic: every path, identifier, and endpoint is a placeholder substituted at install time. 15 placeholders in total.
 - `presets/lean/` — minimal preset: pipeline skills only, no stack opinions.
 - `CLAUDE.md` at the repo root rewritten as stack-agnostic — links to `constitution.md` and the skill catalog; stack conventions live in the active preset.
 - `scripts/migrate-to-0.2.sh` — dry-run-by-default helper for v0.1 consumers.
@@ -72,7 +73,7 @@ Seven new skills replacing the brainstorming/writing-plans/speckit cluster. All 
 
 ### Added — governance and attribution (phase 0)
 
-- `CREDITS.md` with explicit attribution to `obra/superpowers`, `github/spec-kit`, StriveX/Suportly internal playbooks (origin of `presets/mobile-ops/`). `contains-studio/agents` listed as opt-in external catalog (not bundled — see `agents/README.md` for the rationale).
+- `CREDITS.md` with explicit attribution to `obra/superpowers` and `github/spec-kit`. `contains-studio/agents` listed as opt-in external catalog (not bundled — see `agents/README.md` for the rationale).
 - `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `VERSION` (single source of truth for semver), `.editorconfig`.
 - `agents/README.md` documents the two-tier structure (framework-native + preset-specific) and the decision to not bundle unlicensed catalogs.
 

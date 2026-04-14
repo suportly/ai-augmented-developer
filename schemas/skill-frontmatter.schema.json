@@ -68,14 +68,14 @@
     },
     "disable-model-invocation": {
       "type": "boolean",
-      "description": "If true, the skill never runs the model — it is a deterministic script. Inherited from the StriveX convention."
+      "description": "If true, the skill never runs the model — it is a deterministic script."
     },
     "allowed-tools": {
       "oneOf": [
         { "type": "array", "items": { "type": "string" } },
         {
           "type": "string",
-          "description": "Comma-separated list of tool names, as used by StriveX-origin skills."
+          "description": "Comma-separated list of tool names."
         }
       ],
       "description": "Restrict which tools the skill may call. Optional."

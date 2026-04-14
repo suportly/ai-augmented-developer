@@ -152,7 +152,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full workflow (issue-first, one
 
 ## Credits
 
-This framework builds on prior work from `obra/superpowers`, `github/spec-kit`, `contains-studio/agents`, and internal StriveX playbooks. See [CREDITS.md](./CREDITS.md) for the full attribution list.
+This framework builds on prior work from `obra/superpowers` and `github/spec-kit`. See [CREDITS.md](./CREDITS.md) for the full attribution list.
 
 ## License
 

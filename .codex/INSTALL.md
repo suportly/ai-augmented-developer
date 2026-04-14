@@ -9,17 +9,20 @@ Enable AI-Augmented Developer skills in Codex via native skill discovery.
 ## Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/suportly/ai-augmented-developer.git ~/.codex/ai-augmented-developer
    ```
 
 2. **Create the skills symlink:**
+
    ```bash
    mkdir -p ~/.agents/skills
    ln -s ~/.codex/ai-augmented-developer/skills ~/.agents/skills/ai-augmented-developer
    ```
 
    **Windows (PowerShell):**
+
    ```powershell
    New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
    cmd /c mklink /J "$env:USERPROFILE\.agents\skills\ai-augmented-developer" "$env:USERPROFILE\.codex\ai-augmented-developer\skills"
