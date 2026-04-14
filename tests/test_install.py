@@ -335,6 +335,142 @@ class TestNewPlatforms:
         assert "skip" in output or "nothing to do" in output
 
 
+class TestExtensionPreset:
+    """Install picks up a preset that lives in a registered extension."""
+
+    @pytest.fixture
+    def fake_home(self, tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+        return home
+
+    def _add_sample_extension(self, fake_home: pathlib.Path) -> None:
+        """Install the sample extension fixture into the fake HOME."""
+        import shutil
+        import subprocess
+
+        fixture = (
+            pathlib.Path(__file__).parent
+            / "fixtures"
+            / "extensions"
+            / "sample-extension"
+        )
+        work = fake_home / "_work"
+        bare = fake_home / "_remote.git"
+        shutil.copytree(fixture, work)
+        subprocess.check_call(["git", "init", "-q", "-b", "main"], cwd=str(work))
+        subprocess.check_call(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "."],
+            cwd=str(work),
+        )
+        subprocess.check_call(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"],
+            cwd=str(work),
+        )
+        subprocess.check_call(
+            ["git", "init", "--bare", "-q", "-b", "main", str(bare)],
+        )
+        subprocess.check_call(
+            ["git", "remote", "add", "origin", str(bare)], cwd=str(work)
+        )
+        subprocess.check_call(["git", "push", "-q", "origin", "main"], cwd=str(work))
+        from aiadev.extensions import add as extension_add
+
+        extension_add(str(bare))
+
+    def test_install_extension_only_preset(
+        self,
+        isolated_framework: pathlib.Path,
+        fake_home: pathlib.Path,
+        tmp_path: pathlib.Path,
+        monkeypatch,
+    ) -> None:
+        self._add_sample_extension(fake_home)
+        monkeypatch.chdir(isolated_framework)
+        project = tmp_path / "project"
+        project.mkdir()
+        result = _invoke(
+            CliRunner(),
+            project,
+            "--preset",
+            "sample",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        assert "from extension" in result.output
+        agent = project / "CLAUDE.md"
+        assert agent.is_file()
+        assert "Demo" in agent.read_text(encoding="utf-8")
+
+    def test_built_in_wins_on_collision(
+        self,
+        isolated_framework: pathlib.Path,
+        fake_home: pathlib.Path,
+        tmp_path: pathlib.Path,
+        monkeypatch,
+    ) -> None:
+        import shutil
+        import subprocess
+
+        fixture = (
+            pathlib.Path(__file__).parent
+            / "fixtures"
+            / "extensions"
+            / "sample-extension"
+        )
+        clash_root = fake_home / "_clash"
+        shutil.copytree(fixture, clash_root)
+        (clash_root / "extension.yaml").write_text(
+            "name: clash-extension\nversion: '1.0.0'\npresets: [lean]\n",
+            encoding="utf-8",
+        )
+        (clash_root / "presets" / "sample").rename(clash_root / "presets" / "lean")
+        bare = fake_home / "_clash.git"
+        subprocess.check_call(["git", "init", "-q", "-b", "main"], cwd=str(clash_root))
+        subprocess.check_call(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "."],
+            cwd=str(clash_root),
+        )
+        subprocess.check_call(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"],
+            cwd=str(clash_root),
+        )
+        subprocess.check_call(
+            ["git", "init", "--bare", "-q", "-b", "main", str(bare)],
+        )
+        subprocess.check_call(
+            ["git", "remote", "add", "origin", str(bare)], cwd=str(clash_root)
+        )
+        subprocess.check_call(["git", "push", "-q", "origin", "main"], cwd=str(clash_root))
+        from aiadev.extensions import add as extension_add
+
+        extension_add(str(bare))
+
+        monkeypatch.chdir(isolated_framework)
+        project = tmp_path / "project"
+        project.mkdir()
+        result = _invoke(
+            CliRunner(),
+            project,
+            "--preset",
+            "lean",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        # rich wraps the warning across two lines; check for both pieces.
+        assert "built-in takes" in result.output
+        assert "precedence" in result.output
+        agent = project / "CLAUDE.md"
+        assert agent.is_file()
+        assert "lean preset" in agent.read_text(encoding="utf-8")
+
+
 class TestUserScope:
     @pytest.fixture
     def fake_home(self, tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
