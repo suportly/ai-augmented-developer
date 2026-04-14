@@ -282,6 +282,92 @@ class TestUninstall:
 # ---------------------------------------------------------------------------
 
 
+class TestUserScope:
+    """Tests for --scope user behaviour.
+
+    Every test in this class monkeypatches HOME to a tmp_path so nothing
+    touches the real user home directory.
+    """
+
+    @pytest.fixture
+    def fake_home(self, tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
+        # Path.home() on POSIX honours HOME; make absolutely sure.
+        monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+        return home
+
+    def test_user_scope_writes_skill_under_home(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "unused-project"
+        project.mkdir()
+        report = install(
+            FIXTURES,
+            project,
+            VARIABLES,
+            scope="user",
+            now="2026-04-14T12:00:00Z",
+        )
+        # Agent file is skipped under user scope (not installable).
+        assert report.skipped_unsupported
+        # The only skill in the mini-preset lands under .claude/skills/.
+        skill_target = fake_home / ".claude" / "skills" / "hello-world" / "SKILL.md"
+        assert skill_target.is_file()
+        # No CLAUDE.md at home root or project root.
+        assert not (fake_home / "CLAUDE.md").exists()
+        assert not (project / "CLAUDE.md").exists()
+
+    def test_user_scope_manifest_is_under_home(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "unused"
+        project.mkdir()
+        install(FIXTURES, project, VARIABLES, scope="user", now="2026-04-14T12:00:00Z")
+        assert (fake_home / ".aiadev" / "installed.yaml").is_file()
+        # No project-scope manifest was created.
+        assert not (project / ".aiadev").exists()
+
+    def test_user_scope_uninstall_round_trip(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "unused"
+        project.mkdir()
+        install(FIXTURES, project, VARIABLES, scope="user", now="2026-04-14T12:00:00Z")
+        uninstall_report = install(
+            FIXTURES,
+            project,
+            VARIABLES,
+            scope="user",
+            mode=InstallMode.UNINSTALL,
+        )
+        assert uninstall_report.ok
+        assert not (fake_home / ".claude").exists()
+        assert not (fake_home / ".aiadev").exists()
+
+    def test_user_and_project_scopes_are_independent(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "real-project"
+        project.mkdir()
+        # Install at project scope first.
+        install(FIXTURES, project, VARIABLES, now="2026-04-14T12:00:00Z")
+        assert (project / "CLAUDE.md").is_file()
+        assert (project / ".aiadev" / "installed.yaml").is_file()
+
+        # Now install at user scope; project artifacts untouched.
+        install(FIXTURES, project, VARIABLES, scope="user", now="2026-04-14T13:00:00Z")
+        assert (fake_home / ".claude" / "skills" / "hello-world" / "SKILL.md").is_file()
+        assert (fake_home / ".aiadev" / "installed.yaml").is_file()
+        assert (project / "CLAUDE.md").is_file()  # still there
+        assert (project / ".aiadev" / "installed.yaml").is_file()
+
+    def test_unknown_scope_raises(self, tmp_path: pathlib.Path) -> None:
+        with pytest.raises(InstallError, match="unknown scope"):
+            install(FIXTURES, tmp_path, VARIABLES, scope="moon")
+
+
 class TestMisconfiguration:
     def test_unknown_platform_raises(self, tmp_path: pathlib.Path) -> None:
         with pytest.raises(InstallError, match="unknown platform"):

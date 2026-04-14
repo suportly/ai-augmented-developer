@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
 from click.testing import CliRunner
 
 from aiadev.commands.install import install_command
@@ -332,6 +333,48 @@ class TestNewPlatforms:
         # AGENTS.md already present with matching sha -> reported as skip.
         output = second.output.lower()
         assert "skip" in output or "nothing to do" in output
+
+
+class TestUserScope:
+    @pytest.fixture
+    def fake_home(self, tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+        return home
+
+    def test_user_scope_skips_agent_file_writes_skills(
+        self,
+        isolated_framework: pathlib.Path,
+        fake_home: pathlib.Path,
+        tmp_path: pathlib.Path,
+        monkeypatch,
+    ) -> None:
+        monkeypatch.chdir(isolated_framework)
+        project = tmp_path / "proj"
+        project.mkdir()
+        result = CliRunner().invoke(
+            install_command,
+            [
+                "--project-root", str(project),
+                "--preset", "lean",
+                "--scope", "user",
+                "--non-interactive",
+                "--vars", "PROJECT_NAME=Demo",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        # Lean preset has no skills, only an agent file — which user
+        # scope skips. Expect a "note" line and nothing written.
+        assert "note" in result.output.lower()
+        assert not (fake_home / "CLAUDE.md").exists()
+        assert not (project / "CLAUDE.md").exists()
+
+    def test_user_scope_help_mentions_scope_flag(self) -> None:
+        result = CliRunner().invoke(install_command, ["--help"])
+        assert "--scope" in result.output
+        assert "user" in result.output.lower()
 
 
 class TestCursorPlatform:

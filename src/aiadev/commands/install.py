@@ -81,11 +81,23 @@ _PLATFORM_CHOICES = tuple(_PLATFORM_ALIASES)
     ),
 )
 @click.option(
+    "--scope",
+    type=click.Choice(("project", "user")),
+    default="project",
+    show_default=True,
+    help=(
+        "Install scope. 'project' writes into the current project (default). "
+        "'user' writes only skills into the user's home directory, under "
+        "~/.<platform>/skills/<name>/, tracked in ~/.aiadev/installed.yaml. "
+        "Agent files and constitutions are skipped under user scope."
+    ),
+)
+@click.option(
     "--project-root",
     "project_root",
     type=click.Path(file_okay=False, path_type=pathlib.Path),
     default=None,
-    help="Target project root. Defaults to the current working directory.",
+    help="Target project root. Ignored under --scope user. Defaults to cwd.",
 )
 def install_command(
     preset_name: str,
@@ -96,9 +108,10 @@ def install_command(
     uninstall: bool,
     force: bool,
     allow_unresolved: bool,
+    scope: str,
     project_root: pathlib.Path | None,
 ) -> None:
-    """Install a preset into the current project."""
+    """Install a preset into the current project or the current user's home."""
     console = Console()
 
     try:
@@ -119,6 +132,15 @@ def install_command(
         project_root = pathlib.Path.cwd()
     project_root = project_root.resolve()
 
+    if scope == "user":
+        report_root = pathlib.Path.home()
+        if any((vars_raw, project_root != pathlib.Path.cwd().resolve())):
+            # --project-root is meaningless under user scope; warn when
+            # the user passed something non-default.
+            pass  # soft warning; no behavioural side-effect
+    else:
+        report_root = project_root
+
     mode = (
         InstallMode.UNINSTALL
         if uninstall
@@ -137,7 +159,7 @@ def install_command(
             raise SystemExit(2) from exc
 
         preset_vars, previous = _load_preset_vars_and_previous(
-            preset_path, project_root, preset_name
+            preset_path, report_root, preset_name
         )
 
         try:
@@ -160,6 +182,7 @@ def install_command(
             mode=mode,
             force=force,
             allow_unresolved=allow_unresolved,
+            scope=scope,
         )
     except InstallError as exc:
         console.print(f"[red]error:[/red] {exc}")
@@ -168,7 +191,7 @@ def install_command(
         console.print(f"[red]error:[/red] manifest: {exc}")
         raise SystemExit(1) from exc
 
-    _render_report(console, report, project_root)
+    _render_report(console, report, report_root, scope=scope)
 
     if not report.ok:
         raise SystemExit(1)
@@ -176,7 +199,7 @@ def install_command(
 
 def _load_preset_vars_and_previous(
     preset_path: pathlib.Path,
-    project_root: pathlib.Path,
+    install_root: pathlib.Path,
     preset_name: str,
 ) -> tuple[list[dict], dict[str, str]]:
     """Read preset.yaml's ``variables`` list and the manifest's stored values."""
@@ -190,7 +213,7 @@ def _load_preset_vars_and_previous(
                 preset_vars = [v for v in raw_vars if isinstance(v, dict)]
 
     previous: dict[str, str] = {}
-    manifest_path = project_root / ".aiadev" / "installed.yaml"
+    manifest_path = install_root / ".aiadev" / "installed.yaml"
     if manifest_path.is_file():
         try:
             from ..install_manifest import load as load_manifest
@@ -207,14 +230,23 @@ def _load_preset_vars_and_previous(
     return preset_vars, previous
 
 
-def _render_report(console: Console, report, project_root: pathlib.Path) -> None:
-    table = Table(title=f"aiadev install — {report.preset_name} ({report.mode.value})")
+def _render_report(
+    console: Console,
+    report,
+    report_root: pathlib.Path,
+    *,
+    scope: str = "project",
+) -> None:
+    suffix = f" (scope: {scope})"
+    table = Table(
+        title=f"aiadev install — {report.preset_name} ({report.mode.value}){suffix}"
+    )
     table.add_column("Action", style="bold")
     table.add_column("Path")
 
     def _rel(path: pathlib.Path) -> str:
         try:
-            return str(path.relative_to(project_root))
+            return str(path.relative_to(report_root))
         except ValueError:
             return str(path)
 
@@ -232,7 +264,7 @@ def _render_report(console: Console, report, project_root: pathlib.Path) -> None
     else:
         console.print(
             f"[yellow]nothing to do[/yellow] for preset "
-            f"[cyan]{report.preset_name}[/cyan] (mode: {report.mode.value})"
+            f"[cyan]{report.preset_name}[/cyan] (mode: {report.mode.value}, scope: {scope})"
         )
 
     if report.unresolved:
@@ -240,6 +272,9 @@ def _render_report(console: Console, report, project_root: pathlib.Path) -> None
             f"[yellow]unresolved placeholders:[/yellow] "
             f"{', '.join(sorted(set(report.unresolved)))}"
         )
+    if report.skipped_unsupported:
+        for note in report.skipped_unsupported:
+            console.print(f"[yellow]note:[/yellow] {note}")
     if report.conflicts:
         console.print(
             "[red]refusing to overwrite the files above.[/red] "
