@@ -72,12 +72,41 @@ Until the CLI ships (see `CHANGELOG.md [Unreleased]`), validation is manual:
 find skills -name "SKILL.md" -exec head -n 10 {} \;
 
 # From v0.2: the CLI handles this
-aiadev validate skills/
-aiadev validate templates/
+aiadev validate
 aiadev doctor
 ```
 
-CI will run the same checks automatically once `.github/workflows/validate.yml` is in place.
+CI runs the same checks automatically via `.github/workflows/validate.yml`.
+
+### Testing the install command locally
+
+The install engine (v0.3) is exercised by unit, CLI, and end-to-end
+tests. To try the command by hand without mutating your own checkout:
+
+```bash
+# Create a disposable project directory.
+mkdir -p /tmp/install-demo && cd /tmp/install-demo
+
+# Point the CLI at this framework checkout.
+AIADEV_ROOT=/path/to/ai-augmented-developer \
+  python -m aiadev install \
+    --preset lean \
+    --non-interactive \
+    --vars PROJECT_NAME=Demo
+
+ls /tmp/install-demo          # CLAUDE.md + .aiadev/installed.yaml
+cat /tmp/install-demo/.aiadev/installed.yaml
+
+# Undo.
+AIADEV_ROOT=/path/to/ai-augmented-developer \
+  python -m aiadev install --preset lean --uninstall
+```
+
+The test suite covers every behaviour of that flow. For coverage reports:
+
+```bash
+pytest --cov=src/aiadev --cov-report=term-missing
+```
 
 ## Commit messages
 

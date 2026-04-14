@@ -144,7 +144,7 @@
 
 ### T008 — CHANGELOG and docs
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `CHANGELOG.md`
@@ -152,10 +152,10 @@
   - modify: `CONTRIBUTING.md`
 - **Spec scenarios:** all
 - **Acceptance:**
-  - [ ] CHANGELOG `[Unreleased]` gains an `Added` entry describing the new `aiadev install` behavior with a CLI example.
-  - [ ] README Installation section updated to prefer `aiadev install` over `scripts/migrate-to-0.2.sh`.
-  - [ ] CONTRIBUTING gains a note on how to test the install command locally (`python -m aiadev install --preset lean --dry-run`).
-  - [ ] Commit message: `docs(install): T008 release notes and usage docs`.
+  - [x] CHANGELOG `[Unreleased]` documents every `aiadev install` capability, the new modules, the schema, the CI job, and the fallback resolution.
+  - [x] README Installation section now leads with the `aiadev install` workflow (editable install, interactive / non-interactive / dry-run / uninstall examples). Platform plugins kept as "unchanged from v0.2" alternatives.
+  - [x] CONTRIBUTING gained a "Testing the install command locally" subsection showing the `AIADEV_ROOT=... python -m aiadev install --preset lean` pattern against a tmpdir.
+  - [x] Commit message: `docs(install): T008 release notes and usage docs`.
 
 ## Parallelization hints
 
