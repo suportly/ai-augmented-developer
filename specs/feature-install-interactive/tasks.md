@@ -33,22 +33,23 @@
 
 ### T002 — Manifest schema and IO
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/install_manifest.py`
   - create: `schemas/install-manifest.schema.json`
   - test: `tests/test_install_manifest.py`
   - test: `tests/fixtures/manifest/valid.yaml`
-  - test: `tests/fixtures/manifest/invalid_missing_preset.yaml`
+  - test: `tests/fixtures/manifest/invalid_missing_preset_name.yaml`
+  - test: `tests/fixtures/manifest/invalid_bad_sha.yaml`
 - **Spec scenarios:** Story 2 scenario 1, Story 4 scenario 1
 - **Acceptance:**
-  - [ ] `InstalledPreset` dataclass with fields: `name`, `version`, `variables` (dict), `files` (list of `InstalledFile`), `installed_at`.
-  - [ ] `InstalledFile` dataclass: `path`, `sha256`, `role` (`agent_file` / `constitution` / `skill` / `plugin_manifest`).
-  - [ ] `load(path)` reads YAML and validates against the schema.
-  - [ ] `save(manifest, path)` writes YAML atomically (tempfile + os.replace).
-  - [ ] Round-trip test: save then load returns equivalent object.
-  - [ ] Commit message: `feat(install): T002 install manifest read/write`.
+  - [x] `InstalledPreset` dataclass with fields: `name`, `version`, `variables` (dict), `files` (list of `InstalledFile`), `installed_at`.
+  - [x] `InstalledFile` dataclass: `path`, `sha256`, `role` (`agent_file` / `constitution` / `skill` / `plugin_manifest`).
+  - [x] `load(path)` reads YAML and validates against the schema.
+  - [x] `save(manifest, path)` writes YAML atomically (tempfile + os.replace).
+  - [x] Round-trip test: save then load returns equivalent object.
+  - [x] Commit message: `feat(install): T002 install manifest read/write`.
 
 ### T003 — Claude Code platform handler
 

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/install-manifest.schema.json",
+  "title": "Install Manifest",
+  "description": "Structure of .aiadev/installed.yaml — records every preset installed into a consumer project along with the variable values used and file-level sha256 hashes for drift detection.",
+  "type": "object",
+  "required": ["aiadev_version", "installed_presets"],
+  "properties": {
+    "aiadev_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$",
+      "description": "Version of aiadev that produced the manifest. Used by future re-installs to run migrations when the schema changes."
+    },
+    "installed_presets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version", "installed_at", "variables", "files"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,39}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+          },
+          "installed_at": {
+            "type": "string",
+            "description": "ISO-8601 timestamp in UTC."
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Resolved variable values used at install time. Keys are UPPER_SNAKE."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "sha256", "role"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Relative to the project root, forward slashes."
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["agent_file", "constitution", "skill", "plugin_manifest"]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
