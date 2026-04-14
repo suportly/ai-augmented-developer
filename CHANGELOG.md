@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **PyPI distribution.** `pip install aiadev` now works (or will, after the v0.7.0 release tag triggers the publish workflow). Wheel ships the framework's `constitution.md`, `templates/`, `schemas/`, `skills/`, `presets/`, and `agents/` so the CLI runs anywhere — no checkout required. `aiadev doctor` resolves the framework root from the bundled `_assets/` directory.
+- `scripts/sync_assets.py` copies the source-of-truth dirs into `src/aiadev/_assets/` before `python -m build`. The destination is gitignored; run it whenever the source dirs change.
+- `MANIFEST.in` ships the same trees in the sdist.
+- `pyproject.toml` declares the new `package-data`, `include-package-data`, and `[project.optional-dependencies].dev` now includes `build`.
+- `__init__.__version__` resolves via `importlib.metadata` first, falling back to the repo-root `VERSION` file. Installed wheels report the real version instead of `0.0.0+unknown`.
+- `.github/workflows/publish.yml` triggered by `release: published`. Two jobs (build → publish) using OIDC trusted publishing — no API tokens stored in the repo. The `pypi` GitHub environment must be configured once; see `docs/RELEASING.md`.
+- `docs/RELEASING.md` covers the one-time pypi.org trusted-publisher setup, the routine release flow, common failure modes, and a post-publish smoke test.
+- `CONTRIBUTING.md` release section condensed to a pointer at `docs/RELEASING.md` plus a four-line cheat sheet.
+
+### Changed
+
+- `find_framework_root` gained a final fallback: `aiadev/_assets/` adjacent to the installed package. Previous fallbacks (env var, parent walk, git toplevel, `parents[2]` editable install) are preserved.
 
 ## [0.6.0] - 2026-04-14
 
