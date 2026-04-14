@@ -58,7 +58,7 @@ Use OpenCode's native `skill` tool to list available skills.
 
 ### Loading a Skill
 ```
-use skill tool to load ai-augmented-developer/brainstorming
+use skill tool to load ai-augmented-developer/specify
 ```
 
 ### Skill Priority

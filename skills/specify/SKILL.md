@@ -1,0 +1,50 @@
+---
+name: specify
+description: Turn a natural-language demand into a numbered spec.md under specs/<branch>/. Use when the user describes what they want but no spec exists yet.
+version: 0.2.0
+inputs:
+  - type: text
+    description: Feature request in free-form natural language (issue, user quote, product brief).
+outputs:
+  - type: file
+    path: specs/<branch>/spec.md
+requires:
+  - constitution
+  - templates/spec-template.md
+handoffs:
+  - clarify
+  - plan
+---
+
+# Specify
+
+Take a demand in plain language and produce a `spec.md` focused on **what** and **why** — no implementation details.
+
+**Announce at start:** "Using the specify skill. I will produce a spec.md; implementation details come later."
+
+## Preconditions
+
+- The repository has a `constitution.md` at the root (or in the active preset).
+- `templates/spec-template.md` exists.
+- The current branch is either `main` or an already-open feature branch. If on `main`, create `feature/<slug>` first.
+
+## Loop
+
+1. **Create the artifact stub.** If `specs/<branch>/spec.md` does not exist, copy it from `templates/spec-template.md`. Fill `{{FEATURE_NAME}}`, `{{BRANCH}}`, `{{DATE}}`, `{{SPEC_ID}}`.
+2. **Read the demand.** Identify: primary problem, who feels it, the shape of a good outcome. Do not propose a solution yet.
+3. **Draft the Problem, Users, Success criteria, and Non-goals sections.** Keep each under 5 bullets.
+4. **Surface ambiguities inline.** Every unknown becomes a `[NEEDS CLARIFICATION: <precise question>]` marker. Do not invent answers.
+5. **Write user stories.** Each story has ≥ 3 acceptance scenarios in Given / When / Then form. If you cannot think of three, the story is either too small (fold it into another) or too big (split it).
+6. **Dispatch `spec-document-reviewer`** if available. Address feedback until the review returns approved.
+7. **Report to the user.** Summarize the spec in 3-5 lines, link to the file, and list the outstanding `[NEEDS CLARIFICATION]` markers.
+
+## What not to do
+
+- Do not write `plan.md` content. Cross that bridge with `plan`.
+- Do not invent acceptance criteria to close clarification markers. Ambiguity is a signal, not a defect.
+- Do not skip the spec because "the feature is obvious". Article I is not waivable on feature work.
+
+## Hand-off
+
+- If markers remain → invoke `clarify`.
+- If the spec is clean and reviewer-approved → invoke `plan`.

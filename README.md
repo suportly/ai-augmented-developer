@@ -69,33 +69,44 @@ Start a new session in your chosen platform and ask for something that should tr
 
 ## The Basic Workflow
 
-1. **brainstorming** — Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves spec document.
+1. **specify** — Activates first. Turns a natural-language demand into a `spec.md` under `specs/<branch>/`, surfacing any ambiguity as `[NEEDS CLARIFICATION: …]` markers instead of guessing.
 
-2. **writing-plans** — Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, and verification steps.
+2. **clarify** — Walks the user through the clarification markers one at a time and rewrites the spec with the answers. The spec stays unapproved while any marker is unresolved.
 
-3. **implement** — Activates with an approved plan and tasks list. Dispatches a fresh subagent per task with two-stage review (spec compliance, then code quality) before advancing.
+3. **plan** — Turns the clean spec into a `plan.md` that fills the Constitution Check table, maps project structure changes, and splits the work into phases.
 
-4. **test-driven-development** — Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit.
+4. **tasks** — Decomposes the plan into an ordered `tasks.md` where each task = one failing test + one implementation + one commit, with dependencies declared.
 
-5. **requesting-code-review** — Activates before opening a PR. Reviews against plan and spec, reports issues by severity. Critical issues block progress.
+5. **implement** — Dispatches one fresh subagent per task with a two-stage review (spec compliance, then code quality) before advancing. One task per commit; never skip either review.
 
-6. **finishing-a-branch** — Activates when tasks complete. Verifies tests pass, opens PR with full traceability (issue → spec → plan → code), cleans up.
+6. **analyze**, **checklist** — Cross-checks. `analyze` reports drift between spec, plan, tasks, and actual code. `checklist` runs a category pass (security, performance, accessibility, i18n, privacy, observability).
+
+7. **test-driven-development**, **systematic-debugging** — Invoked inside `implement`. RED-GREEN-REFACTOR for new work; four-phase root-cause investigation for failures.
+
+8. **requesting-code-review**, **finishing-a-branch** — Pre-PR review and merge hygiene. Close the loop back to the spec.
 
 **The agent checks for relevant skills before any task.** These are mandatory workflows, not suggestions.
 
 ## What's Inside
 
-### Skills (15 total)
+### Skills (20 total)
 
-**Workflow**
-- **using-ai-augmented-developer** — Entry point. Ensures skills are invoked before any response.
-- **brainstorming** — Socratic design refinement with hard gate before any code
-- **writing-plans** — Detailed, bite-sized implementation plans with TDD steps
-- **implement** — Fresh subagent per task with two-stage review (spec compliance, then code quality)
-- **test-driven-development** — RED-GREEN-REFACTOR cycle, strictly enforced
-- **systematic-debugging** — 4-phase root cause investigation before any fix
-- **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch
-- **finishing-a-branch** — PR creation, merge decision, cleanup
+**Pipeline**
+- **specify** — Natural-language demand → numbered `spec.md` with `[NEEDS CLARIFICATION]` markers for ambiguity.
+- **clarify** — Surfaces those markers one at a time and rewrites the spec with the answers.
+- **plan** — Turns an approved spec into `plan.md` with a mandatory Constitution Check.
+- **tasks** — Ordered `tasks.md`; one task = one test + one implementation + one commit.
+- **implement** — Fresh subagent per task with two-stage review (spec compliance, then code quality).
+- **analyze** — Gap report between spec, plan, tasks, and code.
+- **checklist** — Category pass: security, performance, accessibility, i18n, privacy, observability.
+- **constitution** — Amend the framework/preset/project constitution through the documented process.
+
+**Quality**
+- **using-ai-augmented-developer** — Meta-skill that orients the agent to the catalog and skill rule.
+- **test-driven-development** — RED-GREEN-REFACTOR cycle, strictly enforced.
+- **systematic-debugging** — 4-phase root-cause investigation before any fix.
+- **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch.
+- **finishing-a-branch** — PR creation, merge decision, cleanup.
 
 **Project Skills**
 - **run-tests** — Run the full test suite across all project layers

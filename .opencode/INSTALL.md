@@ -33,7 +33,7 @@ Verify by asking: "do you have ai-augmented-developer skills?"
 Use OpenCode's native `skill` tool to list available skills.
 
 ### Loading a Skill
-Use OpenCode's native `skill` tool, e.g. `ai-augmented-developer/brainstorming`.
+Use OpenCode's native `skill` tool, e.g. `ai-augmented-developer/specify`.
 
 ### Skill Priority
 Project skills (`.opencode/skills/`) > Personal skills > AI-Augmented Developer skills

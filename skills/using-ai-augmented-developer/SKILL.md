@@ -33,19 +33,18 @@ When in conflict, the user wins.
 
 | Skill | Use when |
 |---|---|
-| `specify` *(phase 3)* | the user describes a demand in natural language and no `spec.md` exists yet |
-| `clarify` *(phase 3)* | `spec.md` exists but contains `[NEEDS CLARIFICATION]` markers |
-| `plan` *(phase 3)* | spec is clean; no `plan.md` yet |
-| `tasks` *(phase 3)* | `plan.md` is approved; no `tasks.md` yet |
-| `analyze` *(phase 3)* | checking drift between spec/plan/tasks/code |
-| `checklist` *(phase 3)* | applying a security/perf/a11y/i18n review |
+| `specify` | the user describes a demand in natural language and no `spec.md` exists yet |
+| `clarify` | `spec.md` exists but contains `[NEEDS CLARIFICATION]` markers |
+| `plan` | spec is clean; no `plan.md` yet |
+| `tasks` | `plan.md` is approved; no `tasks.md` yet |
+| `analyze` | checking drift between spec / plan / tasks / code |
+| `checklist` | applying a category pass (security, performance, a11y, i18n, privacy, observability) |
 | `implement` | `tasks.md` exists and is approved; time to execute |
+| `constitution` | amending `constitution.md` (framework, preset, or project) |
 | `test-driven-development` | writing any test-backed code inside `implement` |
 | `systematic-debugging` | a test is failing or behavior is unexpected |
 | `requesting-code-review` | the branch is ready, before opening the PR |
 | `finishing-a-branch` | review approved; time to open the PR and clean up |
-
-> The entries marked *(phase 3)* land in v0.2. Until then, `brainstorming` and `writing-plans` serve as their predecessors. See `CHANGELOG.md`.
 
 ### Preset skills
 

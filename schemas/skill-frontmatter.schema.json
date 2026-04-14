@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/skill-frontmatter.schema.json",
+  "title": "Skill Frontmatter",
+  "description": "Provisional schema for the YAML frontmatter at the top of each SKILL.md. Replaced in phase 5 by the one shipped inside the aiadev CLI package.",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,39}$",
+      "description": "Unique skill identifier in kebab-case. Must match the containing directory name."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 240,
+      "description": "One-line summary used by agents to decide when to invoke the skill."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$",
+      "description": "Semver. Optional during v0.1; required from v0.2."
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text", "file", "dir", "command", "artifact"]
+          },
+          "path": { "type": "string" },
+          "description": { "type": "string" },
+          "optional": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text", "file", "dir", "commit", "branch", "pr"]
+          },
+          "path": { "type": "string" },
+          "description": { "type": "string" },
+          "optional": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "requires": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Other skill names, file paths, or artifacts this skill expects to exist."
+    },
+    "handoffs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Skill names this skill typically invokes next. Non-binding; `implement` does not rely on handoffs to route."
+    },
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "If true, the skill never runs the model — it is a deterministic script. Inherited from the StriveX convention."
+    },
+    "allowed-tools": {
+      "oneOf": [
+        { "type": "array", "items": { "type": "string" } },
+        {
+          "type": "string",
+          "description": "Comma-separated list of tool names, as used by StriveX-origin skills."
+        }
+      ],
+      "description": "Restrict which tools the skill may call. Optional."
+    },
+    "license": {
+      "type": "string",
+      "description": "Optional attribution line when the skill is adapted from another project. Primary attribution still lives in CREDITS.md."
+    },
+    "argument-hint": {
+      "type": "string",
+      "description": "Shown in UIs that prompt the user for arguments before invoking the skill."
+    }
+  },
+  "additionalProperties": false
+}

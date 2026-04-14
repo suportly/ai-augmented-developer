@@ -1,6 +1,22 @@
 ---
 name: implement
 description: Execute an approved plan + tasks list by dispatching one fresh subagent per task and applying two-stage review (spec compliance, then code quality) before moving on.
+version: 0.2.0
+inputs:
+  - type: file
+    path: specs/<branch>/plan.md
+  - type: file
+    path: specs/<branch>/tasks.md
+outputs:
+  - type: commit
+    description: One commit per task, in order, with the task id in the commit message.
+requires:
+  - constitution
+  - test-driven-development
+handoffs:
+  - requesting-code-review
+  - finishing-a-branch
+  - systematic-debugging
 ---
 
 # Implement
@@ -9,7 +25,7 @@ Take a `plan.md` + `tasks.md` that have already been specified, clarified and ap
 
 **Announce at start:** "Using the implement skill. One subagent per task with two-stage review."
 
-This skill replaces the previous `speckit` and `subagent-driven-development` skills. It does not generate specs or plans — use `specify`, `clarify`, `plan`, and `tasks` first (those land in phase 3 of the v0.2 plan).
+This skill replaces the previous `speckit` and `subagent-driven-development` skills. It does not generate specs or plans — use `specify` → `clarify` → `plan` → `tasks` first.
 
 ## When to use
 

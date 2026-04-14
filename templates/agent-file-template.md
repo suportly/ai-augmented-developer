@@ -30,8 +30,9 @@ Invoke the right skill for the stage you are at:
 | Ready to open a PR | `requesting-code-review` |
 | Review approved | `finishing-a-branch` |
 
-`brainstorming` and `writing-plans` are still available for compatibility
-with pre-0.2 workflows; new work should prefer `specify` + `plan`.
+`brainstorming` and `writing-plans` were removed in 0.2. Use `specify` +
+`plan` + `tasks` instead — one artifact per stage, validated against the
+constitution.
 
 ## Constitution
 

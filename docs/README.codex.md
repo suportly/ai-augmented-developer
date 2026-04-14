@@ -56,7 +56,7 @@ You should see a symlink pointing to the skills directory with all 16 skills lis
 ## Usage
 
 Skills are discovered automatically. Codex activates them when:
-- You mention a skill by name (e.g., "use brainstorming")
+- You mention a skill by name (e.g., "use specify")
 - The task matches a skill's description
 - The `using-ai-augmented-developer` skill directs Codex to use one
 

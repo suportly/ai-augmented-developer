@@ -8,10 +8,15 @@ You are working with the AI-Augmented Developer framework — a structured devel
 
 | What you're doing | Skill to invoke |
 |-------------------|----------------|
-| Starting a new feature or task | `brainstorming` |
-| Have a spec, need an implementation plan | `writing-plans` |
-| Have a plan, ready to implement | `implement` |
-| Implementing any feature/fix | `test-driven-development` |
+| User described a demand, no `spec.md` yet | `specify` |
+| `spec.md` has `[NEEDS CLARIFICATION]` markers | `clarify` |
+| Spec is clean, no `plan.md` yet | `plan` |
+| Plan approved, no `tasks.md` yet | `tasks` |
+| Tasks ready, time to build | `implement` |
+| Drift suspected between spec / plan / code | `analyze` |
+| Focused quality pass (security/perf/a11y/i18n) | `checklist` |
+| Amending `constitution.md` | `constitution` |
+| Implementing any feature or fix | `test-driven-development` |
 | Hit a bug or test failure | `systematic-debugging` |
 | Ready to open a PR | `requesting-code-review` |
 | Code review approved | `finishing-a-branch` |
@@ -111,19 +116,19 @@ Stack-specific articles (API-First under `/api/v1/<app>/`, async-first via Celer
 ## Workflow
 
 ```
-brainstorming
-    ↓ (spec approved)
-writing-plans
-    ↓ (plan approved)
-implement
-    → test-driven-development (per task)
-    → systematic-debugging (on failures)
-    ↓ (all tasks done)
-requesting-code-review
-    ↓ (review approved)
-finishing-a-branch
-    ↓ (PR merged)
-deploy
+specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  implement
+                                                                │
+                                                  test-driven-development (per task)
+                                                  systematic-debugging (on failures)
+                                                  checklist (per category)
+                                                                ↓ (all tasks done)
+                                                       analyze (drift check)
+                                                                ↓
+                                                  requesting-code-review
+                                                                ↓ (review approved)
+                                                         finishing-a-branch
+                                                                ↓ (PR merged)
+                                                              deploy
 ```
 
 ## Commands Quick Reference

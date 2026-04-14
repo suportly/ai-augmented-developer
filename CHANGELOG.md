@@ -16,6 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `templates/` directory with the canonical artifacts produced by the pipeline skills: `spec-template.md`, `plan-template.md`, `tasks-template.md`, `checklist-template.md`, `constitution-template.md`, `agent-file-template.md`, and `commands/command-template.md`. Placeholders use `{{UPPER_SNAKE}}`. Section headings are stable so validators can parse them.
 - `[NEEDS CLARIFICATION: <question>]` marker documented in `CONTRIBUTING.md` and `spec-template.md`. Consumed by the upcoming `clarify` skill (phase 3) and enforced by CI from phase 6a.
 - Optional `handoffs:` frontmatter schema documented in `templates/commands/command-template.md` — preserves the StriveX convention so Claude Code UIs can surface next-step buttons.
+- Seven new pipeline skills: `specify`, `clarify`, `plan`, `tasks`, `analyze`, `checklist`, `constitution`. Structured frontmatter (`name`, `description`, `version`, `inputs`, `outputs`, `requires`, `handoffs`) common to all of them.
+- `schemas/skill-frontmatter.schema.json` — provisional JSON Schema for the YAML frontmatter at the top of each `SKILL.md`. Accepts both array and comma-separated-string forms of `allowed-tools`.
+- `scripts/validate_skills.py` + `scripts/validate-skills.sh` wrapper — validates every skill against the schema and checks that the frontmatter `name` matches its directory. Run locally with `python3 scripts/validate_skills.py`. Replaced by `aiadev validate` in phase 5.
+
+### Changed
+
+- `skills/implement/SKILL.md` frontmatter extended to the v0.2 structured format (`version`, `inputs`, `outputs`, `requires`, `handoffs`).
+- `CLAUDE.md` "Start Here" table and workflow diagram now reflect the new pipeline (`specify → clarify → plan → tasks → implement`).
+- `README.md` skills section re-organized into "Pipeline" and "Quality" groups with the new taxonomy.
+- Platform docs (`docs/README.codex.md`, `docs/README.opencode.md`, `.opencode/INSTALL.md`) updated to use `specify` in their usage examples.
+
+### Removed
+
+- `skills/brainstorming/` and `skills/writing-plans/` — replaced by `specify`, `clarify`, `plan`, and `tasks`.
 
 ### Changed
 
@@ -42,7 +56,6 @@ See [implementation plan](https://github.com/alairjt/ai-augmented-developer/blob
 
 ### Planned breaking changes still on the v0.2.0 roadmap
 
-- `skills/brainstorming/` and `skills/writing-plans/` to be replaced by `skills/specify/` + `skills/plan/` (phase 3).
 - Root `CLAUDE.md` rewritten as stack-agnostic; Django-specific content moved to `presets/django-drf-react/` (phase 4).
 
 A migration script (`scripts/migrate-to-0.2.sh`) will be provided to install the Django preset automatically for users on v0.1.
