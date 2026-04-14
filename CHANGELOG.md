@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Cursor platform handler** (`aiadev install --platform cursor`). Drops `AGENTS.md` at the project root (so Cursor and Claude Code can coexist without clashing on their agent-file names) and writes skills under `.cursor/skills/<name>/SKILL.md`. The `constitution.md` file is shared — both handlers read the same file at project root.
+
+### Changed
+
+- `_perform_uninstall` in `install_engine.py` now walks up each skill's path and removes ancestor directories when empty, so `aiadev install --uninstall` leaves the project free of stray `.claude/`, `.cursor/`, or `.aiadev/` directories.
 
 ## [0.3.0] - 2026-04-14
 
