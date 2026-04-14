@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.4.0] - 2026-04-14
+
+Second install target: Cursor.
+
 ### Added
 
 - **Cursor platform handler** (`aiadev install --platform cursor`). Drops `AGENTS.md` at the project root (so Cursor and Claude Code can coexist without clashing on their agent-file names) and writes skills under `.cursor/skills/<name>/SKILL.md`. The `constitution.md` file is shared — both handlers read the same file at project root.
+- End-to-end round-trip test for the Cursor target (`test_cursor_platform_round_trip`): installs the 11-skill mobile-ops preset with 15 placeholders, verifies every skill lands at the Cursor path, no `{{UPPER_SNAKE}}` token survives, and uninstall leaves the project clean.
 
 ### Changed
 
 - `_perform_uninstall` in `install_engine.py` now walks up each skill's path and removes ancestor directories when empty, so `aiadev install --uninstall` leaves the project free of stray `.claude/`, `.cursor/`, or `.aiadev/` directories.
+- README install example documents the `--platform cursor` variant.
 
 ## [0.3.0] - 2026-04-14
 
@@ -151,7 +159,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/suportly/ai-augmented-developer/releases/tag/v0.1.0
