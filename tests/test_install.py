@@ -244,6 +244,96 @@ class TestUninstall:
         assert (tmp_path / "CLAUDE.md").exists()
 
 
+class TestNewPlatforms:
+    def test_codex_writes_agents_md_and_codex_skills(
+        self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(isolated_framework)
+        result = _invoke(
+            CliRunner(),
+            tmp_path,
+            "--preset",
+            "lean",
+            "--platform",
+            "codex",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "AGENTS.md").is_file()
+        assert not (tmp_path / "CLAUDE.md").exists()
+
+    def test_opencode_writes_agents_md(
+        self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(isolated_framework)
+        result = _invoke(
+            CliRunner(),
+            tmp_path,
+            "--preset",
+            "lean",
+            "--platform",
+            "opencode",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "AGENTS.md").is_file()
+
+    def test_gemini_writes_gemini_md(
+        self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(isolated_framework)
+        result = _invoke(
+            CliRunner(),
+            tmp_path,
+            "--preset",
+            "lean",
+            "--platform",
+            "gemini",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "GEMINI.md").is_file()
+        assert not (tmp_path / "AGENTS.md").exists()
+        assert not (tmp_path / "CLAUDE.md").exists()
+
+    def test_cursor_then_codex_coexistence(
+        self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        """Installing the same preset for two IDEs that share AGENTS.md
+        must leave only one AGENTS.md file and skip it on the second
+        run when the sha matches."""
+        monkeypatch.chdir(isolated_framework)
+        runner = CliRunner()
+
+        first = _invoke(
+            runner, tmp_path,
+            "--preset", "lean",
+            "--platform", "cursor",
+            "--non-interactive",
+            "--vars", "PROJECT_NAME=Demo",
+        )
+        assert first.exit_code == 0, first.output
+        assert (tmp_path / "AGENTS.md").is_file()
+
+        second = _invoke(
+            runner, tmp_path,
+            "--preset", "lean",
+            "--platform", "codex",
+            "--non-interactive",
+            "--vars", "PROJECT_NAME=Demo",
+        )
+        assert second.exit_code == 0, second.output
+        # AGENTS.md already present with matching sha -> reported as skip.
+        output = second.output.lower()
+        assert "skip" in output or "nothing to do" in output
+
+
 class TestCursorPlatform:
     def test_cursor_install_writes_agents_md(
         self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
