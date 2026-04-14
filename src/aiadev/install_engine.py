@@ -68,6 +68,10 @@ class InstallReport:
     conflicts: list[Path] = field(default_factory=list)  # present, differs
     removed: list[Path] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
+    # Artifacts the handler reports as not installable under the current
+    # scope (user scope refuses agent_file and constitution). One entry
+    # per skipped artifact, human-readable for CLI output.
+    skipped_unsupported: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -92,19 +96,32 @@ def _load_preset_yaml(preset_path: Path) -> dict:
     return data
 
 
-def _manifest_path(project_root: Path) -> Path:
-    return project_root / MANIFEST_REL_PATH
+def _manifest_path(install_root: Path) -> Path:
+    return install_root / MANIFEST_REL_PATH
 
 
-def _load_or_create_manifest(project_root: Path) -> Manifest:
-    path = _manifest_path(project_root)
+def _load_or_create_manifest(install_root: Path) -> Manifest:
+    path = _manifest_path(install_root)
     if path.is_file():
         return load_manifest(path)
     return Manifest(aiadev_version=__version__)
 
 
-def _to_rel(target: Path, project_root: Path) -> str:
-    return str(target.relative_to(project_root)).replace("\\", "/")
+def _to_rel(target: Path, install_root: Path) -> str:
+    return str(target.relative_to(install_root)).replace("\\", "/")
+
+
+def _resolve_install_root(scope: str, project_root: Path) -> Path:
+    """Return the root under which artifacts land for the given scope.
+
+    Project scope -> the project directory (current behaviour).
+    User scope    -> the user's home directory.
+    """
+    if scope == "user":
+        return Path.home()
+    if scope == "project":
+        return project_root
+    raise InstallError(f"unknown scope: {scope!r} (expected 'project' or 'user')")
 
 
 def _sha256_text(text: str) -> str:
@@ -120,33 +137,51 @@ def install(
     mode: InstallMode = InstallMode.INSTALL,
     force: bool = False,
     allow_unresolved: bool = False,
+    scope: str = "project",
     now: str | None = None,
 ) -> InstallReport:
-    """Install or re-install a preset into ``project_root``.
+    """Install or re-install a preset into ``project_root`` (or ``$HOME``).
+
+    ``scope='project'`` (default) writes into ``project_root``. ``scope='user'``
+    writes into the current user's home directory, covering only the
+    roles each platform reports via ``user_scope_supported``; agent files
+    and constitutions are skipped and noted in
+    :attr:`InstallReport.skipped_unsupported`.
 
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
-    recorded manifest.
+    scope-appropriate manifest.
     """
     platform_module = _PLATFORMS.get(platform)
     if platform_module is None:
         raise InstallError(f"unknown platform: {platform!r}")
 
+    install_root = _resolve_install_root(scope, project_root)
+
     preset_data = _load_preset_yaml(preset_path)
     preset_name = preset_data.get("name", preset_path.name)
     preset_version = str(preset_data.get("version", "0.0.0"))
 
-    manifest = _load_or_create_manifest(project_root)
+    manifest = _load_or_create_manifest(install_root)
     existing = manifest.find_preset(preset_name)
 
     if mode is InstallMode.UNINSTALL:
-        return _perform_uninstall(project_root, manifest, existing, preset_name, force)
+        return _perform_uninstall(install_root, manifest, existing, preset_name, force)
 
     report = InstallReport(preset_name=preset_name, mode=mode)
     previous_by_path = {f.path: f for f in existing.files} if existing else {}
     recorded_files: list[InstalledFile] = []
 
     for role, name, source_path in platform_module.iter_preset_artifacts(preset_path):
+        # Under user scope, skip artifacts the handler says are not
+        # installable there (agent_file, constitution). They stay
+        # project-local.
+        if scope == "user" and not platform_module.user_scope_supported(role):
+            report.skipped_unsupported.append(
+                f"role={role!r} skipped: not installable under --scope user"
+            )
+            continue
+
         source_text = source_path.read_text(encoding="utf-8")
         rendered = substitute(source_text, variables)
 
@@ -156,8 +191,8 @@ def install(
             if not allow_unresolved:
                 continue
 
-        target = platform_module.resolve_target(role, name, project_root)
-        target_rel = _to_rel(target, project_root)
+        target = platform_module.resolve_target(role, name, install_root, scope=scope)
+        target_rel = _to_rel(target, install_root)
         rendered_sha = _sha256_text(rendered)
 
         if target.is_file():
@@ -208,13 +243,13 @@ def install(
             files=recorded_files,
         )
         manifest.upsert(record)
-        save_manifest(manifest, _manifest_path(project_root))
+        save_manifest(manifest, _manifest_path(install_root))
 
     return report
 
 
 def _perform_uninstall(
-    project_root: Path,
+    install_root: Path,
     manifest: Manifest,
     existing: InstalledPreset | None,
     preset_name: str,
@@ -225,7 +260,7 @@ def _perform_uninstall(
         return report
 
     for entry in list(existing.files):
-        target = project_root / entry.path
+        target = install_root / entry.path
         if not target.is_file():
             continue
         current_sha = compute_sha256(target)
@@ -244,8 +279,8 @@ def _perform_uninstall(
     for entry in existing.files:
         if entry.role != "skill":
             continue
-        parent = (project_root / entry.path).parent
-        while parent.is_dir() and parent != project_root:
+        parent = (install_root / entry.path).parent
+        while parent.is_dir() and parent != install_root:
             try:
                 parent.rmdir()
             except OSError:
@@ -253,7 +288,7 @@ def _perform_uninstall(
             parent = parent.parent
 
     manifest.remove(preset_name)
-    manifest_path = _manifest_path(project_root)
+    manifest_path = _manifest_path(install_root)
     if manifest.installed_presets:
         save_manifest(manifest, manifest_path)
     elif manifest_path.is_file():
