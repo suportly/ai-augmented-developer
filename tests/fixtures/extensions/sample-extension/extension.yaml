@@ -1,0 +1,5 @@
+name: sample-extension
+version: "1.0.0"
+description: "Tiny extension fixture used by aiadev's test suite."
+presets:
+  - sample

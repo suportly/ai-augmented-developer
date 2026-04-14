@@ -1,0 +1,16 @@
+name: sample
+version: "1.0.0"
+description: "Sample preset shipped by sample-extension."
+
+variables:
+  - name: PROJECT_NAME
+    prompt: Project name
+    required: true
+
+provides:
+  agent_file: CLAUDE.md
+  skills:
+    - skills/hello
+
+adds_articles: []
+tightens: []
