@@ -62,6 +62,33 @@ aiadev install --preset mobile-ops --platform codex --scope user \
 
 `aiadev doctor` then verifies the repo is in good shape.
 
+### Extensions (third-party presets)
+
+Install presets that live in any git repo:
+
+```bash
+# Add an extension once. The repo must contain an `extension.yaml`
+# at its root and a `presets/<preset-name>/` tree.
+aiadev extension add https://github.com/example/rails-preset.git
+
+# `aiadev install --preset rails` now works in any project. Built-in
+# presets win on name collision; a yellow "note" reports the shadow.
+aiadev install --preset rails --non-interactive --vars PROJECT_NAME=Demo
+
+# Inspect or clean up.
+aiadev extension list
+aiadev extension remove rails-preset
+```
+
+Extensions are git URLs only — no central registry, no signing, no
+auto-update. Each `extension add` runs one `git clone --depth 1` into
+`~/.aiadev/extensions/<name>/`. Inspect any third-party extension
+before installing it: it can ship arbitrary skill content.
+
+To **author** an extension, see the format documented in
+[`schemas/extension-manifest.schema.json`](./schemas/extension-manifest.schema.json)
+and the `tests/fixtures/extensions/sample-extension/` reference.
+
 ### Platform-specific plugins (unchanged from v0.2)
 
 The legacy plugin install paths still work; they drop the skills catalog
