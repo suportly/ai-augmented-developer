@@ -128,6 +128,8 @@ jobs:
             --exclude-path node_modules
             --exclude-path .venv
             --exclude-path .claude
+            --exclude-path templates
             --exclude "^https://github.com/alairjt/ai-augmented-developer"
+            --exclude "^https://github.com/suportly/ai-augmented-developer"
             './**/*.md'
           fail: true
