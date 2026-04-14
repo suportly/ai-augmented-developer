@@ -1,0 +1,80 @@
+# Preset manifest for mobile-ops.
+# Ships the 11 operational runbook skills (build, submit, deploy, OTA,
+# release-notes, bump-version, start-dev, run-tests) for projects that
+# combine a GCP Cloud Run backend with an Expo mobile app on EAS.
+# All placeholders are replaced at `aiadev install --preset mobile-ops
+# --interactive` time.
+
+name: mobile-ops
+version: 1.0.0
+description: >
+  Operational preset for the "Cloud Run backend + Expo mobile on EAS"
+  shape: deploy, build, submit, OTA, release-notes, dev-server, and
+  test runners. Stack-agnostic on the backend framework; pair with
+  django-drf-react (or another feature preset) for the pipeline layer.
+
+variables:
+  - name: PROJECT_NAME
+    prompt: Project display name
+    required: true
+  - name: APP_NAME
+    prompt: User-facing app name (used in release notes and commit messages)
+    required: true
+  - name: BACKEND_DIR
+    prompt: Path to the backend directory
+    default: backend
+  - name: MOBILE_DIR
+    prompt: Path to the Expo mobile app directory
+    default: mobile
+  - name: ADMIN_DIR
+    prompt: Path to the admin app directory
+    default: admin
+  - name: BACKEND_ASGI_MODULE
+    prompt: ASGI application import path (e.g. backend.asgi or myproject.asgi)
+    required: true
+  - name: CELERY_APP
+    prompt: Celery app import path (e.g. backend or myproject)
+    required: true
+  - name: GCP_PROJECT
+    prompt: GCP project id
+    required: true
+  - name: GCP_REGION
+    prompt: GCP region
+    default: southamerica-east1
+  - name: ARTIFACT_REPO
+    prompt: Artifact Registry repository name
+    required: true
+  - name: BACKEND_SERVICE
+    prompt: Cloud Run service name for the API
+    default: api
+  - name: ADMIN_SERVICE
+    prompt: Cloud Run service name for the admin app
+    default: admin
+  - name: CLOUD_SQL_INSTANCE
+    prompt: Cloud SQL instance connection string
+    required: true
+  - name: PROD_API_URL
+    prompt: Production API URL (without scheme)
+    required: true
+  - name: PROD_ADMIN_URL
+    prompt: Production admin URL (without scheme)
+    required: true
+
+provides:
+  agent_file: CLAUDE.md
+  skills:
+    - skills/start-dev
+    - skills/run-tests
+    - skills/bump-version
+    - skills/build-android
+    - skills/build-ios
+    - skills/submit-android
+    - skills/submit-ios
+    - skills/deploy-backend
+    - skills/deploy-admin
+    - skills/ota-update
+    - skills/release-notes
+
+# Additive preset — no new constitution articles, no tightening.
+adds_articles: []
+tightens: []

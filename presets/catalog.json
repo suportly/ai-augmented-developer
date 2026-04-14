@@ -17,6 +17,14 @@
       "use_when": "Full-stack web app with Python backend and React frontend.",
       "maintained_by": "ai-augmented-developer core",
       "stability": "stable"
+    },
+    {
+      "name": "mobile-ops",
+      "path": "presets/mobile-ops",
+      "summary": "Operational runbooks (build/submit/deploy/OTA/release-notes) for Cloud Run backend + Expo mobile via EAS + React admin.",
+      "use_when": "Project ships a Cloud Run backend alongside an Expo mobile app on EAS and optionally a React admin app.",
+      "maintained_by": "ai-augmented-developer core",
+      "stability": "beta"
     }
   ]
 }

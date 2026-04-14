@@ -20,11 +20,29 @@ Where we copy verbatim (for example markdownlint config or template scaffolds), 
 
 A widely-referenced community catalog of multi-discipline subagents (design, engineering, marketing, studio-operations, testing, project-management, product). We **do not bundle** it: the upstream has no visible license at the time of writing, and Article VII (Attribution) requires a citable license before redistribution. The catalog is documented in [`agents/README.md`](./agents/README.md) as an opt-in external catalog; a future extension (phase 7) will make it installable from a licensed fork.
 
-### StriveX / Suportly internal playbooks
+### StriveX / Suportly internal playbooks (origin of `presets/mobile-ops/`)
 
-The operational skills in `presets/strivex-stack/` (deploy-backend, build-ios, build-android, submit-*, ota-update, release-notes, bump-version) are generalized versions of runbooks originally written inside the StriveX project at Suportly. They have been parameterized (`{{BACKEND_DIR}}`, `{{GCP_PROJECT}}`, etc.) so they can be reused outside that codebase.
+The 11 operational skills in `presets/mobile-ops/` (deploy-backend,
+deploy-admin, build-ios, build-android, submit-ios, submit-android,
+ota-update, release-notes, bump-version, start-dev, run-tests) started
+life as internal runbooks inside the StriveX project at Suportly. They
+have been:
 
-The StriveX project also ships heavily-customized subagents (backend-architect, frontend-developer, mobile-app-builder, etc.) based on the contains-studio format but rewritten for the StriveX stack (Django 5.2, Cloud Run, Gemini API, SimpleJWT). Those land in `presets/strivex-stack/agents/` in phase 8b of the v0.2 refactor — not at the framework root, because they are stack-specific by construction.
+- **Renamed** away from any StriveX-specific identifiers.
+- **Parameterized** with placeholders (`{{BACKEND_DIR}}`, `{{MOBILE_DIR}}`,
+  `{{ADMIN_DIR}}`, `{{GCP_PROJECT}}`, `{{GCP_REGION}}`,
+  `{{ARTIFACT_REPO}}`, `{{BACKEND_SERVICE}}`, `{{ADMIN_SERVICE}}`,
+  `{{CLOUD_SQL_INSTANCE}}`, `{{BACKEND_ASGI_MODULE}}`, `{{CELERY_APP}}`,
+  `{{APP_NAME}}`, `{{PROD_API_URL}}`, `{{PROD_ADMIN_URL}}`) so any
+  project with the same operational shape can use them.
+- **Genericized** so nothing in the skills, CLAUDE.md, or preset manifest
+  references StriveX, Suportly, nzrgym, or any other project-specific
+  domain.
+
+The preset carries no StriveX-specific subagents. The customized
+subagents that exist inside the StriveX project are not bundled here —
+see the `agents/README.md` note on why multi-discipline catalogs require
+clearer licensing before they ship.
 
 ## Reporting attribution gaps
 

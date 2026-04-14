@@ -70,6 +70,16 @@ BREAKING CHANGE: Projects that relied on importing the stack skills from `skills
 - Test fixtures under `tests/fixtures/` for the four validator failure modes (missing frontmatter, mismatched name, short description, valid).
 - `.gitignore` updated to skip Python build artifacts (`*.egg-info/`, `.pytest_cache/`, `.coverage`, `htmlcov/`, `dist/`, `build/`).
 
+### `mobile-ops` preset (phase 8b)
+
+- `presets/mobile-ops/` — 11 operational runbook skills for the "Cloud Run backend + Expo mobile on EAS + React admin" shape. Skills adapted from internal StriveX playbooks but fully genericized: no project-specific name, domain, or path survives in the preset.
+- Placeholders introduced for substitution at `aiadev install` time: `{{PROJECT_NAME}}`, `{{APP_NAME}}`, `{{BACKEND_DIR}}`, `{{MOBILE_DIR}}`, `{{ADMIN_DIR}}`, `{{BACKEND_ASGI_MODULE}}`, `{{CELERY_APP}}`, `{{GCP_PROJECT}}`, `{{GCP_REGION}}`, `{{ARTIFACT_REPO}}`, `{{BACKEND_SERVICE}}`, `{{ADMIN_SERVICE}}`, `{{CLOUD_SQL_INSTANCE}}`, `{{PROD_API_URL}}`, `{{PROD_ADMIN_URL}}`.
+- `presets/mobile-ops/preset.yaml` declares the variables with prompts and defaults.
+- `presets/mobile-ops/CLAUDE.md` describes the stack assumption, lists the skills, and reminds the reader that the preset is additive — it does not redefine the feature pipeline.
+- `presets/catalog.json` registers the new preset at `beta` stability.
+- `CREDITS.md` records the StriveX/Suportly lineage as origin-only: the preset itself is scrubbed of project-specific identifiers.
+- `aiadev validate` now reports 31 skills (14 generic + 6 django-drf-react + 11 mobile-ops).
+
 ### Agents catalog strategy (phase 8a)
 
 - `agents/README.md` documents the two-tier structure: framework-native agents at the top of `agents/` and preset-specific agents under `presets/<preset>/agents/`.
