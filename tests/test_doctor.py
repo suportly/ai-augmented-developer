@@ -20,10 +20,11 @@ def test_doctor_fails_when_constitution_missing(
 ) -> None:
     monkeypatch.chdir(isolated_framework)
     (isolated_framework / "constitution.md").unlink()
+    # Force AIADEV_ROOT to the now-broken isolated tree so the fallback
+    # chain (cwd walk, git toplevel, package install location) does not
+    # find the real framework elsewhere and paper over the problem.
+    monkeypatch.setenv("AIADEV_ROOT", str(isolated_framework))
     result = CliRunner().invoke(doctor_command, [])
-    # constitution.md is part of the framework-root heuristic; removing
-    # it actually makes the command error (framework not found), which is
-    # the correct behavior.
     assert result.exit_code == 2
 
 

@@ -92,33 +92,38 @@
 
 ### T005 — Variable collection (interactive + non-interactive)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - create: `src/aiadev/variable_prompt.py`
   - test: `tests/test_variable_prompt.py`
 - **Spec scenarios:** Story 1 scenario 1, Story 3 scenarios 1–2
 - **Acceptance:**
-  - [ ] `collect(preset_vars, defaults, non_interactive, cli_vars)` returns a resolved dict.
-  - [ ] Non-interactive mode errors if any required variable is missing from `cli_vars + defaults`; the error names the missing variable.
-  - [ ] Interactive mode uses `click.prompt` with `default=` from either `preset.yaml` or the previous manifest entry.
-  - [ ] `--vars KEY=VAL,KEY2=VAL2` parsing: tolerates spaces, rejects duplicate keys.
-  - [ ] Commit message: `feat(install): T005 variable collection`.
+  - [x] `collect(preset_vars, *, previous, cli_vars, non_interactive, prompt_func)` returns a resolved dict.
+  - [x] Non-interactive mode errors if any required variable is missing from every source; the error names the missing variable.
+  - [x] Interactive mode uses the injected `prompt_func` (defaults to `click.prompt`) with `default=` from the previous install or the preset.
+  - [x] `parse_cli_vars` / `merge_vars_strings`: whitespace-tolerant, duplicate-rejecting, supports repeated `--vars`.
+  - [x] 100% coverage (58/58 stmts, 23 tests).
+  - [x] Commit message: `feat(install): T005 variable collection`.
 
 ### T006 — CLI command wiring
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T002, T003, T004, T005
 - **Files:**
   - modify: `src/aiadev/commands/install.py`
-  - test: `tests/test_install.py` (extend)
+  - modify: `src/aiadev/paths.py` (AIADEV_ROOT + package-location fallback)
+  - modify: `tests/test_install.py` (rewritten for the real CLI)
+  - modify: `tests/test_doctor.py` (pin AIADEV_ROOT when asserting the failure case)
 - **Spec scenarios:** Story 1 scenarios 1–3, Story 3 scenarios 1–3, Story 4 scenarios 1–2
 - **Acceptance:**
-  - [ ] Options: `--preset`, `--platform` (default `claude-code`), `--vars`, `--non-interactive`, `--dry-run`, `--uninstall`, `--force`, `--allow-unresolved`.
-  - [ ] Output: `rich` table showing actions (write / skip / conflict / remove).
-  - [ ] Exit codes: 0 success, 1 install error (missing var, conflict without `--force`), 2 usage error (invalid preset name).
-  - [ ] The v0.2 stub behavior (`install` prints a list) is replaced; no regression tests on that behavior.
-  - [ ] Commit message: `feat(install): T006 CLI command wiring`.
+  - [x] Options wired: `--preset`, `--platform` (default `claude-code`), `--vars` (multiple), `--non-interactive`, `--dry-run`, `--uninstall`, `--force`, `--allow-unresolved`, `--project-root`.
+  - [x] Output via `rich.Table` with colored Action column (write/skip/remove/conflict) and relative Path column; unresolved placeholders and conflict hints printed below the table.
+  - [x] Exit codes: 0 success / ok report; 1 install error (missing var, unresolved, conflict); 2 usage error (bad preset name, malformed --vars, framework not found).
+  - [x] v0.2 stub tests replaced; 12 new cases cover validation, non-interactive, re-install, conflict/force, uninstall.
+  - [x] Framework-root resolution now supports AIADEV_ROOT env var and package-location fallback so the CLI works from anywhere once installed.
+  - [x] Manual smoke: `aiadev install --preset lean --non-interactive --vars PROJECT_NAME=SmokeDemo` in `/tmp/install-smoke` wrote CLAUDE.md and `.aiadev/installed.yaml`.
+  - [x] Commit message: `feat(install): T006 CLI command wiring`.
 
 ### T007 — End-to-end smoke test and CI job
 
