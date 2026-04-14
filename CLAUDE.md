@@ -10,7 +10,7 @@ You are working with the AI-Augmented Developer framework — a structured devel
 |-------------------|----------------|
 | Starting a new feature or task | `brainstorming` |
 | Have a spec, need an implementation plan | `writing-plans` |
-| Have a plan, ready to implement | `subagent-driven-development` |
+| Have a plan, ready to implement | `implement` |
 | Implementing any feature/fix | `test-driven-development` |
 | Hit a bug or test failure | `systematic-debugging` |
 | Ready to open a PR | `requesting-code-review` |
@@ -113,7 +113,7 @@ brainstorming
     ↓ (spec approved)
 writing-plans
     ↓ (plan approved)
-subagent-driven-development
+implement
     → test-driven-development (per task)
     → systematic-debugging (on failures)
     ↓ (all tasks done)

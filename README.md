@@ -10,7 +10,7 @@ Once it's teased a spec out of the conversation, it shows it to you in chunks sh
 
 After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY.
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for the agent to be able to work autonomously for a couple of hours at a time without deviating from the plan you put together.
+Next up, once you say "go", the `implement` skill takes over: it dispatches one fresh subagent per task, runs a spec compliance review and a code quality review after each, and moves forward only when both pass. The agent can run through several tasks unattended as long as the plan stays accurate — your job is to check in, not to babysit every step.
 
 There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has AI-Augmented Developer superpowers.
 
@@ -73,28 +73,25 @@ Start a new session in your chosen platform and ask for something that should tr
 
 2. **writing-plans** — Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, and verification steps.
 
-3. **speckit** — Full pipeline from demand to Pull Request: specify → plan → tasks → implement → PR. Designed for proactive, automated development flows.
+3. **implement** — Activates with an approved plan and tasks list. Dispatches a fresh subagent per task with two-stage review (spec compliance, then code quality) before advancing.
 
-4. **subagent-driven-development** — Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality).
+4. **test-driven-development** — Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit.
 
-5. **test-driven-development** — Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit.
+5. **requesting-code-review** — Activates before opening a PR. Reviews against plan and spec, reports issues by severity. Critical issues block progress.
 
-6. **requesting-code-review** — Activates before opening a PR. Reviews against plan and spec, reports issues by severity. Critical issues block progress.
-
-7. **finishing-a-branch** — Activates when tasks complete. Verifies tests pass, opens PR with full traceability (issue → spec → plan → code), cleans up.
+6. **finishing-a-branch** — Activates when tasks complete. Verifies tests pass, opens PR with full traceability (issue → spec → plan → code), cleans up.
 
 **The agent checks for relevant skills before any task.** These are mandatory workflows, not suggestions.
 
 ## What's Inside
 
-### Skills (16 total)
+### Skills (15 total)
 
 **Workflow**
 - **using-ai-augmented-developer** — Entry point. Ensures skills are invoked before any response.
 - **brainstorming** — Socratic design refinement with hard gate before any code
 - **writing-plans** — Detailed, bite-sized implementation plans with TDD steps
-- **speckit** — Full autodev pipeline: specify → plan → tasks → implement → PR
-- **subagent-driven-development** — Fresh subagent per task with two-stage review
+- **implement** — Fresh subagent per task with two-stage review (spec compliance, then code quality)
 - **test-driven-development** — RED-GREEN-REFACTOR cycle, strictly enforced
 - **systematic-debugging** — 4-phase root cause investigation before any fix
 - **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch
@@ -109,13 +106,9 @@ Start a new session in your chosen platform and ask for something that should tr
 - **django-patterns** — Conventions for apps, models, serializers, views, and URLs
 - **celery-async** — Background task patterns, scheduling, retry logic, and debugging
 
-### Commands (5 total)
+### Commands
 
-- `/brainstorm` — Start a brainstorming session
-- `/write-plan` — Write an implementation plan from an approved spec
-- `/execute-plan` — Execute a plan using subagent-driven development
-- `/speckit` — Run the full SpecKit pipeline (specify → plan → implement → PR)
-- `/debug` — Start systematic debugging
+Skills are invoked directly by name — there are no thin command wrappers in v0.2. Earlier versions shipped `/brainstorm`, `/write-plan`, `/execute-plan`, `/speckit`, `/debug`; these redirected to skills with no added behavior and were removed. Call the skills themselves instead.
 
 ### Agents (3 total)
 

@@ -20,7 +20,7 @@ Every plan MUST start with:
 ```markdown
 # [Feature Name] — Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use `subagent-driven-development` (if subagents available) or execute in current session.
+> **For agentic workers:** REQUIRED: Use `implement` (if subagents available) or execute in current session.
 
 **Branch**: `XXX-<name>` | **Date**: YYYY-MM-DD | **Spec**: [spec.md](spec.md)
 
@@ -173,5 +173,5 @@ After completing each chunk of the plan (≤1000 lines):
 After saving the plan:
 > "Plan complete and saved to `specs/<path>/plan.md`. Ready to execute?"
 
-- **With subagents (Claude Code):** Use `subagent-driven-development` — mandatory standard
+- **With subagents (Claude Code):** Use `implement` — mandatory standard
 - **Without subagents:** Execute in current session step by step

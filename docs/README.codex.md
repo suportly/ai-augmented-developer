@@ -32,7 +32,7 @@ Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai
 
 3. Restart Codex.
 
-4. **For subagent skills** (optional): Skills like `subagent-driven-development` require Codex's collab feature. Add to your Codex config:
+4. **For subagent skills** (optional): Skills like `implement` require Codex's collab feature. Add to your Codex config:
    ```toml
    [features]
    collab = true

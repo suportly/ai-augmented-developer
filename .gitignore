@@ -4,3 +4,6 @@
 .env
 node_modules/
 __pycache__/
+
+# Local IDE/Claude Code state; not framework content
+.claude/

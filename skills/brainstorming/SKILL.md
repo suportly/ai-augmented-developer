@@ -25,7 +25,7 @@ Every project goes through this process. A one-line change can have unexamined a
 6. **Write spec** — save to `specs/YYYY-MM-DD-<topic>/spec.md`
 7. **Spec review loop** — dispatch spec-document-reviewer subagent until approved
 8. **User reviews spec** — wait for approval before proceeding
-9. **Transition to implementation** — invoke `writing-plans` or `speckit`
+9. **Transition to implementation** — invoke `writing-plans`, then `implement`
 
 ## Process
 
@@ -93,6 +93,6 @@ After design approval:
 ## Transition
 
 After spec is approved:
-- Invoke `speckit` for features with auto-dev pipeline
-- Invoke `writing-plans` for manual implementation
-- **NEVER** invoke implementation skills directly
+- Invoke `writing-plans` to produce `plan.md` + `tasks.md`.
+- Then invoke `implement` to execute with subagent-driven-development.
+- **NEVER** skip `writing-plans` and go straight to `implement`.

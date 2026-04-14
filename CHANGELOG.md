@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Governance baseline: `CREDITS.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `VERSION`, `.editorconfig`.
 - Attribution to `obra/superpowers`, `github/spec-kit`, `contains-studio/agents`, and StriveX internal playbooks.
+- `skills/implement/` — replaces `speckit` + `subagent-driven-development` with a single execution skill focused on plan + tasks already approved.
+
+### Changed
+
+- `skills/using-ai-augmented-developer/SKILL.md` rewritten: removed the "1% / ABSOLUTELY MUST / NOT NEGOTIABLE" tone, removed the directive that blocked clarifying questions, and clarified that the skill rule only gates **write actions** (not research or questions).
+- README skills section and skill count (now 15) aligned with the new `implement` skill and the removal of the command wrappers.
+- `CLAUDE.md` workflow diagram and "Start Here" table updated to point at `implement`.
+
+### Removed
+
+- `skills/speckit/` and `skills/subagent-driven-development/` (merged into `skills/implement/`).
+- `commands/` directory and its five wrappers (`/brainstorm`, `/write-plan`, `/execute-plan`, `/speckit`, `/debug`) — they were one-line redirects to skills with no added behavior. Skills are invoked directly now.
 
 ### Planned for 0.2.0
 
@@ -24,12 +36,10 @@ See [implementation plan](https://github.com/alairjt/ai-augmented-developer/blob
 - Python CLI `aiadev` with `init`, `validate`, `install`, `doctor` commands.
 - Automated CI validation via `.github/workflows/validate.yml`.
 
-### Planned breaking changes in 0.2.0
+### Planned breaking changes still on the v0.2.0 roadmap
 
-- `skills/speckit/` and `skills/subagent-driven-development/` merged into `skills/implement/`.
-- `skills/brainstorming/` and `skills/writing-plans/` replaced by `skills/specify/` + `skills/plan/`.
-- `commands/` wrappers removed; skills invoked directly.
-- Root `CLAUDE.md` rewritten as stack-agnostic; Django-specific content moved to `presets/django-drf-react/`.
+- `skills/brainstorming/` and `skills/writing-plans/` to be replaced by `skills/specify/` + `skills/plan/` (phase 3).
+- Root `CLAUDE.md` rewritten as stack-agnostic; Django-specific content moved to `presets/django-drf-react/` (phase 4).
 
 A migration script (`scripts/migrate-to-0.2.sh`) will be provided to install the Django preset automatically for users on v0.1.
 

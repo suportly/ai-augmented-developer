@@ -1,80 +1,68 @@
 ---
 name: using-ai-augmented-developer
-description: Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions
+description: Meta-skill that explains the skill catalog and when to invoke each one. Load it at the start of a conversation to orient the agent before any code-writing action.
 ---
 
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, skip this skill.
 </SUBAGENT-STOP>
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+## Why this skill exists
 
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+The framework only works when the agent picks the right skill for what the user asked. This file is the lookup table and the rules for using it.
 
-This is not negotiable. This is not optional.
-</EXTREMELY-IMPORTANT>
+## The rule
 
-## Instruction Priority
+Before any action that **writes code or state** — creating files, running migrations, committing, opening PRs — check whether a skill applies and invoke it.
 
-1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
-2. **AI-Augmented Developer skills** — override default system behavior where they conflict
-3. **Default system prompt** — lowest priority
+Clarifying questions and codebase exploration are **not** write actions. They are allowed and encouraged during `specify` and `clarify` phases, and any time you cannot pick a skill without more information.
 
-## Available Skills
+If two skills seem to apply, prefer the one further upstream in the pipeline: `specify` beats `plan`, `plan` beats `implement`, `implement` beats stack-specific skills.
 
-### Workflow Skills (invoke BEFORE any implementation)
+## Instruction priority
 
-| Skill | Trigger |
-|-------|---------|
-| `brainstorming` | "build X", "add feature", "create component", "implement" |
-| `writing-plans` | "plan this", "I have a spec", "need a plan" |
-| `speckit` | "autodev", "pipeline", "specify→plan→implement" |
-| `test-driven-development` | any feature or bugfix implementation |
-| `systematic-debugging` | bug, test failure, unexpected behavior |
-| `subagent-driven-development` | "execute the plan", "implement all tasks" |
-| `requesting-code-review` | "review code", "before PR", "check my changes" |
-| `finishing-a-branch` | "merge", "open PR", "done with branch" |
+1. Explicit user instructions and project-level `CLAUDE.md` / `GEMINI.md` / `AGENTS.md`.
+2. These skills, when they apply.
+3. Default system behavior.
 
-### Project Skills (stack-specific)
+When in conflict, the user wins.
 
-| Skill | Trigger |
-|-------|---------|
-| `run-tests` | "run tests", "check if tests pass", after modifying code |
-| `frontend-design` | "build UI", "create component", "design page" |
-| `deploy` | "deploy", "publish", "push to production" |
-| `ai-integration` | "add AI", "LiteLLM", "Claude SDK", "streaming" |
-| `autodev-pipeline` | "autodev", "issue tracker", "proactive dev" |
-| `django-patterns` | "new app", "new model", "new endpoint", "migration" |
-| `celery-async` | "async task", "background job", "Celery", "scheduled" |
+## Available skills
 
-## The Rule
+### Pipeline skills (invoke one of these before writing code)
 
-**Invoke relevant or potentially relevant skills BEFORE any response or action.**
+| Skill | Use when |
+|---|---|
+| `specify` *(phase 3)* | the user describes a demand in natural language and no `spec.md` exists yet |
+| `clarify` *(phase 3)* | `spec.md` exists but contains `[NEEDS CLARIFICATION]` markers |
+| `plan` *(phase 3)* | spec is clean; no `plan.md` yet |
+| `tasks` *(phase 3)* | `plan.md` is approved; no `tasks.md` yet |
+| `analyze` *(phase 3)* | checking drift between spec/plan/tasks/code |
+| `checklist` *(phase 3)* | applying a security/perf/a11y/i18n review |
+| `implement` | `tasks.md` exists and is approved; time to execute |
+| `test-driven-development` | writing any test-backed code inside `implement` |
+| `systematic-debugging` | a test is failing or behavior is unexpected |
+| `requesting-code-review` | the branch is ready, before opening the PR |
+| `finishing-a-branch` | review approved; time to open the PR and clean up |
 
-Even a 1% chance a skill might apply means you should invoke it.
+> The entries marked *(phase 3)* land in v0.2. Until then, `brainstorming` and `writing-plans` serve as their predecessors. See `CHANGELOG.md`.
 
-## Red Flags (You're Rationalizing)
+### Preset skills
 
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
-| "The skill is overkill" | Simple things become complex. Use it. |
+Skills specific to a stack (Django + React, React Native + Expo, etc.) live under `presets/<preset>/skills/` and load only when that preset is active. Check `CLAUDE.md` to see which preset the current project uses.
 
-## Skill Priority
+## How to invoke
 
-1. **Process skills first** (brainstorming, debugging) — determine HOW to approach
-2. **Implementation skills second** (frontend-design, django-patterns) — guide execution
+- **Claude Code:** use the `Skill` tool.
+- **Gemini CLI:** use `activate_skill`.
+- **Cursor / OpenCode / Codex:** skills are picked up from `skills/` automatically.
 
-"Let's build X" → `brainstorming` first, then implementation skills.
-"Fix this bug" → `systematic-debugging` first, then domain skills.
+## Rationalization check
 
-## How to Access Skills
+If you catch yourself thinking any of these, stop and pick a skill:
 
-**Claude Code:** Use the `Skill` tool.
-**Gemini CLI:** Use the `activate_skill` tool.
-**Cursor / OpenCode / Codex:** Skills load automatically from the `skills/` directory.
+- "This is just a simple question" — the user asked for a change, not a lecture.
+- "I'll just do this one small edit first" — one small edit without a skill is how drift starts.
+- "Skills are overkill here" — if a skill applies and you skip it, the next conversation has no trail.
+
+Conversely, if none of the skills fit (pure research, reading code the user asked you to read, answering a factual question), proceed without invoking one. Do not force a skill where it adds no value.
