@@ -20,6 +20,7 @@ from ..variable_prompt import VariableError, collect, merge_vars_strings
 # Hyphenated names the user types -> module names used by the engine.
 _PLATFORM_ALIASES = {
     "claude-code": "claude_code",
+    "cursor": "cursor",
 }
 _PLATFORM_CHOICES = tuple(_PLATFORM_ALIASES)
 
@@ -36,7 +37,7 @@ _PLATFORM_CHOICES = tuple(_PLATFORM_ALIASES)
     type=click.Choice(_PLATFORM_CHOICES),
     default="claude-code",
     show_default=True,
-    help="Target platform. Only claude-code is wired in v0.3.",
+    help="Target platform. claude-code (default) and cursor are wired; more in v0.5.",
 )
 @click.option(
     "--vars",
