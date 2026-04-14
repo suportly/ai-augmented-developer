@@ -155,5 +155,6 @@ jobs:
             --exclude-path templates
             --exclude "^https://github.com/alairjt/ai-augmented-developer"
             --exclude "^https://github.com/suportly/ai-augmented-developer"
+            --exclude "^https://pypi.org/manage/"
             './**/*.md'
           fail: true
