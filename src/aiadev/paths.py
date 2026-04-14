@@ -19,18 +19,42 @@ class FrameworkNotFound(RuntimeError):
     """Raised when ``aiadev`` cannot locate the framework root."""
 
 
+def _is_framework_root(candidate: pathlib.Path) -> bool:
+    return (
+        (candidate / "constitution.md").is_file()
+        and (candidate / "templates").is_dir()
+    )
+
+
 def find_framework_root(start: pathlib.Path | None = None) -> pathlib.Path:
     """Return the directory containing ``constitution.md`` and ``templates/``.
 
-    Walks up from ``start`` (default: cwd). Raises ``FrameworkNotFound``
-    if no ancestor qualifies.
+    Resolution order:
+
+    1. ``AIADEV_ROOT`` environment variable, when set and valid.
+    2. Walk up from ``start`` (default: cwd).
+    3. Git toplevel of ``start``, when inside a repo.
+    4. The directory where the installed ``aiadev`` package lives — lets
+       ``pip install -e .`` consumers run the CLI from anywhere.
+
+    Raises :class:`FrameworkNotFound` if none of those qualify.
     """
+    env_root = os.environ.get("AIADEV_ROOT")
+    if env_root:
+        candidate = pathlib.Path(env_root).expanduser().resolve()
+        if _is_framework_root(candidate):
+            return candidate
+        # An explicit AIADEV_ROOT that does not satisfy the check is a
+        # user mistake, not an invitation to keep looking.
+        raise FrameworkNotFound(
+            f"AIADEV_ROOT={candidate} does not contain constitution.md + templates/"
+        )
+
     here = (start or pathlib.Path.cwd()).resolve()
     for candidate in [here, *here.parents]:
-        if (candidate / "constitution.md").is_file() and (candidate / "templates").is_dir():
+        if _is_framework_root(candidate):
             return candidate
-    # Fallback: git toplevel, in case the user runs aiadev from a deep
-    # subdirectory that predates the constitution.md landing.
+
     try:
         toplevel = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -39,15 +63,22 @@ def find_framework_root(start: pathlib.Path | None = None) -> pathlib.Path:
             text=True,
         ).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
-        raise FrameworkNotFound(
-            "could not find constitution.md and templates/ in any parent of "
-            f"{here}"
-        )
-    top = pathlib.Path(toplevel)
-    if (top / "constitution.md").is_file() and (top / "templates").is_dir():
-        return top
+        toplevel = ""
+    if toplevel:
+        top = pathlib.Path(toplevel)
+        if _is_framework_root(top):
+            return top
+
+    # Package-location fallback: paths.py lives at src/aiadev/paths.py, so
+    # parents[2] is the repo root when installed in editable mode.
+    package_candidate = pathlib.Path(__file__).resolve().parents[2]
+    if _is_framework_root(package_candidate):
+        return package_candidate
+
     raise FrameworkNotFound(
-        f"git toplevel {top} does not contain constitution.md + templates/"
+        "could not locate the aiadev framework root. Looked at AIADEV_ROOT, "
+        f"every parent of {here}, the git toplevel, and the package install "
+        f"location. None contained constitution.md + templates/."
     )
 
 
