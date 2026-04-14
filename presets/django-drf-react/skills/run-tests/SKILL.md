@@ -44,9 +44,9 @@ cd frontend && npx jest --watch
 
 ### Mobile (RNTL)
 ```bash
-cd StriveXMobile && npx jest --no-coverage
+cd <mobile-dir> && npx jest --no-coverage
 # Specific file:
-cd StriveXMobile && npx jest --no-coverage <path>
+cd <mobile-dir> && npx jest --no-coverage <path>
 ```
 
 ### Type Check (no test runner needed)

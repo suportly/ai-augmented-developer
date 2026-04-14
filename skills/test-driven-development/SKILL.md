@@ -147,7 +147,7 @@ cd frontend && npx jest --no-coverage src/__tests__/MyComponent.test.tsx
 ### Mobile React Native (RNTL)
 
 ```typescript
-// Location: StriveXMobile/src/__tests__/<Screen>.test.tsx
+// Location: <mobile-dir>/src/__tests__/<Screen>.test.tsx
 import { render, screen } from '@testing-library/react-native';
 import { MyScreen } from '../screens/MyScreen';
 
@@ -160,7 +160,7 @@ test('should render items list', async () => {
 
 **Run:**
 ```bash
-cd StriveXMobile && npx jest --no-coverage src/__tests__/MyScreen.test.tsx
+cd <mobile-dir> && npx jest --no-coverage src/__tests__/MyScreen.test.tsx
 ```
 
 ## Exceptions (Ask the User)

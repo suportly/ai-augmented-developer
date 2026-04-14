@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- `skills/test-driven-development/SKILL.md`, `presets/django-drf-react/skills/run-tests/SKILL.md`, and `presets/django-drf-react/skills/deploy/SKILL.md` had leftover `StriveXMobile` path references that escaped the phase-8b scrub. Replaced with the generic `<mobile-dir>` placeholder.
+- `agents/README.md` and root `CLAUDE.md` referenced the pre-rename `strivex-stack` preset and "phase N of the v0.2 refactor" language that is no longer accurate after the release. Rewritten to point at `mobile-ops` and to drop completed-phase callouts.
 
 ## [0.2.0] - 2026-04-14
 

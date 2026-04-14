@@ -79,7 +79,7 @@ gcloud run deploy frontend --image $IMAGE --region <region>
 
 ### Pre-flight
 ```bash
-cd StriveXMobile
+cd <mobile-dir>
 # Verify versions are synced
 cat app.json | grep -A3 '"android"'
 cat android/app/build.gradle | grep versionCode
@@ -93,7 +93,7 @@ cat android/app/build.gradle | grep versionCode
 
 ### Build AAB
 ```bash
-cd StriveXMobile && eas build --platform android --profile production --local
+cd <mobile-dir> && eas build --platform android --profile production --local
 # Timeout: ~10 minutes. Run in background.
 ```
 
@@ -108,7 +108,7 @@ eas submit --platform android --latest
 
 ### Build (cloud, no Mac required)
 ```bash
-cd StriveXMobile && eas build --platform ios --profile production --non-interactive
+cd <mobile-dir> && eas build --platform ios --profile production --non-interactive
 # Runs ~15-20 min in EAS cloud. Monitor:
 eas build:list --platform ios --limit 1
 ```
@@ -127,7 +127,7 @@ Only for TypeScript/JavaScript changes. Native changes (new packages, AndroidMan
 
 ### Publish
 ```bash
-cd StriveXMobile && eas update --branch production --message "<description of changes>"
+cd <mobile-dir> && eas update --branch production --message "<description of changes>"
 # Verify:
 eas update:list --branch production --limit 1
 ```

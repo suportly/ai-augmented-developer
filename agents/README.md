@@ -38,19 +38,18 @@ In the meantime, projects that want those agents can either:
 1. Fork the upstream into their own repository and reference it as an
    external tool.
 2. Author their own discipline-specific agents under
-   `presets/<preset>/agents/<discipline>/` (the StriveX preset, shipped
-   via phase 8b of the v0.2 refactor, takes this route — its agents are
-   heavily tailored to the StriveX stack and are not generic).
-3. Wait for the extensions system (phase 7 of the v0.2 refactor) to
-   make third-party catalogs installable via
-   `aiadev extension install contains-studio-agents`.
+   `presets/<preset>/agents/<discipline>/`. No preset currently ships
+   bundled discipline agents in v0.2.
+3. Wait for the extensions system (planned for v0.3) to make third-party
+   catalogs installable via `aiadev extension install <name>`.
 
 ## Stack-specific agents
 
-Stack-specific agents live with their preset. At the time of writing:
-
-- `presets/strivex-stack/agents/` (introduced in phase 8b) will ship
-  Django + React Native + Expo agents tailored to the StriveX stack.
+Stack-specific agents live with their preset (`presets/<preset>/agents/`).
+No preset ships discipline-level agents in v0.2; `presets/mobile-ops/`
+only carries operational skills. Preset maintainers are free to add
+agents tailored to their stack, but they should not duplicate the three
+framework-native reviewers listed above.
 
 ## Contributing
 

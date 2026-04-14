@@ -50,7 +50,7 @@ specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  imple
 - [`presets/<preset>/skills/`](./presets) — stack-specific skills loaded only when that preset is active.
 - [`templates/`](./templates) — canonical artifact shapes produced by the pipeline skills.
 - [`schemas/`](./schemas) — JSON Schemas for skill frontmatter, preset catalog, and other machine-checkable contracts.
-- [`scripts/`](./scripts) — provisional validators until `aiadev` ships (phase 5 of the v0.2 refactor).
+- [`scripts/`](./scripts) — zero-install fallbacks (`validate_skills.py`, `migrate-to-0.2.sh`); the canonical path is `aiadev` (installed via `pip install -e '.[dev]'` or a PyPI release).
 - [`agents/`](./agents) — bundled subagent definitions.
 
 ## Repository-local commands
