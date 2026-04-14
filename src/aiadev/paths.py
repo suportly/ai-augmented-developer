@@ -75,10 +75,19 @@ def find_framework_root(start: pathlib.Path | None = None) -> pathlib.Path:
     if _is_framework_root(package_candidate):
         return package_candidate
 
+    # Wheel install fallback: the assets bundled inside the package live
+    # at ``aiadev/_assets/`` (populated by scripts/sync_assets.py before
+    # the wheel is built). This is the path that lets ``pip install
+    # aiadev`` work without a framework checkout on disk.
+    bundled_assets = pathlib.Path(__file__).resolve().parent / "_assets"
+    if _is_framework_root(bundled_assets):
+        return bundled_assets
+
     raise FrameworkNotFound(
         "could not locate the aiadev framework root. Looked at AIADEV_ROOT, "
-        f"every parent of {here}, the git toplevel, and the package install "
-        f"location. None contained constitution.md + templates/."
+        f"every parent of {here}, the git toplevel, the package install "
+        "location, and the wheel-bundled _assets/. None contained "
+        "constitution.md + templates/."
     )
 
 
