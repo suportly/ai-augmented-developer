@@ -16,13 +16,15 @@ Where we copy verbatim (for example markdownlint config or template scaffolds), 
 
 ## Bundled catalogs
 
-### [contains-studio/agents](https://github.com/contains-studio/agents)
+### [contains-studio/agents](https://github.com/contains-studio/agents) — not bundled
 
-The 36-agent multi-discipline catalog shipped under `agents/` (design, engineering, marketing, studio-operations, testing, project-management, product) originates in contains-studio's open collection. We import fixed versions; drift is tracked in `CHANGELOG.md` under "Bundled catalog updates".
+A widely-referenced community catalog of multi-discipline subagents (design, engineering, marketing, studio-operations, testing, project-management, product). We **do not bundle** it: the upstream has no visible license at the time of writing, and Article VII (Attribution) requires a citable license before redistribution. The catalog is documented in [`agents/README.md`](./agents/README.md) as an opt-in external catalog; a future extension (phase 7) will make it installable from a licensed fork.
 
 ### StriveX / Suportly internal playbooks
 
 The operational skills in `presets/strivex-stack/` (deploy-backend, build-ios, build-android, submit-*, ota-update, release-notes, bump-version) are generalized versions of runbooks originally written inside the StriveX project at Suportly. They have been parameterized (`{{BACKEND_DIR}}`, `{{GCP_PROJECT}}`, etc.) so they can be reused outside that codebase.
+
+The StriveX project also ships heavily-customized subagents (backend-architect, frontend-developer, mobile-app-builder, etc.) based on the contains-studio format but rewritten for the StriveX stack (Django 5.2, Cloud Run, Gemini API, SimpleJWT). Those land in `presets/strivex-stack/agents/` in phase 8b of the v0.2 refactor — not at the framework root, because they are stack-specific by construction.
 
 ## Reporting attribution gaps
 

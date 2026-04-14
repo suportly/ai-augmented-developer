@@ -56,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BREAKING CHANGE: Projects that relied on importing the stack skills from `skills/django-patterns/` (and siblings) must either install the `django-drf-react` preset or move the files into their own project. The migration script covers the common case.
 
+### Agents catalog strategy (phase 8a)
+
+- `agents/README.md` documents the two-tier structure: framework-native agents at the top of `agents/` and preset-specific agents under `presets/<preset>/agents/`.
+- **The contains-studio multi-discipline catalog is intentionally not bundled.** The upstream has no visible license; Article VII forbids redistribution without one. Users who want that catalog can fork upstream, author their own, or wait for the extensions system (phase 7) to install licensed forks.
+- `CREDITS.md` updated to reflect reality: contains-studio listed as an opt-in external catalog rather than a bundled dependency; StriveX-origin subagents noted as destined for `presets/strivex-stack/agents/` in phase 8b (stack-specific, not framework-generic).
+
 ### Changed
 
 - `skills/using-ai-augmented-developer/SKILL.md` rewritten: removed the "1% / ABSOLUTELY MUST / NOT NEGOTIABLE" tone, removed the directive that blocked clarifying questions, and clarified that the skill rule only gates **write actions** (not research or questions).
