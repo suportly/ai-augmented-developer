@@ -34,11 +34,14 @@ from .install_manifest import (
     save as save_manifest,
 )
 from .placeholders import find_unresolved, substitute
-from .platforms import claude_code
+from .platforms import claude_code, cursor
 
 MANIFEST_REL_PATH = Path(".aiadev") / "installed.yaml"
 
-_PLATFORMS = {"claude_code": claude_code}
+_PLATFORMS = {
+    "claude_code": claude_code,
+    "cursor": cursor,
+}
 
 
 class InstallMode(str, Enum):

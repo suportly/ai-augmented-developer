@@ -244,6 +244,29 @@ class TestUninstall:
         assert (tmp_path / "CLAUDE.md").exists()
 
 
+class TestCursorPlatform:
+    def test_cursor_install_writes_agents_md(
+        self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(isolated_framework)
+        result = _invoke(
+            CliRunner(),
+            tmp_path,
+            "--preset",
+            "lean",
+            "--platform",
+            "cursor",
+            "--non-interactive",
+            "--vars",
+            "PROJECT_NAME=Demo",
+        )
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "AGENTS.md").is_file()
+        # Claude Code's CLAUDE.md must NOT appear.
+        assert not (tmp_path / "CLAUDE.md").exists()
+        assert "Demo" in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+
+
 class TestNonRequiredVars:
     def test_optional_var_defaults_to_empty_string_in_non_interactive(
         self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
