@@ -70,6 +70,15 @@ BREAKING CHANGE: Projects that relied on importing the stack skills from `skills
 - Test fixtures under `tests/fixtures/` for the four validator failure modes (missing frontmatter, mismatched name, short description, valid).
 - `.gitignore` updated to skip Python build artifacts (`*.egg-info/`, `.pytest_cache/`, `.coverage`, `htmlcov/`, `dist/`, `build/`).
 
+### CI extended with the CLI (phase 6b)
+
+- `.github/workflows/validate.yml` now installs the `aiadev` package and uses the CLI instead of the provisional `scripts/validate_skills.py`:
+  - **skills**: `aiadev validate` on Python 3.11 and 3.12 (matrix).
+  - **tests**: `pytest --cov=src/aiadev --cov-fail-under=80` on Python 3.11 and 3.12 (matrix). Merges fail below 80% coverage.
+  - **doctor**: `aiadev doctor` end-to-end check.
+  - Existing **markdown**, **clarifications**, and **links** jobs kept unchanged.
+- Pip cache enabled for all Python jobs to keep CI runs under a minute on cache hits.
+
 ### `mobile-ops` preset (phase 8b)
 
 - `presets/mobile-ops/` — 11 operational runbook skills for the "Cloud Run backend + Expo mobile on EAS + React admin" shape. Skills adapted from internal StriveX playbooks but fully genericized: no project-specific name, domain, or path survives in the preset.
