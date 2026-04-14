@@ -7,14 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.8.0] - 2026-04-14
+
+Extensions system MVP. Third-party preset catalogs become installable.
+
 ### Added
 
-- **Extensions system MVP.** `aiadev extension <add|list|remove>` lets users install third-party preset catalogs from any git URL. Extensions land at `~/.aiadev/extensions/<name>/`; the registry at `~/.aiadev/extensions/registry.yaml` records each install. `aiadev install --preset <name>` falls back to extension-provided presets when no built-in matches; built-in presets win on name collision and the user is told when an extension is shadowed.
+- **`aiadev extension <add|list|remove>`** lets users install third-party preset catalogs from any git URL. Extensions land at `~/.aiadev/extensions/<name>/`; the registry at `~/.aiadev/extensions/registry.yaml` records each install. `aiadev install --preset <name>` falls back to extension-provided presets when no built-in matches; built-in presets win on name collision and the user is told when an extension is shadowed.
 - `src/aiadev/extensions.py` (~140 stmts, 89% coverage): `add(url)`, `list_all()`, `remove(name)`, `find_preset(preset_name)`, `load_extension_manifest(dir)`. Atomic registry write mirrors the install manifest pattern.
 - `src/aiadev/commands/extension.py`: click group with `add URL`, `list`, `remove NAME` subcommands; rich.Table output for `list`.
 - `schemas/extension-manifest.schema.json`: declared shape of the `extension.yaml` an extension repo must ship at its root (name, version, optional description / homepage / presets list).
 - `tests/fixtures/extensions/sample-extension/`: tiny extension fixture (extension.yaml + presets/sample/{preset.yaml, CLAUDE.md, skills/hello/SKILL.md}).
 - E2E round-trip test exercises `extension add` -> `install --preset` -> `install --uninstall` -> `extension remove` against a fake `$HOME`. The real home is never touched.
+- README gains an "Extensions (third-party presets)" subsection with one example and a security caveat.
 
 ### Changed
 
@@ -231,7 +238,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.4.0...v0.5.0
