@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.7.0] - 2026-04-14
+
+PyPI distribution. `pip install aiadev` works after the v0.7.0 release event triggers the new publish workflow.
+
 ### Added
 
-- **PyPI distribution.** `pip install aiadev` now works (or will, after the v0.7.0 release tag triggers the publish workflow). Wheel ships the framework's `constitution.md`, `templates/`, `schemas/`, `skills/`, `presets/`, and `agents/` so the CLI runs anywhere — no checkout required. `aiadev doctor` resolves the framework root from the bundled `_assets/` directory.
+- **PyPI distribution.** Wheel ships the framework's `constitution.md`, `templates/`, `schemas/`, `skills/`, `presets/`, and `agents/` so the CLI runs anywhere — no checkout required. `aiadev doctor` resolves the framework root from the bundled `_assets/` directory.
 - `scripts/sync_assets.py` copies the source-of-truth dirs into `src/aiadev/_assets/` before `python -m build`. The destination is gitignored; run it whenever the source dirs change.
 - `MANIFEST.in` ships the same trees in the sdist.
 - `pyproject.toml` declares the new `package-data`, `include-package-data`, and `[project.optional-dependencies].dev` now includes `build`.
@@ -21,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `find_framework_root` gained a final fallback: `aiadev/_assets/` adjacent to the installed package. Previous fallbacks (env var, parent walk, git toplevel, `parents[2]` editable install) are preserved.
+
+### Fixed
+
+- `.github/workflows/validate.yml` link-check now excludes `https://pypi.org/manage/` URLs (they require auth and 404 to anonymous probes; they appear in `docs/RELEASING.md` as instructions for the maintainer).
 
 ## [0.6.0] - 2026-04-14
 
@@ -210,7 +220,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.3.0...v0.4.0
