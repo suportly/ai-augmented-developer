@@ -56,6 +56,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 BREAKING CHANGE: Projects that relied on importing the stack skills from `skills/django-patterns/` (and siblings) must either install the `django-drf-react` preset or move the files into their own project. The migration script covers the common case.
 
+### Python CLI `aiadev` (phase 5)
+
+- `pyproject.toml` declares the `aiadev` package (Python 3.11+) with dependencies on `click`, `pyyaml`, `jsonschema`, and `rich`. Version sourced dynamically from the root `VERSION` file. Console script entry point: `aiadev = aiadev.cli:main`.
+- `src/aiadev/` package with four subcommands:
+  - `aiadev validate [paths]` — runs the same schema check as `scripts/validate_skills.py` but with a richer UI and proper exit codes. Walks `skills/` and `presets/*/skills/`.
+  - `aiadev init --feature <name>` — creates `specs/feature-<slug>/{spec,plan,tasks}.md` from the templates with placeholders substituted (feature name, branch, date, monotonic spec id). Creates the git branch by default; `--branch -` keeps the current branch, `--no-git` skips branching, `--dry-run` prints without acting.
+  - `aiadev install --platform --preset` — stub for v0.2 that lists the preset contents it would install; real install lands in v0.3.
+  - `aiadev doctor` — runs every validator in order (constitution presence, templates completeness, catalog resolution, skill validation) and returns a single verdict.
+- `src/aiadev/paths.py` — framework-root detection (walks up looking for `constitution.md` + `templates/`, falls back to git toplevel).
+- `src/aiadev/validate.py` — shared validation core returning a structured `ValidationReport`.
+- `tests/` with 20 tests covering validator, init, install, doctor, and the CLI entry point. 84% line coverage of the package.
+- Test fixtures under `tests/fixtures/` for the four validator failure modes (missing frontmatter, mismatched name, short description, valid).
+- `.gitignore` updated to skip Python build artifacts (`*.egg-info/`, `.pytest_cache/`, `.coverage`, `htmlcov/`, `dist/`, `build/`).
+
 ### Agents catalog strategy (phase 8a)
 
 - `agents/README.md` documents the two-tier structure: framework-native agents at the top of `agents/` and preset-specific agents under `presets/<preset>/agents/`.

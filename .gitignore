@@ -4,6 +4,13 @@
 .env
 node_modules/
 __pycache__/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
 
 # Local IDE/Claude Code state; not framework content
 .claude/
+.venv/
