@@ -1,0 +1,82 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  skills:
+    name: skills frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependencies
+        run: pip install pyyaml jsonschema
+
+      - name: Validate every SKILL.md
+        run: python3 scripts/validate_skills.py
+
+  markdown:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: "**/*.md"
+
+  clarifications:
+    name: no lingering [NEEDS CLARIFICATION]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grep for unresolved clarification markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A spec or plan with unresolved [NEEDS CLARIFICATION: ...]
+          # markers is, by Article I of the constitution, not approved.
+          # Allowed inside templates/ (scaffolding) and inside
+          # CONTRIBUTING.md / CHANGELOG.md / skills/ (where they are
+          # documented as a convention, not left unresolved).
+          offenders=$(git grep -n -E '\[NEEDS CLARIFICATION' \
+            -- 'specs/**' \
+            ':(exclude)templates/' \
+            ':(exclude)CONTRIBUTING.md' \
+            ':(exclude)CHANGELOG.md' \
+            ':(exclude)skills/**' || true)
+          if [ -n "$offenders" ]; then
+            echo "Unresolved clarification markers found:" >&2
+            echo "$offenders" >&2
+            exit 1
+          fi
+
+  links:
+    name: link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose
+            --no-progress
+            --max-concurrency 4
+            --exclude-path node_modules
+            --exclude-path .venv
+            --exclude-path .claude
+            --exclude "^https://github.com/alairjt/ai-augmented-developer"
+            './**/*.md'
+          fail: true

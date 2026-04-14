@@ -1,0 +1,40 @@
+{
+  // Markdownlint config. Kept lenient on purpose — the point is to catch
+  // genuine mistakes (broken tables, malformed links, duplicate headings),
+  // not to enforce a house style that fights the content of SKILL.md files.
+  "config": {
+    "default": true,
+
+    // Line length: SKILL.md prose often wraps at ~100; don't fight that.
+    "MD013": false,
+
+    // Allow inline HTML (used for collapsible sections and <SUBAGENT-STOP>).
+    "MD033": false,
+
+    // Allow bare URLs inside prose (common in CREDITS / README).
+    "MD034": false,
+
+    // First line does not need to be a top-level heading (skills start
+    // with YAML frontmatter).
+    "MD041": false,
+
+    // Duplicate headings across sibling sections are common in
+    // templates (every article has "Rationale"), allow them.
+    "MD024": { "siblings_only": true },
+
+    // Allow emphasis as a heading (used sparingly).
+    "MD036": false,
+
+    // Trailing punctuation in headings is fine (e.g. "Why?").
+    "MD026": false
+  },
+  "ignores": [
+    "node_modules/",
+    ".venv/",
+    "venv/",
+    ".claude/",
+    "presets/**/skills/",
+    // Ignore Markdown inside code fences of other Markdown files.
+    "**/CHANGELOG.md.bak"
+  ]
+}

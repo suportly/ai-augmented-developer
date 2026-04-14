@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `skills/brainstorming/` and `skills/writing-plans/` — replaced by `specify`, `clarify`, `plan`, and `tasks`.
 
+### CI and tooling
+
+- `.github/workflows/validate.yml` — four jobs on every push and PR:
+  - `skills`: runs `scripts/validate_skills.py` against the JSON Schema.
+  - `markdown`: `markdownlint-cli2` over `**/*.md` with a lenient config (`.markdownlint-cli2.jsonc`) tuned for prose-heavy SKILL.md files.
+  - `clarifications`: `git grep` that fails the build if any file under `specs/` still contains a `[NEEDS CLARIFICATION: …]` marker (Article I enforcement).
+  - `links`: `lychee` checks internal and external links in every Markdown file.
+- `.github/PULL_REQUEST_TEMPLATE.md` — PR template with the Constitution Check, Complexity Tracking, and explicit Test Plan with evidence (Article IV).
+- `.markdownlint-cli2.jsonc` — project-wide markdownlint config.
+
 ### Changed
 
 - `skills/using-ai-augmented-developer/SKILL.md` rewritten: removed the "1% / ABSOLUTELY MUST / NOT NEGOTIABLE" tone, removed the directive that blocked clarifying questions, and clarified that the skill rule only gates **write actions** (not research or questions).
