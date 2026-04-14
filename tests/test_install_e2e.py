@@ -340,6 +340,85 @@ def test_user_scope_round_trip_with_fake_home(
     assert not (fake_home / ".aiadev").exists()
 
 
+def test_extension_round_trip(
+    aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> None:
+    """End-to-end: extension add -> install --preset (from extension) -> uninstall.
+
+    Uses the `aiadev extension` CLI subcommand and the `aiadev install`
+    command via CliRunner; HOME is monkeypatched so the real
+    ~/.aiadev/extensions/ is never touched.
+    """
+    import shutil
+    import subprocess
+
+    from aiadev.commands.extension import extension_command
+
+    fake_home = tmp_path / "fake-home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: fake_home))
+
+    fixture = (
+        pathlib.Path(__file__).parent
+        / "fixtures"
+        / "extensions"
+        / "sample-extension"
+    )
+
+    work = tmp_path / "ext-work"
+    bare = tmp_path / "ext-source.git"
+    shutil.copytree(fixture, work)
+    subprocess.check_call(["git", "init", "-q", "-b", "main"], cwd=str(work))
+    subprocess.check_call(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "."],
+        cwd=str(work),
+    )
+    subprocess.check_call(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"],
+        cwd=str(work),
+    )
+    subprocess.check_call(
+        ["git", "init", "--bare", "-q", "-b", "main", str(bare)],
+    )
+    subprocess.check_call(
+        ["git", "remote", "add", "origin", str(bare)], cwd=str(work)
+    )
+    subprocess.check_call(["git", "push", "-q", "origin", "main"], cwd=str(work))
+
+    runner = CliRunner()
+
+    add = runner.invoke(extension_command, ["add", str(bare)])
+    assert add.exit_code == 0, add.output
+    assert (fake_home / ".aiadev" / "extensions" / "sample-extension").is_dir()
+
+    project = tmp_path / "ext-project"
+    project.mkdir()
+    install = _invoke_install(
+        runner,
+        project,
+        "--preset",
+        "sample",
+        "--non-interactive",
+        "--vars",
+        "PROJECT_NAME=ExtDemo",
+    )
+    assert install.exit_code == 0, install.output
+    agent = project / "CLAUDE.md"
+    assert agent.is_file()
+    assert "ExtDemo" in agent.read_text(encoding="utf-8")
+
+    uninstall = _invoke_install(
+        runner, project, "--preset", "sample", "--uninstall"
+    )
+    assert uninstall.exit_code == 0, uninstall.output
+    assert not agent.exists()
+
+    remove = runner.invoke(extension_command, ["remove", "sample-extension"])
+    assert remove.exit_code == 0, remove.output
+    assert not (fake_home / ".aiadev" / "extensions" / "sample-extension").exists()
+
+
 def test_module_entrypoint_round_trip(
     aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:
