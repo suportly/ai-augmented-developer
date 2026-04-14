@@ -1,0 +1,19 @@
+name: mini
+version: 1.0.0
+description: Tiny fixture preset used by the install-engine tests.
+
+variables:
+  - name: PROJECT_NAME
+    prompt: Project name
+    required: true
+  - name: GREETING
+    prompt: Greeting word
+    default: Hello
+
+provides:
+  agent_file: CLAUDE.md
+  skills:
+    - skills/hello-world
+
+adds_articles: []
+tightens: []
