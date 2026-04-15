@@ -120,19 +120,26 @@ def test_mobile_ops_preset_smoke(
     assert install.exit_code == 0, install.output
 
     # Every operational skill landed under .claude/skills/.
-    for skill in (
+    preset_skills = (
         "build-android",
         "build-ios",
         "deploy-backend",
         "ota-update",
         "release-notes",
-    ):
+    )
+    for skill in preset_skills:
         assert (project / ".claude" / "skills" / skill / "SKILL.md").is_file()
 
-    # No placeholder survived substitution.
-    for skill_file in (project / ".claude" / "skills").rglob("SKILL.md"):
-        text = skill_file.read_text(encoding="utf-8")
-        assert "{{" not in text.replace("{{{{", "") or "}}" not in text.replace("}}}}", "")
+    # No install-time placeholder survived substitution in preset skills.
+    # Framework-generic skills carry runtime placeholders intentionally
+    # (e.g. {{BRANCH}}, {{TEST_COMMAND}}) so we don't assert over them.
+    import re
+
+    for skill in preset_skills:
+        text = (project / ".claude" / "skills" / skill / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        assert re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", text) is None
 
 
 def test_cursor_platform_round_trip(
@@ -178,14 +185,16 @@ def test_cursor_platform_round_trip(
 
     # Skills under .cursor/skills (Cursor convention), NOT .claude/skills.
     assert not (project / ".claude").exists()
-    for skill in ("build-android", "deploy-backend", "ota-update"):
+    preset_skills = ("build-android", "deploy-backend", "ota-update")
+    for skill in preset_skills:
         assert (project / ".cursor" / "skills" / skill / "SKILL.md").is_file()
 
-    for skill_file in (project / ".cursor" / "skills").rglob("SKILL.md"):
-        text = skill_file.read_text(encoding="utf-8")
-        # No literal {{UPPER_SNAKE}} tokens survived substitution.
-        import re
+    import re
 
+    for skill in preset_skills:
+        text = (project / ".cursor" / "skills" / skill / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
         assert re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", text) is None
 
     # Uninstall cleans up.
@@ -240,13 +249,17 @@ def test_codex_platform_round_trip(
     assert not (project / ".cursor").exists()
     assert not (project / ".claude").exists()
 
-    for skill in ("build-android", "deploy-backend", "ota-update"):
+    preset_skills = ("build-android", "deploy-backend", "ota-update")
+    for skill in preset_skills:
         assert (project / ".codex" / "skills" / skill / "SKILL.md").is_file()
 
-    for skill_file in (project / ".codex" / "skills").rglob("SKILL.md"):
-        import re
+    import re
 
-        assert re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", skill_file.read_text(encoding="utf-8")) is None
+    for skill in preset_skills:
+        text = (project / ".codex" / "skills" / skill / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        assert re.search(r"\{\{[A-Z][A-Z0-9_]*\}\}", text) is None
 
     uninstall = _invoke_install(
         runner, project, "--preset", "mobile-ops", "--platform", "codex", "--uninstall"

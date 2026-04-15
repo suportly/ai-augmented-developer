@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.9.0] - 2026-04-15
+
+Full-install and sync. `aiadev install` now equips a project with the complete pipeline (slash commands + agents + framework-generic skills + coding rules) out of the box, across all 5 platforms. A new `aiadev sync` command pulls framework updates into installed projects and regenerates a detected-stack block inside `CLAUDE.md`.
+
+### Added
+
+- **Three new artifact roles** — `command`, `agent`, `rule` — alongside the existing `agent_file`, `constitution`, and `skill`. `FileRole` in `src/aiadev/install_manifest.py` and the JSON schema at `schemas/install-manifest.schema.json` are both extended; the manifest stays forward-compatible.
+- **Framework-generic scan** (`src/aiadev/framework_artifacts.py`). Every install now also copies the commands/agents/rules/skills that ship with `aiadev` itself, not just the preset's own. Preset artifacts win on `(role, name)` collision.
+- **14 pipeline slash commands** under `commands/` — one per skill (`specify`, `clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`, `constitution`, `finishing-a-branch`, `frontend-design`, `requesting-code-review`, `systematic-debugging`, `test-driven-development`, `using-ai-augmented-developer`) plus `sync`.
+- **3 agents** with proper Claude Code frontmatter (`code-reviewer`, `plan-document-reviewer`, `spec-document-reviewer`).
+- **5 coding rules** under `rules/`: `code-style`, `testing`, `api-conventions`, `security`, `git-workflow`.
+- **`aiadev sync`** command. Re-runs every installed preset (pulling framework updates into the project) and regenerates a `<!-- aiadev:auto-stack:start -->` block inside the agent file from a project introspection (package.json, pyproject.toml, Cargo.toml, go.mod, pubspec.yaml, docker-compose, Makefile, .github/workflows). Flags: `--dry-run`, `--force`, `--skip-artifacts`, `--skip-stack`, `--platform`.
+- **`src/aiadev/project_introspect.py`** with a deterministic `StackReport` dataclass and `apply_stack_block` marker-aware replacer. Content outside the markers is preserved byte-for-byte; when markers are missing, a fresh block is appended and the user is warned.
+- **Platform-specific layouts** for the new roles:
+  - `.claude/commands/*.md`, `.claude/agents/*.md`, `.claude/rules/*.md`.
+  - `.cursor/commands/*.md`, `.cursor/agents/*.md`, `.cursor/rules/*.mdc` (Cursor native rules extension).
+  - `.codex/` and `.opencode/` mirror the Claude Code layout.
+  - `.gemini/commands/*.toml` (Gemini CLI reads TOML — the handler converts markdown via the new `render_target` hook), `.gemini/agents/*.md`, `.gemini/rules/*.md`.
+- Spec `specs/feature-full-install-and-sync/spec.md` captures the feature requirements.
+
+### Changed
+
+- Framework-generic artifacts are copied **verbatim** (no variable substitution, no unresolved-placeholder check). Skills like `specify/SKILL.md` intentionally carry runtime markers such as `{{BRANCH}}` and `{{TEST_COMMAND}}` that the AI fills in at runtime, not at install time. Preset-owned artifacts still pass through `substitute()`.
+- Uninstall climbs empty directories for `skill`, `command`, `agent`, and `rule` roles so `.claude/commands/`, `.claude/rules/`, etc., vanish cleanly when the last file is removed.
+- Platform handlers gain an optional `render_target(role, name, text)` hook; only Gemini overrides it today (to emit TOML commands).
+- User scope now supports `skill`, `command`, `agent`, and `rule` (all shareable, no project-specific variables). `agent_file` and `constitution` remain project-only.
+
 ## [0.8.0] - 2026-04-14
 
 Extensions system MVP. Third-party preset catalogs become installable.

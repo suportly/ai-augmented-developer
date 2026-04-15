@@ -206,6 +206,7 @@ def install_command(
             force=force,
             allow_unresolved=allow_unresolved,
             scope=scope,
+            framework_root=framework_root,
         )
     except InstallError as exc:
         console.print(f"[red]error:[/red] {exc}")

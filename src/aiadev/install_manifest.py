@@ -30,7 +30,15 @@ from jsonschema import Draft202012Validator
 
 from .paths import find_framework_root, schemas_dir
 
-FileRole = Literal["agent_file", "constitution", "skill", "plugin_manifest"]
+FileRole = Literal[
+    "agent_file",
+    "constitution",
+    "skill",
+    "command",
+    "agent",
+    "rule",
+    "plugin_manifest",
+]
 
 
 @dataclass(frozen=True)
@@ -199,4 +207,12 @@ def iter_roles() -> Iterable[str]:
     Exposed so the install engine can assert role validity at write
     time without hard-coding the list.
     """
-    return ("agent_file", "constitution", "skill", "plugin_manifest")
+    return (
+        "agent_file",
+        "constitution",
+        "skill",
+        "command",
+        "agent",
+        "rule",
+        "plugin_manifest",
+    )

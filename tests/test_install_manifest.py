@@ -229,6 +229,9 @@ class TestRolesHelper:
             "agent_file",
             "constitution",
             "skill",
+            "command",
+            "agent",
+            "rule",
             "plugin_manifest",
         }
 

@@ -114,3 +114,10 @@ celery -A config beat -l info
   a new AI model vendor, the second caller rule is relaxed: the interface
   is required by Article V and Article III must yield to it. Document the
   waiver in the plan's Complexity Tracking.
+
+<!-- aiadev:auto-stack:start -->
+## Detected stack
+
+_Run `aiadev sync` to populate this block from the project's
+package.json / pyproject.toml / Makefile / docker-compose / workflows._
+<!-- aiadev:auto-stack:end -->

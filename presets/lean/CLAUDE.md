@@ -32,3 +32,24 @@ own amended `constitution.md` if any.
 
 None shipped by this preset. Add the commands your stack actually uses to
 this file before the first `implement` run — agents rely on them.
+
+## What got installed
+
+The installer dropped the complete framework pipeline into this project:
+
+- `.claude/commands/` — 15 slash commands (pipeline + `/sync`).
+- `.claude/agents/` — 3 reviewer agents (spec, plan, code).
+- `.claude/skills/` — 14 framework-generic skills.
+- `.claude/rules/` — 5 coding rules (code-style, testing, api-conventions,
+  security, git-workflow).
+
+Run `aiadev sync` whenever you pull a new `aiadev` version or edit the
+project's stack so this file's Detected-stack block stays current.
+
+<!-- aiadev:auto-stack:start -->
+## Detected stack
+
+_Run `aiadev sync` to populate this block from your project's
+package.json / pyproject.toml / Makefile / docker-compose / workflows._
+<!-- aiadev:auto-stack:end -->
+
