@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.11.0] - 2026-04-15
+
+MCP (Model Context Protocol) support: declare servers once in `mcps.yaml`, `aiadev install` writes the native config for every target platform.
+
+### Added
+
+- **New `mcp` install role** — seventh citizen alongside `agent_file`, `constitution`, `skill`, `command`, `agent`, `rule`. Manifest literal, JSON schema, role priority, uninstall cleanup, and user-scope eligibility all updated.
+- **Canonical `mcps.yaml`** at the framework root (and optionally at `presets/<preset>/mcps.yaml`) declaring `servers: <name>: {command, args, env}`. Preset servers win on name collision.
+- **`src/aiadev/mcp.py`** loader (`load_servers`, `load_servers_from_text`) with validation that surfaces bad entries instead of silently dropping them.
+- **Per-platform MCP translation** via `render_target` in every handler:
+  - Claude Code → `.mcp.json` (`mcpServers` key).
+  - Cursor → `.cursor/mcp.json` (`mcpServers` key).
+  - Gemini CLI → `.gemini/settings.json` (`mcpServers` key).
+  - Codex → `.codex/config.toml` (`[mcp_servers.<name>]` tables, hand-rolled TOML to avoid adding a writer dependency).
+  - OpenCode → `opencode.json` (`mcp.<name>` with `type: "local"`, `command: [exe, ...args]`, `environment`, `enabled: true`).
+- **`schemas/mcps.schema.json`** — JSON Schema for the canonical declaration.
+- **`tests/test_mcp.py`** — 40 tests covering the loader, per-platform `resolve_target`, `user_scope_supported`, `render_target`, and preset-scan pickup.
+
+### Changed
+
+- Framework-level `mcps.yaml` now ships empty (`servers: {}`) — aiadev is infrastructure-only for MCPs; teams add the servers they want and re-run `aiadev install`.
+
 ## [0.10.0] - 2026-04-15
 
 Namespaced slash commands, numbered spec directories, and a `--language` flag for `aiadev init`.

@@ -15,7 +15,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
-ArtifactRole = Literal["command", "agent", "skill", "rule"]
+from .mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME
+
+ArtifactRole = Literal["command", "agent", "skill", "rule", "mcp"]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
@@ -76,3 +78,7 @@ def iter_framework_artifacts(framework_root: Path) -> Iterator[ArtifactTuple]:
             skill_file = entry / "SKILL.md"
             if skill_file.is_file():
                 yield ("skill", entry.name, skill_file)
+
+    mcps_file = framework_root / MCP_SOURCE_FILENAME
+    if mcps_file.is_file():
+        yield ("mcp", MCP_ARTIFACT_NAME, mcps_file)

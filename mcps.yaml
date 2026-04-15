@@ -1,0 +1,32 @@
+# AI-Augmented Developer — canonical MCP declaration.
+#
+# Declare MCP servers here once; `aiadev install` translates the list to
+# each platform's native config file:
+#
+#   Claude Code → .mcp.json
+#   Cursor      → .cursor/mcp.json
+#   Gemini CLI  → .gemini/settings.json  (mcpServers key)
+#   Codex       → .codex/config.toml     ([mcp_servers] table)
+#   OpenCode    → opencode.json          (mcp key)
+#
+# Merge policy: the whole MCP config file becomes aiadev-owned. If you
+# already have a hand-written `.mcp.json`, `aiadev install` will flag it
+# as a conflict; re-run with --force after copying your MCPs into this
+# file.
+#
+# Presets may ship their own mcps.yaml; preset servers win on name
+# collision (presets tighten framework defaults, never weaken them).
+#
+# Shape:
+#
+#   servers:
+#     <server-name>:
+#       command: "<executable>"     # required
+#       args: ["<arg1>", "<arg2>"]  # optional, default []
+#       env:                        # optional, default {}
+#         KEY: "value"
+#
+# Environment values may reference shell vars with "${VAR}"; they pass
+# through verbatim so each platform evaluates them at runtime.
+
+servers: {}

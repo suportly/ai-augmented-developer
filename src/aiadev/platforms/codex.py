@@ -10,14 +10,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
+from ..mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME, load_servers_from_text
+
 ArtifactRole = Literal[
-    "agent_file", "constitution", "skill", "command", "agent", "rule"
+    "agent_file", "constitution", "skill", "command", "agent", "rule", "mcp"
 ]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
 def user_scope_supported(role: ArtifactRole) -> bool:
-    return role in ("skill", "command", "agent", "rule")
+    return role in ("skill", "command", "agent", "rule", "mcp")
 
 
 def resolve_target(
@@ -51,6 +53,14 @@ def resolve_target(
         if not name:
             raise ValueError("rule artifact requires a non-empty name")
         return install_root / ".codex" / "rules" / f"{name}.md"
+    if role == "mcp":
+        if not name:
+            raise ValueError("mcp artifact requires a non-empty name")
+        # Codex CLI reads MCP config from ``~/.codex/config.toml``; the
+        # project-scope install writes ``.codex/config.toml`` so teams
+        # can version the declaration. Users can symlink or merge the
+        # table manually until Codex supports project-scope MCPs.
+        return install_root / ".codex" / "config.toml"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 
@@ -89,3 +99,56 @@ def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
             skill_file = entry / "SKILL.md"
             if skill_file.is_file():
                 yield ("skill", entry.name, skill_file)
+
+    mcps_file = preset_root / MCP_SOURCE_FILENAME
+    if mcps_file.is_file():
+        yield ("mcp", MCP_ARTIFACT_NAME, mcps_file)
+
+
+def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
+    """Convert canonical ``mcps.yaml`` into Codex's ``.codex/config.toml``."""
+    if role == "mcp":
+        servers = load_servers_from_text(source_text, label=f".codex/config.toml[{name}]")
+        return _servers_to_toml(servers)
+    return source_text
+
+
+def _servers_to_toml(servers) -> str:
+    """Render the ``[mcp_servers.<name>]`` tables Codex expects.
+
+    We emit TOML by hand to keep the dependency footprint minimal and to
+    avoid surprises with tomllib's dict-roundtrip (Python 3.11+ ships a
+    reader only; writers are third-party). The format is deliberately
+    narrow: one table per server with ``command``, ``args``, and ``env``
+    sub-table when present.
+    """
+    if not servers:
+        # Empty servers map → still emit the section header so users
+        # know where to add entries by hand if they choose.
+        return "# Managed by aiadev. Add MCP servers to mcps.yaml and re-run `aiadev install`.\n"
+    parts: list[str] = []
+    for server in servers:
+        parts.append(f"[mcp_servers.{_toml_key(server.name)}]")
+        parts.append(f"command = {_toml_str(server.command)}")
+        if server.args:
+            rendered_args = ", ".join(_toml_str(a) for a in server.args)
+            parts.append(f"args = [{rendered_args}]")
+        if server.env:
+            env_items = ", ".join(
+                f"{_toml_key(k)} = {_toml_str(v)}" for k, v in server.env.items()
+            )
+            parts.append("env = { " + env_items + " }")
+        parts.append("")
+    return "\n".join(parts) + "\n"
+
+
+def _toml_str(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _toml_key(value: str) -> str:
+    # Bare keys only contain ASCII letters, digits, _, -. Quote otherwise.
+    if value and all(c.isalnum() or c in "_-" for c in value):
+        return value
+    return _toml_str(value)

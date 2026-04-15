@@ -6,17 +6,20 @@ and Codex) and places skills under ``.opencode/skills/<skill-name>/SKILL.md``.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
+from ..mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME, load_servers_from_text
+
 ArtifactRole = Literal[
-    "agent_file", "constitution", "skill", "command", "agent", "rule"
+    "agent_file", "constitution", "skill", "command", "agent", "rule", "mcp"
 ]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
 def user_scope_supported(role: ArtifactRole) -> bool:
-    return role in ("skill", "command", "agent", "rule")
+    return role in ("skill", "command", "agent", "rule", "mcp")
 
 
 def resolve_target(
@@ -50,6 +53,12 @@ def resolve_target(
         if not name:
             raise ValueError("rule artifact requires a non-empty name")
         return install_root / ".opencode" / "rules" / f"{name}.md"
+    if role == "mcp":
+        if not name:
+            raise ValueError("mcp artifact requires a non-empty name")
+        # OpenCode reads MCP servers from ``opencode.json`` at the
+        # project root under the top-level ``mcp`` key.
+        return install_root / "opencode.json"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 
@@ -88,3 +97,36 @@ def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
             skill_file = entry / "SKILL.md"
             if skill_file.is_file():
                 yield ("skill", entry.name, skill_file)
+
+    mcps_file = preset_root / MCP_SOURCE_FILENAME
+    if mcps_file.is_file():
+        yield ("mcp", MCP_ARTIFACT_NAME, mcps_file)
+
+
+def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
+    """Convert canonical ``mcps.yaml`` into OpenCode's ``opencode.json``.
+
+    OpenCode's MCP schema: ``mcp.<name> = {type, command: [exe, ...args], environment, enabled}``.
+    We emit ``type: "local"`` and ``enabled: true`` for every server —
+    those are the only settings the canonical ``mcps.yaml`` currently
+    models.
+    """
+    if role == "mcp":
+        servers = load_servers_from_text(source_text, label=f"opencode.json[{name}]")
+        payload = {
+            "$schema": "https://opencode.ai/config.json",
+            "mcp": {s.name: _opencode_mcp_entry(s) for s in servers},
+        }
+        return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    return source_text
+
+
+def _opencode_mcp_entry(server) -> dict:
+    entry: dict = {
+        "type": "local",
+        "command": [server.command, *server.args],
+        "enabled": True,
+    }
+    if server.env:
+        entry["environment"] = dict(server.env)
+    return entry

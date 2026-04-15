@@ -8,18 +8,21 @@ installed.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
+from ..mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME, load_servers_from_text
+
 ArtifactRole = Literal[
-    "agent_file", "constitution", "skill", "command", "agent", "rule"
+    "agent_file", "constitution", "skill", "command", "agent", "rule", "mcp"
 ]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
 def user_scope_supported(role: ArtifactRole) -> bool:
     """Skills, commands, agents, and rules install at user scope; see claude_code.py."""
-    return role in ("skill", "command", "agent", "rule")
+    return role in ("skill", "command", "agent", "rule", "mcp")
 
 
 def resolve_target(
@@ -55,6 +58,10 @@ def resolve_target(
             raise ValueError("rule artifact requires a non-empty name")
         # Cursor native rules use the .mdc extension.
         return install_root / ".cursor" / "rules" / f"{name}.mdc"
+    if role == "mcp":
+        if not name:
+            raise ValueError("mcp artifact requires a non-empty name")
+        return install_root / ".cursor" / "mcp.json"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 
@@ -94,3 +101,29 @@ def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
             skill_file = entry / "SKILL.md"
             if skill_file.is_file():
                 yield ("skill", entry.name, skill_file)
+
+    mcps_file = preset_root / MCP_SOURCE_FILENAME
+    if mcps_file.is_file():
+        yield ("mcp", MCP_ARTIFACT_NAME, mcps_file)
+
+
+def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
+    """Convert canonical ``mcps.yaml`` into Cursor's ``.cursor/mcp.json``."""
+    if role == "mcp":
+        servers = load_servers_from_text(source_text, label=f".cursor/mcp.json[{name}]")
+        payload = {
+            "mcpServers": {
+                s.name: _cursor_entry(s) for s in servers
+            }
+        }
+        return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    return source_text
+
+
+def _cursor_entry(server) -> dict:
+    entry: dict = {"command": server.command}
+    if server.args:
+        entry["args"] = list(server.args)
+    if server.env:
+        entry["env"] = dict(server.env)
+    return entry

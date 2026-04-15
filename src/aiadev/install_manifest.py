@@ -37,6 +37,7 @@ FileRole = Literal[
     "command",
     "agent",
     "rule",
+    "mcp",
     "plugin_manifest",
 ]
 
@@ -214,5 +215,6 @@ def iter_roles() -> Iterable[str]:
         "command",
         "agent",
         "rule",
+        "mcp",
         "plugin_manifest",
     )

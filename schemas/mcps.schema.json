@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-augmented-developer/schemas/mcps.schema.json",
+  "title": "AI-Augmented Developer MCP declaration",
+  "description": "Canonical shape of mcps.yaml. The install engine translates this into each platform's native MCP config file.",
+  "type": "object",
+  "required": ["servers"],
+  "properties": {
+    "servers": {
+      "type": "object",
+      "description": "Map of server-name → server config. Keys must be kebab-case.",
+      "additionalProperties": {
+        "$ref": "#/$defs/server"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "server": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Executable to launch (e.g. 'npx', '/usr/local/bin/my-mcp')."
+        },
+        "args": {
+          "type": "array",
+          "items": {"type": "string"},
+          "default": []
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "default": {},
+          "description": "Environment variables passed to the server. Values may contain ${VAR} placeholders the platform resolves at runtime."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

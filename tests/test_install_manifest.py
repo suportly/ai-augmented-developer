@@ -232,6 +232,7 @@ class TestRolesHelper:
             "command",
             "agent",
             "rule",
+            "mcp",
             "plugin_manifest",
         }
 

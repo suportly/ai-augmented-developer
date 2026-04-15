@@ -47,6 +47,7 @@ _ROLE_PRIORITY = {
     "command": 3,
     "agent": 4,
     "skill": 5,
+    "mcp": 6,
 }
 
 MANIFEST_REL_PATH = Path(".aiadev") / "installed.yaml"
@@ -344,7 +345,7 @@ def _perform_uninstall(
         return report
 
     for entry in existing.files:
-        if entry.role not in ("skill", "command", "agent", "rule"):
+        if entry.role not in ("skill", "command", "agent", "rule", "mcp"):
             continue
         parent = (install_root / entry.path).parent
         while parent.is_dir() and parent != install_root:
