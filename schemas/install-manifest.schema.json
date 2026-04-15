@@ -50,7 +50,15 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["agent_file", "constitution", "skill", "plugin_manifest"]
+                  "enum": [
+                    "agent_file",
+                    "constitution",
+                    "skill",
+                    "command",
+                    "agent",
+                    "rule",
+                    "plugin_manifest"
+                  ]
                 }
               },
               "additionalProperties": false

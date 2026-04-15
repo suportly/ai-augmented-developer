@@ -77,3 +77,10 @@ identifier), regenerate this file with `aiadev install --preset
 mobile-ops --interactive` instead of editing by hand — the skills under
 `skills/` are generated from the same variables and will drift if only
 one file is patched.
+
+<!-- aiadev:auto-stack:start -->
+## Detected stack
+
+_Run `aiadev sync` to populate this block from the project's
+package.json / pyproject.toml / Makefile / docker-compose / workflows._
+<!-- aiadev:auto-stack:end -->

@@ -25,6 +25,7 @@ from pathlib import Path
 import yaml
 
 from . import __version__
+from .framework_artifacts import iter_framework_artifacts
 from .install_manifest import (
     InstalledFile,
     InstalledPreset,
@@ -35,6 +36,18 @@ from .install_manifest import (
 )
 from .placeholders import find_unresolved, substitute
 from .platforms import claude_code, codex, cursor, gemini, opencode
+
+# Stable order commands/agents/skills install in. Preserves the legacy
+# agent_file→constitution→skill order for manifests that already exist,
+# and slots the new command/agent roles between constitution and skill.
+_ROLE_PRIORITY = {
+    "agent_file": 0,
+    "constitution": 1,
+    "rule": 2,
+    "command": 3,
+    "agent": 4,
+    "skill": 5,
+}
 
 MANIFEST_REL_PATH = Path(".aiadev") / "installed.yaml"
 
@@ -138,6 +151,7 @@ def install(
     force: bool = False,
     allow_unresolved: bool = False,
     scope: str = "project",
+    framework_root: Path | None = None,
     now: str | None = None,
 ) -> InstallReport:
     """Install or re-install a preset into ``project_root`` (or ``$HOME``).
@@ -151,6 +165,13 @@ def install(
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
     scope-appropriate manifest.
+
+    ``framework_root`` points at the ``aiadev`` checkout whose top-level
+    ``commands/``, ``agents/``, and ``skills/`` directories are always
+    installed alongside the preset's own artifacts. When ``None`` (the
+    default), only preset artifacts are installed — this keeps the
+    narrow-scope tests from picking up the real framework's pipeline.
+    The CLI always passes a concrete ``framework_root``.
     """
     platform_module = _PLATFORMS.get(platform)
     if platform_module is None:
@@ -172,7 +193,9 @@ def install(
     previous_by_path = {f.path: f for f in existing.files} if existing else {}
     recorded_files: list[InstalledFile] = []
 
-    for role, name, source_path in platform_module.iter_preset_artifacts(preset_path):
+    artifacts = _collect_artifacts(framework_root, platform_module, preset_path)
+
+    for role, name, source_path, verbatim in artifacts:
         # Under user scope, skip artifacts the handler says are not
         # installable there (agent_file, constitution). They stay
         # project-local.
@@ -183,13 +206,26 @@ def install(
             continue
 
         source_text = source_path.read_text(encoding="utf-8")
-        rendered = substitute(source_text, variables)
+        if verbatim:
+            # Framework-generic artifacts (commands, agents, skills
+            # shipped by aiadev itself) are copied as-is: their
+            # ``{{UPPER_SNAKE}}``-looking tokens are runtime markers the
+            # AI fills in — not install-time variables.
+            rendered = source_text
+        else:
+            rendered = substitute(source_text, variables)
+            unresolved = find_unresolved(rendered)
+            if unresolved:
+                report.unresolved.extend(unresolved)
+                if not allow_unresolved:
+                    continue
 
-        unresolved = find_unresolved(rendered)
-        if unresolved:
-            report.unresolved.extend(unresolved)
-            if not allow_unresolved:
-                continue
+        # Platforms may transform rendered content per-role (Gemini
+        # converts markdown commands to TOML, for example). The hook is
+        # optional; default is a pass-through.
+        render_hook = getattr(platform_module, "render_target", None)
+        if render_hook is not None:
+            rendered = render_hook(role, name, rendered)
 
         target = platform_module.resolve_target(role, name, install_root, scope=scope)
         target_rel = _to_rel(target, install_root)
@@ -248,6 +284,37 @@ def install(
     return report
 
 
+def _collect_artifacts(
+    framework_root: Path | None,
+    platform_module,
+    preset_path: Path,
+) -> list[tuple[str, str, Path, bool]]:
+    """Merge framework-generic and preset artifacts. Preset wins on collision.
+
+    The dedupe key is ``(role, name)`` — a preset that ships a skill
+    with the same name as a framework-generic skill overrides it, never
+    duplicates it. Order is stable: legacy roles first (agent_file →
+    constitution), then command → agent → skill; within each role,
+    alphabetical.
+
+    The trailing ``verbatim`` flag tells the engine whether to run
+    variable substitution. Framework-generic artifacts are copied
+    verbatim because their ``{{UPPER_SNAKE}}`` tokens are runtime
+    markers, not install variables. Preset artifacts run through
+    substitute()/find_unresolved() as before.
+    """
+    merged: dict[tuple[str, str], tuple[str, str, Path, bool]] = {}
+    if framework_root is not None:
+        for role, name, source_path in iter_framework_artifacts(framework_root):
+            merged[(role, name)] = (role, name, source_path, True)
+    for role, name, source_path in platform_module.iter_preset_artifacts(preset_path):
+        merged[(role, name)] = (role, name, source_path, False)
+    return sorted(
+        merged.values(),
+        key=lambda t: (_ROLE_PRIORITY.get(t[0], 99), t[1]),
+    )
+
+
 def _perform_uninstall(
     install_root: Path,
     manifest: Manifest,
@@ -270,14 +337,14 @@ def _perform_uninstall(
         target.unlink()
         report.removed.append(target)
 
-    # Also clean up now-empty skill directories we created, walking up
-    # each skill's path toward the project root so ancestor dirs like
-    # `.cursor/skills/` and `.cursor/` disappear when empty.
+    # Also clean up now-empty artifact directories we created, walking
+    # up each file's path toward the project root so ancestor dirs like
+    # `.cursor/commands/` and `.cursor/` disappear when empty.
     if report.conflicts:
         return report
 
     for entry in existing.files:
-        if entry.role != "skill":
+        if entry.role not in ("skill", "command", "agent", "rule"):
             continue
         parent = (install_root / entry.path).parent
         while parent.is_dir() and parent != install_root:

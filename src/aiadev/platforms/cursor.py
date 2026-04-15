@@ -11,13 +11,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
-ArtifactRole = Literal["agent_file", "constitution", "skill"]
+ArtifactRole = Literal[
+    "agent_file", "constitution", "skill", "command", "agent", "rule"
+]
 ArtifactTuple = Tuple[ArtifactRole, str, Path]
 
 
 def user_scope_supported(role: ArtifactRole) -> bool:
-    """Only skills are installable at user scope; see claude_code.py."""
-    return role == "skill"
+    """Skills, commands, agents, and rules install at user scope; see claude_code.py."""
+    return role in ("skill", "command", "agent", "rule")
 
 
 def resolve_target(
@@ -40,16 +42,24 @@ def resolve_target(
         if not name:
             raise ValueError("skill artifact requires a non-empty name")
         return install_root / ".cursor" / "skills" / name / "SKILL.md"
+    if role == "command":
+        if not name:
+            raise ValueError("command artifact requires a non-empty name")
+        return install_root / ".cursor" / "commands" / f"{name}.md"
+    if role == "agent":
+        if not name:
+            raise ValueError("agent artifact requires a non-empty name")
+        return install_root / ".cursor" / "agents" / f"{name}.md"
+    if role == "rule":
+        if not name:
+            raise ValueError("rule artifact requires a non-empty name")
+        # Cursor native rules use the .mdc extension.
+        return install_root / ".cursor" / "rules" / f"{name}.mdc"
     raise ValueError(f"unknown artifact role: {role!r}")
 
 
 def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
-    """Yield ``(role, name, source_path)`` for everything Cursor installs.
-
-    Identical traversal to :mod:`aiadev.platforms.claude_code`, kept local
-    so Cursor can evolve its own policy without touching the Claude Code
-    handler.
-    """
+    """Yield ``(role, name, source_path)`` for everything Cursor installs."""
     agent = preset_root / "CLAUDE.md"
     if agent.is_file():
         yield ("agent_file", "", agent)
@@ -57,6 +67,24 @@ def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
     constitution = preset_root / "constitution.md"
     if constitution.is_file():
         yield ("constitution", "", constitution)
+
+    rules_dir = preset_root / "rules"
+    if rules_dir.is_dir():
+        for entry in sorted(rules_dir.iterdir()):
+            if entry.is_file() and entry.suffix == ".md":
+                yield ("rule", entry.stem, entry)
+
+    commands_dir = preset_root / "commands"
+    if commands_dir.is_dir():
+        for entry in sorted(commands_dir.iterdir()):
+            if entry.is_file() and entry.suffix == ".md":
+                yield ("command", entry.stem, entry)
+
+    agents_dir = preset_root / "agents"
+    if agents_dir.is_dir():
+        for entry in sorted(agents_dir.iterdir()):
+            if entry.is_file() and entry.suffix == ".md":
+                yield ("agent", entry.stem, entry)
 
     skills_dir = preset_root / "skills"
     if skills_dir.is_dir():
