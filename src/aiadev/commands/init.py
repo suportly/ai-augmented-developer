@@ -1,4 +1,4 @@
-"""``aiadev init`` — scaffold a feature directory under ``specs/<branch>/``."""
+"""``aiadev init`` — scaffold a feature directory under ``specs/<NNNN-slug>/``."""
 from __future__ import annotations
 
 import datetime as dt
@@ -101,14 +101,11 @@ def init_command(
     if branch_name is None:
         branch_name = f"feature/{slug}"
 
-    # The feature dir name is branch-derived when the user gave a real
-    # branch name, slug-derived when the user opted to stay on the current
-    # branch (--branch -).
-    if branch_name == "-":
-        feature_dir_name = f"feature-{slug}"
-    else:
-        feature_dir_name = branch_name.replace("/", "-")
     specs_root = root / "specs"
+    spec_id = _find_next_spec_id(specs_root)
+    # Feature dir always carries the zero-padded spec_id prefix so specs
+    # sort chronologically: ``specs/0001-<slug>/``.
+    feature_dir_name = f"{spec_id}-{slug}"
     feature_dir = specs_root / feature_dir_name
 
     if feature_dir.exists():
@@ -134,7 +131,7 @@ def init_command(
         "FEATURE_NAME": feature_name,
         "BRANCH": branch_name if branch_name != "-" else (_current_branch(root) or "main"),
         "DATE": dt.date.today().isoformat(),
-        "SPEC_ID": _find_next_spec_id(specs_root),
+        "SPEC_ID": spec_id,
         "SHORT_TITLE": feature_name,
         "ROLE": "user",
         "ACTION": "",

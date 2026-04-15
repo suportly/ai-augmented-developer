@@ -6,7 +6,8 @@ skills under ``.gemini/skills/<skill-name>/SKILL.md``. ``constitution.md``
 at the root is shared across every platform.
 
 Commands are special-cased: Gemini CLI reads custom commands from
-``.gemini/commands/<name>.toml`` (not markdown), so the handler provides
+``.gemini/commands/aiadev/<name>.toml`` (not markdown; the ``aiadev/``
+subdirectory namespaces them as ``/aiadev:<name>``), so the handler provides
 a :func:`render_target` hook that converts the framework's markdown
 source into TOML before the engine writes it. Markdown agents and
 skills are passed through unchanged.
@@ -50,7 +51,7 @@ def resolve_target(
     if role == "command":
         if not name:
             raise ValueError("command artifact requires a non-empty name")
-        return install_root / ".gemini" / "commands" / f"{name}.toml"
+        return install_root / ".gemini" / "commands" / "aiadev" / f"{name}.toml"
     if role == "agent":
         if not name:
             raise ValueError("agent artifact requires a non-empty name")
