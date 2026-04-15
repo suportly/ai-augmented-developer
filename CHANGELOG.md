@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **`skills/constitution`** (v0.2.0 → v0.3.0) — adds a Mode detection step that runs before the amendment loop. When invoked on a project without a `constitution.md`, the skill now enters bootstrap mode: it reads `CLAUDE.md`, `.claude/rules/*`, package files, and `README.md`, then renders `templates/constitution-template.md` with values inferred from that context, instead of asking the user generic "what change do you want?" questions. When invoked on a project with a constitution but without amendment text, it lists the current articles and asks which one to amend.
+- **`skills/clarify`** (v0.2.0 → v0.3.0) — when offering multiple-choice answers for a `[NEEDS CLARIFICATION]` marker, the skill must now mark the recommended option (e.g., `★ Option A (recommended)`) with a one-line rationale grounded in the spec, the codebase, or the project conventions. New rule: making the user pick blind is laziness — the agent has enough context to commit to a recommendation.
 
 ## [0.11.1] - 2026-04-15
 
