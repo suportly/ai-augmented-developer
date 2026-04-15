@@ -20,11 +20,11 @@ class TestResolveTargetCommand:
     @pytest.mark.parametrize(
         "handler, expected_suffix",
         [
-            (cc, pathlib.Path(".claude") / "commands" / "specify.md"),
-            (cursor, pathlib.Path(".cursor") / "commands" / "specify.md"),
-            (codex, pathlib.Path(".codex") / "commands" / "specify.md"),
-            (opencode, pathlib.Path(".opencode") / "commands" / "specify.md"),
-            (gemini, pathlib.Path(".gemini") / "commands" / "specify.toml"),
+            (cc, pathlib.Path(".claude") / "commands" / "aiadev" / "specify.md"),
+            (cursor, pathlib.Path(".cursor") / "commands" / "aiadev" / "specify.md"),
+            (codex, pathlib.Path(".codex") / "commands" / "aiadev" / "specify.md"),
+            (opencode, pathlib.Path(".opencode") / "commands" / "aiadev" / "specify.md"),
+            (gemini, pathlib.Path(".gemini") / "commands" / "aiadev" / "specify.toml"),
         ],
     )
     def test_command_lands_in_platform_dir(
