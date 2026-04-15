@@ -1,14 +1,14 @@
 name: publish
 
 # Publishes the aiadev wheel + sdist to PyPI on every GitHub release
-# event. Authentication is OIDC trusted publishing — no API tokens
-# stored in this repo. The maintainer must configure the trusted
-# publisher on pypi.org once before the first publish runs; see
-# docs/RELEASING.md.
+# event, plus on manual dispatch so a failed release can be retried
+# without retagging. Authentication uses the PYPI_API_TOKEN repo secret
+# (scoped API token on pypi.org). See docs/RELEASING.md.
 
 on:
   release:
     types: [published]
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -42,15 +42,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
-    # The `pypi` environment must be configured on the GitHub repo
-    # under Settings -> Environments. The trusted publisher entry on
-    # pypi.org references this same name. See docs/RELEASING.md.
+    # Optional GitHub `pypi` environment; if configured, deployment
+    # protection rules can gate publishes behind an approver.
     environment:
       name: pypi
       url: https://pypi.org/p/aiadev
-
-    permissions:
-      id-token: write   # required for OIDC trusted publishing
 
     steps:
       - name: Download built artefacts
@@ -61,3 +57,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
