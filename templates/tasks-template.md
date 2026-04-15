@@ -5,6 +5,7 @@
 **Branch:** `{{BRANCH}}`
 **Plan:** [plan.md](./plan.md)
 **Generated:** {{DATE}}
+**Language:** {{DOC_LANGUAGE}} <!-- mirrors spec.md; write task descriptions in this language. -->
 
 ---
 

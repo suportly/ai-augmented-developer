@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.10.0] - 2026-04-15
+
+Namespaced slash commands, numbered spec directories, and a `--language` flag for `aiadev init`.
+
+### Added
+
+- **`aiadev init --language/-L <BCP-47>`** stamps a `**Language:**` header into `spec.md`, `plan.md`, and `tasks.md` via a new `{{DOC_LANGUAGE}}` placeholder. Downstream skills (`clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`) read that header and continue in the same language. Default: `en`.
+
+### Changed
+
+- **Slash commands are namespaced under `aiadev/`** across every platform (`.claude/commands/aiadev/<name>.md`, `.codex/`, `.cursor/`, `.opencode/` equivalents, and `.gemini/commands/aiadev/<name>.toml`). Claude Code and Gemini CLI render them as `/aiadev:specify`, `/aiadev:plan`, etc. Consumer projects must run `aiadev sync` to migrate; the old flat layout leaves orphan files until cleaned up.
+- **Spec directories carry the zero-padded `SPEC_ID` prefix** (`specs/0001-<slug>/`, `specs/0002-<slug>/`, …) instead of the legacy `specs/feature-<slug>/`. `aiadev init` computes the next id monotonically from existing specs. Skills and the `specify` command doc updated to reflect the `specs/<NNNN-slug>/` convention.
+
 ## [0.9.0] - 2026-04-15
 
 Full-install and sync. `aiadev install` now equips a project with the complete pipeline (slash commands + agents + framework-generic skills + coding rules) out of the box, across all 5 platforms. A new `aiadev sync` command pulls framework updates into installed projects and regenerates a detected-stack block inside `CLAUDE.md`.

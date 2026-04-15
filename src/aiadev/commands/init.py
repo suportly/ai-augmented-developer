@@ -77,6 +77,14 @@ def _find_next_spec_id(specs_root: pathlib.Path) -> str:
     help="Git branch name to create. Defaults to 'feature/<slug>'. Use '-' to stay on the current branch.",
 )
 @click.option(
+    "--language",
+    "-L",
+    "language",
+    default="en",
+    show_default=True,
+    help="Natural language for generated artifacts (BCP-47, e.g. en, pt-BR, es, fr). Stamped into each template's Language header; downstream skills honor it.",
+)
+@click.option(
     "--no-git",
     is_flag=True,
     help="Skip the git branch creation step (still writes files).",
@@ -87,7 +95,11 @@ def _find_next_spec_id(specs_root: pathlib.Path) -> str:
     help="Print what would be done without writing files or creating branches.",
 )
 def init_command(
-    feature_name: str, branch_name: str | None, no_git: bool, dry_run: bool
+    feature_name: str,
+    branch_name: str | None,
+    language: str,
+    no_git: bool,
+    dry_run: bool,
 ) -> None:
     """Scaffold ``specs/<branch>/{spec,plan,tasks}.md`` from the templates."""
     console = Console()
@@ -132,6 +144,7 @@ def init_command(
         "BRANCH": branch_name if branch_name != "-" else (_current_branch(root) or "main"),
         "DATE": dt.date.today().isoformat(),
         "SPEC_ID": spec_id,
+        "DOC_LANGUAGE": language,
         "SHORT_TITLE": feature_name,
         "ROLE": "user",
         "ACTION": "",

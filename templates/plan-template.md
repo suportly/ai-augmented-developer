@@ -6,6 +6,7 @@
 **Date:** {{DATE}}
 **Spec:** [spec.md](./spec.md)
 **Plan version:** 1
+**Language:** {{DOC_LANGUAGE}} <!-- mirrors spec.md; write plan prose in this language. -->
 
 ---
 

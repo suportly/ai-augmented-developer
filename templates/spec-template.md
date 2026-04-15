@@ -6,6 +6,7 @@
 **Created:** {{DATE}}
 **Status:** Draft <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** {{SPEC_ID}} <!-- auto-incrementing integer -->
+**Language:** {{DOC_LANGUAGE}} <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
 ---
 

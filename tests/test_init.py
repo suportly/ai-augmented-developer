@@ -64,3 +64,22 @@ def test_init_spec_id_is_monotonic(isolated_framework: pathlib.Path, monkeypatch
     second_spec = (isolated_framework / "specs" / "0002-two" / "spec.md").read_text(encoding="utf-8")
     assert "Spec ID:** 0001" in first_spec
     assert "Spec ID:** 0002" in second_spec
+
+
+def test_init_language_defaults_to_english(isolated_framework: pathlib.Path, monkeypatch) -> None:
+    monkeypatch.chdir(isolated_framework)
+    result = _run(CliRunner(), "--feature", "delta")
+    assert result.exit_code == 0, result.output
+    for artifact in ("spec.md", "plan.md", "tasks.md"):
+        text = (isolated_framework / "specs" / "0001-delta" / artifact).read_text(encoding="utf-8")
+        assert "Language:** en" in text, artifact
+
+
+def test_init_language_stamps_all_artifacts(isolated_framework: pathlib.Path, monkeypatch) -> None:
+    monkeypatch.chdir(isolated_framework)
+    result = _run(CliRunner(), "--feature", "epsilon", "--language", "pt-BR")
+    assert result.exit_code == 0, result.output
+    for artifact in ("spec.md", "plan.md", "tasks.md"):
+        text = (isolated_framework / "specs" / "0001-epsilon" / artifact).read_text(encoding="utf-8")
+        assert "Language:** pt-BR" in text, artifact
+        assert "{{DOC_LANGUAGE}}" not in text, artifact

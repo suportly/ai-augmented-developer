@@ -22,6 +22,8 @@ Take a demand in plain language and produce a `spec.md` focused on **what** and 
 
 **Announce at start:** "Using the specify skill. I will produce a spec.md; implementation details come later."
 
+**Language.** Write the spec in the BCP-47 tag recorded in the `Language:` header (stamped by `aiadev init --language`, default `en`). Every downstream skill (`clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`) must read that header and continue in the same language. If the user asks for a different language mid-flow, update the header in `spec.md` first, then regenerate affected artifacts.
+
 ## Preconditions
 
 - The repository has a `constitution.md` at the root (or in the active preset).
