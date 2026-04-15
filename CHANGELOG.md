@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.11.1] - 2026-04-15
+
+Hotfix: `commands/`, `rules/`, and `mcps.yaml` were missing from the published wheel, so `aiadev install` produced an empty `.claude/commands/` directory in consumer projects.
+
+### Fixed
+
+- **`scripts/sync_assets.py`** now copies `commands/`, `rules/`, and `mcps.yaml` into `src/aiadev/_assets/` before the wheel is built. Without them, `iter_framework_artifacts()` found nothing to install under those roles and slash commands (`/specify`, `/plan`, `/tasks`, `/implement`, etc.) silently never landed in the target project.
+- **`MANIFEST.in`** declares the same trees + `mcps.yaml` + `constitution.md` so the sdist matches the wheel.
+
 ## [0.11.0] - 2026-04-15
 
 MCP (Model Context Protocol) support: declare servers once in `mcps.yaml`, `aiadev install` writes the native config for every target platform.

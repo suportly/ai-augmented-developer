@@ -23,3 +23,7 @@ recursive-include schemas *.json
 recursive-include skills *.md
 recursive-include presets *.md *.yaml *.json
 recursive-include agents *.md
+recursive-include commands *.md
+recursive-include rules *.md
+include mcps.yaml
+include constitution.md

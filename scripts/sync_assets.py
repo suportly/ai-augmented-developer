@@ -31,6 +31,9 @@ COPY_PLAN: list[tuple[str, str]] = [
     ("skills", "skills"),
     ("presets", "presets"),
     ("agents", "agents"),
+    ("commands", "commands"),
+    ("rules", "rules"),
+    ("mcps.yaml", "mcps.yaml"),
 ]
 
 
