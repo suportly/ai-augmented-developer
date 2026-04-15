@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.12.0] - 2026-04-15
+
+Two skill UX fixes: `constitution` now bootstraps from existing project context, and `clarify` always marks its recommended option.
+
 ### Changed
 
 - **`skills/constitution`** (v0.2.0 → v0.3.0) — adds a Mode detection step that runs before the amendment loop. When invoked on a project without a `constitution.md`, the skill now enters bootstrap mode: it reads `CLAUDE.md`, `.claude/rules/*`, package files, and `README.md`, then renders `templates/constitution-template.md` with values inferred from that context, instead of asking the user generic "what change do you want?" questions. When invoked on a project with a constitution but without amendment text, it lists the current articles and asks which one to amend.
