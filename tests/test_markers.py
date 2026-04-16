@@ -33,3 +33,22 @@ def test_validator_accepts_cl_n_grammar() -> None:
     )
     errors = check_markers(text)
     assert errors == [], f"Expected no errors for valid markers but got: {errors}"
+
+
+def test_validator_rejects_malformed_ids() -> None:
+    """check_markers flags the three malformed forms documented in marker-format.md."""
+    cases = {
+        # Missing cl-N id (legacy form is handled by T003; here we test the
+        # strict "cl-N or reject" gate so this token must be flagged).
+        "no_id": "[NEEDS CLARIFICATION: pergunta sem id]",
+        # Zero-padding is forbidden.
+        "zero_padded": "[NEEDS CLARIFICATION:cl-001 zero-padded id]",
+        # Decimal ids are forbidden.
+        "decimal": "[NEEDS CLARIFICATION:cl-1.2 decimal id]",
+    }
+    for label, token in cases.items():
+        errors = check_markers(token)
+        assert errors, f"Expected an error for {label} ({token!r}) but got none"
+        assert any(token in err for err in errors), (
+            f"Error message for {label} should reference the offending token; got {errors}"
+        )

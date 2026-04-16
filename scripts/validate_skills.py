@@ -40,17 +40,19 @@ def load_marker_pattern() -> re.Pattern[str]:
 def check_markers(text: str) -> list[str]:
     """Return error messages for malformed cl-N markers in *text*.
 
-    T001 ships only the positive case: every recognized token (`[NEEDS
-    CLARIFICATION:...]`) is iterated using the canonical regex, but no
-    error is emitted yet. T002 will tighten this to flag tokens that do
-    not fully match the canonical grammar.
+    Every recognized token (`[NEEDS CLARIFICATION:...]`) is matched against
+    the canonical regex from schemas/marker-grammar.schema.json. Tokens that
+    do not fully match (missing `cl-N`, zero-padded, decimal, etc.) yield
+    one error each. Legacy back-compat (tokens without `cl-N`) is added in
+    T003 — until then they are reported as malformed.
     """
     pattern = load_marker_pattern()
+    errors: list[str] = []
     for match in re.finditer(r"\[NEEDS CLARIFICATION:[^\]]*\]", text):
-        # T001 scaffold: count/visit, do not reject. T002 will append errors
-        # for tokens that don't match `pattern`.
-        pattern.fullmatch(match.group(0))
-    return []
+        token = match.group(0)
+        if not pattern.fullmatch(token):
+            errors.append(f"Malformed marker: {token}")
+    return errors
 
 
 def _die(message: str, code: int = 2) -> None:
