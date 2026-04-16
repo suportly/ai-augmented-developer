@@ -39,6 +39,10 @@ def build(
         spec_path=pathlib.Path(spec_path) if spec_path else None,
     )
 
+    prompt = loaded["prompt"]
+    if language != "en":
+        prompt += f"\n\n**Language override:** write all artifact content in `{language}`."
+
     target = compute_target_path(
         ws, demand or skill, _artifact_for(skill), overwrite=overwrite,
     )
@@ -69,7 +73,7 @@ def build(
     return {
         "skill": skill,
         "version": getattr(aiadev, "__version__", "0.0.0"),
-        "prompt": loaded["prompt"],
+        "prompt": prompt,
         "context": {
             "template": loaded["template"],
             "constitution_excerpt": loaded["constitution_excerpt"],
