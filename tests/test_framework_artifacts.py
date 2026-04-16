@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 
 from aiadev.framework_artifacts import iter_framework_artifacts
 
@@ -63,3 +64,22 @@ class TestIterFrameworkArtifacts:
         _write(tmp_path / "commands" / "valid.md", "---\ndescription: x\n---")
         roles_names = [(r, n) for (r, n, _p) in iter_framework_artifacts(tmp_path)]
         assert roles_names == [("command", "valid")]
+
+
+class TestSpecTemplateMarkerExample:
+    """spec-template.md must illustrate the cl-N marker grammar (T004)."""
+
+    _CL_N_MARKER = re.compile(r"\[NEEDS CLARIFICATION:cl-([1-9][0-9]*)\s+([^\]]+)\]")
+
+    def test_template_contains_cl_n_marker_example(
+        self, framework_root: pathlib.Path
+    ) -> None:
+        template = (framework_root / "templates" / "spec-template.md").read_text(
+            encoding="utf-8"
+        )
+        match = self._CL_N_MARKER.search(template)
+        assert match, (
+            "templates/spec-template.md must contain at least one "
+            "[NEEDS CLARIFICATION:cl-N <question>] example so that authors "
+            "see the canonical format."
+        )

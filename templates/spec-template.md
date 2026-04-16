@@ -53,11 +53,13 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 ## Clarifications
 
-<!-- Put one [NEEDS CLARIFICATION: <precise question>] marker here for
-     every ambiguity you cannot resolve on your own. The `clarify` skill
-     will surface these to the user before the spec is considered approved. -->
+<!-- Put one [NEEDS CLARIFICATION:cl-N <precise question>] marker here for
+     every ambiguity you cannot resolve on your own. The id (cl-1, cl-2, …)
+     is a positive integer monotonically assigned within this spec; the
+     `clarify` skill will surface these to the user before the spec is
+     considered approved. -->
 
-- [NEEDS CLARIFICATION: example — is this feature gated behind the Pro plan?]
+- [NEEDS CLARIFICATION:cl-1 example — is this feature gated behind the Pro plan?]
 
 ## Data touched
 
