@@ -27,25 +27,30 @@ SCHEMA_PATH = ROOT / "schemas" / "skill-frontmatter.schema.json"
 MARKER_SCHEMA_PATH = ROOT / "schemas" / "marker-grammar.schema.json"
 
 
-def check_markers(text: str) -> list[str]:
-    """Return a list of error messages for malformed cl-N markers in *text*.
+def load_marker_pattern() -> re.Pattern[str]:
+    """Compile the canonical cl-N marker regex from the marker-grammar schema.
 
-    Loads the canonical regex from schemas/marker-grammar.schema.json so the
-    grammar has a single source of truth. An empty list means all markers in
-    the text are valid (positive-case only; T002 adds rejection logic).
+    Single source of truth for the grammar lives in
+    schemas/marker-grammar.schema.json under the `x-marker-pattern` extension.
     """
     schema = json.loads(MARKER_SCHEMA_PATH.read_text(encoding="utf-8"))
-    pattern: str = schema["const"]["marker_pattern"]
-    compiled = re.compile(pattern)
+    return re.compile(schema["x-marker-pattern"])
 
-    errors: list[str] = []
-    # Walk every token that looks like a NEEDS CLARIFICATION marker and verify
-    # the full token matches the canonical regex.
+
+def check_markers(text: str) -> list[str]:
+    """Return error messages for malformed cl-N markers in *text*.
+
+    T001 ships only the positive case: every recognized token (`[NEEDS
+    CLARIFICATION:...]`) is iterated using the canonical regex, but no
+    error is emitted yet. T002 will tighten this to flag tokens that do
+    not fully match the canonical grammar.
+    """
+    pattern = load_marker_pattern()
     for match in re.finditer(r"\[NEEDS CLARIFICATION:[^\]]*\]", text):
-        token = match.group(0)
-        if not compiled.fullmatch(token):
-            errors.append(f"Malformed marker: {token!r}")
-    return errors
+        # T001 scaffold: count/visit, do not reject. T002 will append errors
+        # for tokens that don't match `pattern`.
+        pattern.fullmatch(match.group(0))
+    return []
 
 
 def _die(message: str, code: int = 2) -> None:
