@@ -6,11 +6,9 @@
   "$defs": {
     "cl_marker": {
       "type": "string",
-      "pattern": "^\\[NEEDS CLARIFICATION:cl-(?P<id>[1-9][0-9]*)\\s+(?P<question>[^\\]]+)\\]$",
-      "description": "A single NEEDS CLARIFICATION marker. Prefix is literal '[NEEDS CLARIFICATION:', followed by 'cl-' and a positive integer (no zero-padding), at least one whitespace separator, question text (no ']'), and closing ']'."
+      "pattern": "^\\[NEEDS CLARIFICATION:cl-([1-9][0-9]*)\\s+([^\\]]+)\\]$",
+      "description": "A single NEEDS CLARIFICATION marker. ECMA 262 numbered groups: $1 captures the id (positive integer, no zero-padding), $2 captures the question text. Prefix is literal '[NEEDS CLARIFICATION:', followed by 'cl-' and a positive integer, at least one whitespace separator, question text (no ']'), and closing ']'."
     }
   },
-  "const": {
-    "marker_pattern": "\\[NEEDS CLARIFICATION:cl-([1-9][0-9]*)\\s+([^\\]]+)\\]"
-  }
+  "x-marker-pattern": "\\[NEEDS CLARIFICATION:cl-([1-9][0-9]*)\\s+([^\\]]+)\\]"
 }
