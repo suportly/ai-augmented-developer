@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aiadev.dev/schemas/tool-payload.schema.json",
+  "title": "ToolPayload",
+  "description": "Estrutura retornada por toda tool/prompt do aiadev sob o modelo skill-as-prompt-loader. Caller LLM consome essa estrutura e segue as instruções usando seus próprios tools de filesystem.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skill", "prompt", "context", "target_path", "marker_format"],
+  "properties": {
+    "skill": {
+      "type": "string",
+      "enum": ["specify", "clarify", "plan", "tasks", "implement", "analyze", "checklist", "constitution"],
+      "description": "Nome do skill cujo prompt está sendo carregado."
+    },
+    "version": {
+      "type": "string",
+      "description": "Versão semver do aiadev que serviu este payload (`aiadev.__version__`)."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Conteúdo de skills/<skill>/SKILL.md, possivelmente parametrizado (ex.: clarify recebe answers=...; specify recebe demand=...)."
+    },
+    "context": {
+      "type": "object",
+      "description": "Materiais auxiliares que o caller precisa para executar o prompt sem ter que ler o filesystem do aiadev.",
+      "additionalProperties": false,
+      "required": ["template", "constitution_excerpt"],
+      "properties": {
+        "template": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "content"],
+          "properties": {
+            "path": { "type": "string", "description": "Caminho relativo ao framework root, ex.: 'templates/spec-template.md'." },
+            "content": { "type": "string", "description": "Conteúdo bruto do template a ser usado como base do artefato." }
+          }
+        },
+        "constitution_excerpt": {
+          "type": "string",
+          "description": "Trecho da constitution.md relevante para este skill (Constitution Check do plan; Article I/II para specify, etc.)."
+        },
+        "extra_files": {
+          "type": "array",
+          "description": "Arquivos opcionais adicionais (ex.: spec.md em chamadas de plan/clarify).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "content"],
+            "properties": {
+              "path": { "type": "string" },
+              "content": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "target_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Caminho absoluto (POSIX) onde o caller deve criar/modificar o artefato. Calculado pelo handler a partir de workspace_path; já validado contra path traversal e confirmado como sub-path de workspace_path. Validade de absolute-path é checada no handler (não via JSON Schema regex), porque os critérios variam entre plataformas-alvo."
+    },
+    "marker_format": {
+      "type": "object",
+      "description": "Especificação do formato de marcador a ser estampado pelo caller (relevante para specify; informativo para os demais).",
+      "additionalProperties": false,
+      "required": ["regex", "next_id"],
+      "properties": {
+        "regex": {
+          "type": "string",
+          "description": "PCRE conforme contracts/marker-format.md.",
+          "const": "\\[NEEDS CLARIFICATION:cl-(?P<id>[1-9][0-9]*)\\s+(?P<question>[^\\]]+)\\]"
+        },
+        "next_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Próximo id monotônico que o caller deve usar caso introduza um novo marcador no artefato."
+        }
+      }
+    },
+    "existing_markers": {
+      "type": "array",
+      "description": "Marcadores já presentes em arquivos passados em context.extra_files (útil para clarify e plan).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "question", "location"],
+        "properties": {
+          "id": {
+            "oneOf": [
+              { "type": "string", "pattern": "^cl-\\d+$" },
+              { "type": "null", "description": "Marcador legacy sem id; needs_renumbering=true será reportado." }
+            ]
+          },
+          "question": { "type": "string" },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "line"],
+            "properties": {
+              "path": { "type": "string" },
+              "line": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "needs_renumbering": {
+      "type": "boolean",
+      "description": "True se algum marcador em existing_markers é legacy (sem cl-N)."
+    }
+  }
+}
