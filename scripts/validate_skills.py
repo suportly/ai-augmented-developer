@@ -18,11 +18,34 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 from typing import Iterable
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schemas" / "skill-frontmatter.schema.json"
+MARKER_SCHEMA_PATH = ROOT / "schemas" / "marker-grammar.schema.json"
+
+
+def check_markers(text: str) -> list[str]:
+    """Return a list of error messages for malformed cl-N markers in *text*.
+
+    Loads the canonical regex from schemas/marker-grammar.schema.json so the
+    grammar has a single source of truth. An empty list means all markers in
+    the text are valid (positive-case only; T002 adds rejection logic).
+    """
+    schema = json.loads(MARKER_SCHEMA_PATH.read_text(encoding="utf-8"))
+    pattern: str = schema["const"]["marker_pattern"]
+    compiled = re.compile(pattern)
+
+    errors: list[str] = []
+    # Walk every token that looks like a NEEDS CLARIFICATION marker and verify
+    # the full token matches the canonical regex.
+    for match in re.finditer(r"\[NEEDS CLARIFICATION:[^\]]*\]", text):
+        token = match.group(0)
+        if not compiled.fullmatch(token):
+            errors.append(f"Malformed marker: {token!r}")
+    return errors
 
 
 def _die(message: str, code: int = 2) -> None:
