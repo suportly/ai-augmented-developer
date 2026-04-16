@@ -28,12 +28,13 @@ Resolve every `[NEEDS CLARIFICATION: <question>]` marker in a spec or plan befor
 
 1. **Enumerate markers.** Grep the file; list the questions with file:line references.
 2. **Order them.** Dependencies first (if answering A narrows B, ask A first). Then risk (highest-impact first).
-3. **For each marker:**
+3. **For each marker** (`[NEEDS CLARIFICATION:cl-N <question>]`):
    - Restate the question in plain language, giving the surrounding paragraph as context.
    - If there are 2-4 plausible answers, offer them as a multiple choice **and mark which option you recommend**, with a one-line rationale grounded in the spec, the codebase, or the project's conventions. Use a clear marker — for example `★ Option A (recommended)` — so the recommendation is unmissable when the user scans the choices. The user may still pick another option; they should never have to guess your pick.
    - Wait for the user's answer.
-   - Edit the file: replace the entire `[NEEDS CLARIFICATION: ...]` expression with the resolved text. Do **not** leave a residual comment.
-   - If the answer reveals a new ambiguity, add a fresh marker rather than papering over it.
+   - Edit the file: replace the entire `[NEEDS CLARIFICATION:cl-N ...]` expression with the resolved text. Do **not** leave a residual comment.
+   - If the answer reveals a new ambiguity, add a fresh marker with the next monotonic `cl-N` id rather than papering over it.
+   - **Legacy markers** (`[NEEDS CLARIFICATION: ...]` without a `cl-N` id): if found, assign the next available `cl-N` id before resolving. When calling programmatically, pass `answers=[{id: "cl-1", answer: "..."}, ...]` keyed by the `cl-N` id.
 4. **Re-grep** to confirm zero markers remain before reporting done.
 
 ## Rules
