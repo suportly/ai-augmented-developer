@@ -37,22 +37,34 @@ def load_marker_pattern() -> re.Pattern[str]:
     return re.compile(schema["x-marker-pattern"])
 
 
-def check_markers(text: str) -> list[str]:
-    """Return error messages for malformed cl-N markers in *text*.
+_LEGACY_MARKER_RE = re.compile(r"\[NEEDS CLARIFICATION:\s+[^\]]+\]")
 
-    Every recognized token (`[NEEDS CLARIFICATION:...]`) is matched against
-    the canonical regex from schemas/marker-grammar.schema.json. Tokens that
-    do not fully match (missing `cl-N`, zero-padded, decimal, etc.) yield
-    one error each. Legacy back-compat (tokens without `cl-N`) is added in
-    T003 — until then they are reported as malformed.
+
+def check_markers(text: str) -> dict[str, list[str]]:
+    """Classify NEEDS CLARIFICATION markers in *text*.
+
+    Returns a dict with two lists:
+
+    - ``errors``   — tokens that look like the new grammar (have ``cl-``
+      after the colon) but do not fully match it. Examples: ``cl-001``,
+      ``cl-1.2``.
+    - ``warnings`` — legacy tokens without ``cl-N`` (whitespace right after
+      the colon). Accepted for back-compat with specs created before T001.
+
+    Valid ``[NEEDS CLARIFICATION:cl-N <question>]`` markers produce neither.
     """
     pattern = load_marker_pattern()
     errors: list[str] = []
+    warnings: list[str] = []
     for match in re.finditer(r"\[NEEDS CLARIFICATION:[^\]]*\]", text):
         token = match.group(0)
-        if not pattern.fullmatch(token):
+        if pattern.fullmatch(token):
+            continue
+        if _LEGACY_MARKER_RE.fullmatch(token):
+            warnings.append(f"Legacy marker (no cl-N id): {token}")
+        else:
             errors.append(f"Malformed marker: {token}")
-    return errors
+    return {"errors": errors, "warnings": warnings}
 
 
 def _die(message: str, code: int = 2) -> None:
