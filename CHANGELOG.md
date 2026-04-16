@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.12.1] - 2026-04-16
+
+Hand-off messages were pointing users at bare slash commands like `/plan`, which don't resolve in consumer projects — since v0.10 every command lives under the `aiadev/` namespace.
+
+### Fixed
+
+- **New `rules/slash-commands.md`** — cross-cutting rule that tells the agent to use the namespaced form (`/aiadev:plan`, `/aiadev:clarify`, …) whenever it references a pipeline command in user-facing prose. Skill invocation (the `Skill` tool) and internal skill-to-skill hand-off references stay on the bare name; the rule only governs what the user sees.
+- The file propagates to every consumer project through `framework_artifacts.iter_framework_artifacts` and loads automatically from `.claude/rules/` on each Claude Code session.
+
 ## [0.12.0] - 2026-04-15
 
 Two skill UX fixes: `constitution` now bootstraps from existing project context, and `clarify` always marks its recommended option.
