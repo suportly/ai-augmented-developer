@@ -66,6 +66,41 @@ class TestIterFrameworkArtifacts:
         assert roles_names == [("command", "valid")]
 
 
+class TestSpecifySkillClNInstruction:
+    """skills/specify/SKILL.md must instruct cl-N stamping (T005)."""
+
+    def test_step_4_instructs_cl_n_stamping(
+        self, framework_root: pathlib.Path
+    ) -> None:
+        skill = (framework_root / "skills" / "specify" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        assert "cl-" in skill, (
+            "skills/specify/SKILL.md must reference 'cl-' to instruct the "
+            "cl-N marker id convention."
+        )
+        assert "monoton" in skill.lower(), (
+            "skills/specify/SKILL.md must mention monotonic id assignment."
+        )
+
+
+class TestClarifySkillIdAnswerInput:
+    """skills/clarify/SKILL.md must describe answers=[{id, answer}] (T006)."""
+
+    def test_clarify_describes_id_answer_pairs(
+        self, framework_root: pathlib.Path
+    ) -> None:
+        skill = (framework_root / "skills" / "clarify" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        assert "cl-" in skill, (
+            "skills/clarify/SKILL.md must reference the 'cl-N' id format."
+        )
+        assert "answers" in skill, (
+            "skills/clarify/SKILL.md must mention 'answers' as the input shape."
+        )
+
+
 class TestSpecTemplateMarkerExample:
     """spec-template.md must illustrate the cl-N marker grammar (T004)."""
 

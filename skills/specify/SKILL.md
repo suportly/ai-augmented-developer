@@ -35,7 +35,7 @@ Take a demand in plain language and produce a `spec.md` focused on **what** and 
 1. **Create the artifact stub.** Compute the next `{{SPEC_ID}}` (4-digit, zero-padded, monotonic across `specs/`). The spec directory is `specs/<NNNN>-<slug>/` where `<NNNN>` is `{{SPEC_ID}}` and `<slug>` is the kebab-case feature slug. If `specs/<NNNN>-<slug>/spec.md` does not exist, copy it from `templates/spec-template.md` and fill `{{FEATURE_NAME}}`, `{{BRANCH}}`, `{{DATE}}`, `{{SPEC_ID}}`. `aiadev init --feature <name>` does all of this in one shot.
 2. **Read the demand.** Identify: primary problem, who feels it, the shape of a good outcome. Do not propose a solution yet.
 3. **Draft the Problem, Users, Success criteria, and Non-goals sections.** Keep each under 5 bullets.
-4. **Surface ambiguities inline.** Every unknown becomes a `[NEEDS CLARIFICATION: <precise question>]` marker. Do not invent answers.
+4. **Surface ambiguities inline.** Every unknown becomes a `[NEEDS CLARIFICATION:cl-N <precise question>]` marker with a **monotonically assigned** id within the spec (`cl-1`, `cl-2`, …). To compute the next id, count existing `cl-N` markers in the file and add 1. Do not reuse ids of removed markers; the next id is always `max(existing) + 1`. Do not invent answers.
 5. **Write user stories.** Each story has ≥ 3 acceptance scenarios in Given / When / Then form. If you cannot think of three, the story is either too small (fold it into another) or too big (split it).
 6. **Dispatch `spec-document-reviewer`** if available. Address feedback until the review returns approved.
 7. **Report to the user.** Summarize the spec in 3-5 lines, link to the file, and list the outstanding `[NEEDS CLARIFICATION]` markers.
