@@ -74,3 +74,47 @@ class TestAssertWithin:
         target = escape_link / "secret.md"
         with pytest.raises(InvalidWorkspaceError):
             assert_within(tmp_path, target)
+
+
+class TestComputeTargetPath:
+    """T009 — Story 3 sc2 + Story 1 sc1 (NNNN + slug computation)."""
+
+    def test_empty_workspace_starts_at_0001(self, tmp_path: pathlib.Path) -> None:
+        from aiadev._tooling.workspace import compute_target_path
+
+        result = compute_target_path(tmp_path, "my feature")
+        assert result.parent.name == "0001-my-feature"
+        assert result.name == "spec.md"
+
+    def test_increments_from_existing(self, tmp_path: pathlib.Path) -> None:
+        from aiadev._tooling.workspace import compute_target_path
+
+        (tmp_path / "specs" / "0007-foo").mkdir(parents=True)
+        result = compute_target_path(tmp_path, "bar")
+        assert result.parent.name == "0008-bar"
+
+    def test_slugifies_unicode_and_spaces(self, tmp_path: pathlib.Path) -> None:
+        from aiadev._tooling.workspace import compute_target_path
+
+        result = compute_target_path(tmp_path, "aiadev como ferramenta")
+        assert result.parent.name == "0001-aiadev-como-ferramenta"
+
+    def test_artifact_exists_raises(self, tmp_path: pathlib.Path) -> None:
+        from aiadev._tooling import ArtifactExistsError
+        from aiadev._tooling.workspace import compute_target_path
+
+        # Pre-create the exact path compute_target_path would generate.
+        expected = tmp_path / "specs" / "0001-x" / "spec.md"
+        expected.parent.mkdir(parents=True, exist_ok=True)
+        expected.write_text("existing")
+        with pytest.raises(ArtifactExistsError):
+            compute_target_path(tmp_path, "x")
+
+    def test_overwrite_flag_skips_guard(self, tmp_path: pathlib.Path) -> None:
+        from aiadev._tooling.workspace import compute_target_path
+
+        expected = tmp_path / "specs" / "0001-x" / "spec.md"
+        expected.parent.mkdir(parents=True, exist_ok=True)
+        expected.write_text("existing")
+        result = compute_target_path(tmp_path, "x", overwrite=True)
+        assert result == expected
