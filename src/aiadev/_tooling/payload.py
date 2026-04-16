@@ -91,4 +91,8 @@ def _artifact_for(skill: str) -> str:
         "clarify": "spec.md",
         "plan": "plan.md",
         "tasks": "tasks.md",
-    }.get(skill, "spec.md")
+        "implement": "tasks.md",
+        "analyze": "spec.md",
+        "checklist": "plan.md",
+        "constitution": "constitution.md",
+    }[skill]

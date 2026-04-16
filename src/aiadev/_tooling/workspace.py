@@ -29,8 +29,11 @@ def validate_workspace(path: str | pathlib.Path) -> pathlib.Path:
 def assert_within(workspace: pathlib.Path, candidate: pathlib.Path) -> None:
     """Raise :class:`InvalidWorkspaceError` if *candidate* escapes *workspace*."""
     ws = workspace.resolve()
-    target = candidate.resolve() if candidate.exists() else pathlib.Path(*candidate.parts).resolve()
-    if not str(target).startswith(str(ws)):
+    if candidate.exists():
+        target = candidate.resolve()
+    else:
+        target = pathlib.Path(candidate).resolve()
+    if not target.is_relative_to(ws):
         raise InvalidWorkspaceError(
             f"Path {candidate} resolves to {target}, outside workspace {ws}"
         )
