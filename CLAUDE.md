@@ -22,6 +22,10 @@ Invoke the appropriate skill **before any action that writes code or state**. Cl
 | Code review approved | `finishing-a-branch` |
 | UI or component work | `frontend-design` |
 
+Cross-cutting rules live under [`rules/`](./rules) and install into every
+consumer project (`.claude/rules/<name>.md`). When you add one, drop the
+file in that directory; it propagates through `aiadev sync`.
+
 ## Constitution
 
 See [`constitution.md`](./constitution.md) for the seven framework articles (Spec-first, Test-first, Simplicity, Evidence over claims, Provider pattern, Privacy by design, Attribution). Every plan ships with a Constitution Check; waivers go in the plan's Complexity Tracking table.
