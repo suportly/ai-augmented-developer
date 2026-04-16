@@ -68,7 +68,7 @@
       "properties": {
         "regex": {
           "type": "string",
-          "description": "PCRE conforme contracts/marker-format.md.",
+          "description": "Regex que o caller deve usar para extrair marcadores. Forma PCRE com grupos nomeados (consumida diretamente por Python `re`). Para a forma ECMA 262 / JSON Schema (grupos numerados), ver `x-marker-pattern` em `schemas/marker-grammar.schema.json`.",
           "const": "\\[NEEDS CLARIFICATION:cl-(?P<id>[1-9][0-9]*)\\s+(?P<question>[^\\]]+)\\]"
         },
         "next_id": {
@@ -88,7 +88,7 @@
         "properties": {
           "id": {
             "oneOf": [
-              { "type": "string", "pattern": "^cl-\\d+$" },
+              { "type": "string", "pattern": "^cl-([1-9][0-9]*)$" },
               { "type": "null", "description": "Marcador legacy sem id; needs_renumbering=true será reportado." }
             ]
           },
