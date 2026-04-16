@@ -53,6 +53,39 @@ def test_validator_rejects_malformed_ids() -> None:
         assert result["warnings"] == [], f"{label} must not appear as a warning; got {result['warnings']}"
 
 
+def test_next_id_empty_text() -> None:
+    from aiadev._tooling.markers import next_id
+    assert next_id("text without markers") == 1
+
+
+def test_next_id_with_gaps() -> None:
+    from aiadev._tooling.markers import next_id
+    assert next_id("...[NEEDS CLARIFICATION:cl-1 a]...[NEEDS CLARIFICATION:cl-3 b]...") == 4
+
+
+def test_enumerate_markers_mixed() -> None:
+    from aiadev._tooling.markers import enumerate_markers
+
+    text = (
+        "[NEEDS CLARIFICATION:cl-2 modern]\n"
+        "[NEEDS CLARIFICATION: legacy without id]\n"
+    )
+    result = enumerate_markers(text)
+    assert len(result) == 2
+    assert result[0]["id"] == "cl-2"
+    assert result[0]["question"] == "modern"
+    assert result[1]["id"] is None
+    assert "legacy" in result[1]["question"]
+
+
+def test_needs_renumbering() -> None:
+    from aiadev._tooling.markers import needs_renumbering
+
+    assert needs_renumbering("[NEEDS CLARIFICATION: legacy]") is True
+    assert needs_renumbering("[NEEDS CLARIFICATION:cl-1 modern]") is False
+    assert needs_renumbering("no markers") is False
+
+
 def test_validator_tolerates_legacy_with_warning() -> None:
     """Legacy [NEEDS CLARIFICATION: ...] (no cl-N) is a warning, not an error.
 
