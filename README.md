@@ -143,6 +143,52 @@ Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai
 
 Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant skill.
 
+## Use as LLM tools
+
+The 8 pipeline skills can be invoked programmatically by any LLM agent, outside of Claude Code or other IDE harnesses.
+
+### Python library (in-process)
+
+```python
+from aiadev.tools import specify, clarify, plan, tasks
+
+# 1. Generate a spec
+payload = specify(demand="Add user authentication", workspace_path="/path/to/project")
+# payload["prompt"]      → SKILL.md content + template + constitution excerpt
+# payload["target_path"] → /path/to/project/specs/0001-add-user-authentication/spec.md
+# Your LLM follows the prompt and creates the file at target_path.
+
+# 2. Resolve clarifications
+result = clarify(
+    spec_path="/path/to/project/specs/0001-add-user-authentication/spec.md",
+    workspace_path="/path/to/project",
+    answers=[{"id": "cl-1", "answer": "Use JWT with httpOnly cookies."}],
+)
+
+# 3. Generate plan and tasks
+plan_result = plan(spec_path="...", workspace_path="...")
+tasks_result = tasks(plan_path="...", workspace_path="...")
+```
+
+All functions return a `ToolPayload` dict (see `specs/0008-llm-tool-integration/contracts/tool-payload.schema.json` for the schema). The payload contains the skill prompt, template, context, and a computed `target_path` — the caller LLM follows the instructions to create the artifact.
+
+### MCP stdio server
+
+Add to your MCP configuration (e.g. `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "aiadev": {
+      "command": "aiadev-mcp-server",
+      "args": []
+    }
+  }
+}
+```
+
+The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires `pip install 'aiadev[mcp]'`.
+
 ## The Basic Workflow
 
 1. **specify** — Activates first. Turns a natural-language demand into a `spec.md` under `specs/<branch>/`, surfacing any ambiguity as `[NEEDS CLARIFICATION: …]` markers instead of guessing.
