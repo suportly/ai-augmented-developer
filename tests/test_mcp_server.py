@@ -193,5 +193,4 @@ class TestEntryPoint:
              "from aiadev.mcp_server.__main__ import main"],
             capture_output=True, text=True, timeout=10,
         )
-        # Just verify the module loads without crash
-        assert result.returncode == 0 or "mcp" in result.stderr.lower() or True
+        assert result.returncode == 0

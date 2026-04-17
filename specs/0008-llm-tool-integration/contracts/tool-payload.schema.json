@@ -99,7 +99,7 @@
             "required": ["path", "line"],
             "properties": {
               "path": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 }
+              "line": { "type": "integer", "minimum": 0, "description": "Line number (0 = unknown)." }
             }
           }
         }

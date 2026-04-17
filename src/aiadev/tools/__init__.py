@@ -56,7 +56,10 @@ def clarify(
                 raise UnknownMarkerIdError(
                     f"Marker id {a['id']!r} not found in {spec_path}"
                 )
-    return _call("clarify", workspace_path, spec_path=spec_path, **kwargs)
+    result = _call("clarify", workspace_path, spec_path=spec_path, **kwargs)
+    if answers:
+        result["resolved_answers"] = answers
+    return result
 
 
 def plan(

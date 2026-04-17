@@ -53,7 +53,13 @@ class TestClarify:
 
         spec = tmp_path / "specs" / "0001-test" / "spec.md"
         spec.parent.mkdir(parents=True)
-        spec.write_text("[NEEDS CLARIFICATION:cl-1 question one]\n")
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\n[NEEDS CLARIFICATION:cl-1 question one]\n"
+            "## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
 
         result = clarify(
             spec_path=str(spec),
@@ -71,7 +77,13 @@ class TestClarify:
 
         spec = tmp_path / "specs" / "0001-test" / "spec.md"
         spec.parent.mkdir(parents=True)
-        spec.write_text("[NEEDS CLARIFICATION:cl-1 question]\n")
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\n[NEEDS CLARIFICATION:cl-1 question]\n"
+            "## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
 
         with pytest.raises(UnknownMarkerIdError):
             clarify(
@@ -84,6 +96,34 @@ class TestClarify:
 # ── T017 — plan + tasks ────────────────────────────────────────────────
 
 class TestPlanAndTasks:
+    def test_plan_rejects_malformed_spec(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev._tooling import SpecInvalidError
+        from aiadev.tools import plan
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text("# Spec\nNo real sections here.\n")
+        with pytest.raises(SpecInvalidError):
+            plan(spec_path=str(spec), workspace_path=str(tmp_path))
+
+    def test_plan_prompt_mentions_constitution_check(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import plan
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\nX\n## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
+        result = plan(spec_path=str(spec), workspace_path=str(tmp_path))
+        assert "Constitution" in result["prompt"]
+
     def test_plan_requires_spec(
         self, framework_root: pathlib.Path, tmp_path: pathlib.Path
     ) -> None:
@@ -100,7 +140,12 @@ class TestPlanAndTasks:
 
         spec = tmp_path / "specs" / "0001-test" / "spec.md"
         spec.parent.mkdir(parents=True)
-        spec.write_text("# Spec\n## Problem\nTest.\n")
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\nX\n## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
 
         result = plan(spec_path=str(spec), workspace_path=str(tmp_path))
         assert result["skill"] == "plan"

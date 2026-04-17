@@ -21,7 +21,7 @@
 
 ### T001 — Validator aceita grammar `cl-N`
 
-- **Status:** pending
+- **Status:** done <!-- commits 33f07a9, 2a091ea (fixup #1), db65963 (fixup #2); APPROVED 2026-04-16 -->
 - **Depends on:** —
 - **Files:**
   - create: `schemas/marker-grammar.schema.json`
@@ -37,7 +37,7 @@
 
 ### T002 — Validator rejeita ids malformados
 
-- **Status:** pending
+- **Status:** done <!-- commit 3b2c2f5; APPROVED 2026-04-16 -->
 - **Depends on:** T001
 - **Files:**
   - modify: `scripts/validate_skills.py`
@@ -51,7 +51,7 @@
 
 ### T003 — Validator tolera legacy `[NEEDS CLARIFICATION: ...]` com warning
 
-- **Status:** pending
+- **Status:** done <!-- commit 40b557b; APPROVED 2026-04-16 -->
 - **Depends on:** T001
 - **Files:**
   - modify: `scripts/validate_skills.py`
@@ -65,7 +65,7 @@
 
 ### T004 — Atualizar `templates/spec-template.md` para `cl-N`
 
-- **Status:** pending
+- **Status:** done <!-- commit 2d796e2; review pending -->
 - **Depends on:** T001
 - **Files:**
   - modify: `templates/spec-template.md`
@@ -79,7 +79,7 @@
 
 ### T005 — Atualizar `skills/specify/SKILL.md` para instruir stamping `cl-N`
 
-- **Status:** pending
+- **Status:** done <!-- commit 381d47f; review pending -->
 - **Depends on:** T001
 - **Files:**
   - modify: `skills/specify/SKILL.md`
@@ -92,7 +92,7 @@
 
 ### T006 — Atualizar `skills/clarify/SKILL.md` para `answers=[{id, answer}]`
 
-- **Status:** pending
+- **Status:** done <!-- commit 630e951; review pending -->
 - **Depends on:** T001
 - **Files:**
   - modify: `skills/clarify/SKILL.md`
@@ -105,7 +105,7 @@
 
 ### T007 — `aiadev._tooling.__init__` com excepções tipadas
 
-- **Status:** pending
+- **Status:** done <!-- commit 30681c4 -->
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/_tooling/__init__.py`
@@ -119,7 +119,7 @@
 
 ### T008 — `workspace.py` valida `workspace_path` e bloqueia path traversal
 
-- **Status:** pending
+- **Status:** done <!-- commit d21b4e6 -->
 - **Depends on:** T007
 - **Files:**
   - create: `src/aiadev/_tooling/workspace.py`
@@ -134,7 +134,7 @@
 
 ### T009 — `workspace.compute_target_path` (NNNN + slug) com guarda `artifact_exists`
 
-- **Status:** pending
+- **Status:** done <!-- commit 0234dab -->
 - **Depends on:** T008
 - **Files:**
   - modify: `src/aiadev/_tooling/workspace.py`
@@ -147,7 +147,7 @@
 
 ### T010 — `skill_loader.py` lê SKILL.md + template + trecho de constitution
 
-- **Status:** pending
+- **Status:** done <!-- commit f56e8ce -->
 - **Depends on:** T007
 - **Files:**
   - create: `src/aiadev/_tooling/skill_loader.py`
@@ -161,7 +161,7 @@
 
 ### T011 — `markers.py` gera ids `cl-N` e enumera marcadores em texto
 
-- **Status:** pending
+- **Status:** done <!-- commit b275412 -->
 - **Depends on:** T001, T007
 - **Files:**
   - create: `src/aiadev/_tooling/markers.py`
@@ -175,7 +175,7 @@
 
 ### T012 — `payload.py` monta `ToolPayload` validado contra schema
 
-- **Status:** pending
+- **Status:** done <!-- commit a65c33f -->
 - **Depends on:** T009, T010, T011
 - **Files:**
   - create: `src/aiadev/_tooling/payload.py`
@@ -189,7 +189,7 @@
 
 ### T013 — `telemetry.py` emite JSON-lines em stderr com allowlist
 
-- **Status:** pending
+- **Status:** done <!-- commit 90f6344 -->
 - **Depends on:** T007
 - **Files:**
   - create: `src/aiadev/_tooling/telemetry.py`
@@ -203,7 +203,7 @@
 
 ### T014 — `aiadev.tools._definitions` deriva catálogo do frontmatter de SKILL.md
 
-- **Status:** pending
+- **Status:** done <!-- commit d1559b5 -->
 - **Depends on:** T010
 - **Files:**
   - create: `src/aiadev/tools/_definitions.py`
@@ -217,7 +217,7 @@
 
 ### T015 — `aiadev.tools.specify(demand, workspace_path)`
 
-- **Status:** pending
+- **Status:** done <!-- commit 6f59589 -->
 - **Depends on:** T012, T013, T014
 - **Files:**
   - modify: `src/aiadev/tools/__init__.py`
@@ -232,7 +232,7 @@
 
 ### T016 — `aiadev.tools.clarify(spec_path, workspace_path, answers)`
 
-- **Status:** pending
+- **Status:** done <!-- commit e276fb2 -->
 - **Depends on:** T015
 - **Files:**
   - modify: `src/aiadev/tools/__init__.py`
@@ -246,7 +246,7 @@
 
 ### T017 — `aiadev.tools.plan` e `tasks` (artefatos derivados de spec/plan)
 
-- **Status:** pending
+- **Status:** done <!-- commit 6ae14dd -->
 - **Depends on:** T015
 - **Files:**
   - modify: `src/aiadev/tools/__init__.py`
@@ -262,7 +262,7 @@
 
 ### T018 — `aiadev.tools.implement / analyze / checklist / constitution`
 
-- **Status:** pending
+- **Status:** done <!-- commit c981727 -->
 - **Depends on:** T015
 - **Files:**
   - modify: `src/aiadev/tools/__init__.py`
@@ -273,9 +273,7 @@
   - [ ] Implementação reutiliza `_tooling.payload.build`. Testes GREEN.
   - [ ] Commit: `feat(tools): T018 implement remaining 4 pipeline tools`.
 
-### T019 — Vendorar JSON Schemas oficiais do MCP em `schemas/vendor/`
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** —
 - **Files:**
   - create: `schemas/vendor/mcp-tools-list.schema.json`
@@ -290,9 +288,7 @@
   - [ ] Testes GREEN.
   - [ ] Commit: `chore(schemas): T019 vendor MCP tools/list and prompts/list schemas`.
 
-### T020 — `pyproject.toml`: extra `[mcp]`, `pytest-asyncio`, script `aiadev-mcp-server`
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** —
 - **Files:**
   - modify: `pyproject.toml`
@@ -305,9 +301,7 @@
   - [ ] Testes GREEN.
   - [ ] Commit: `chore(packaging): T020 add mcp extra and aiadev-mcp-server entrypoint`.
 
-### T021 — `mcp_server/transport.py` provider para o SDK `mcp` (Article V)
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** T020
 - **Files:**
   - create: `src/aiadev/mcp_server/__init__.py`
@@ -320,9 +314,7 @@
   - [ ] Testes GREEN.
   - [ ] Commit: `feat(mcp-server): T021 transport provider over mcp SDK`.
 
-### T022 — `mcp_server/server.py` handlers `prompts/list` + `tools/list`
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** T014, T019, T021
 - **Files:**
   - create: `src/aiadev/mcp_server/server.py`
@@ -334,9 +326,7 @@
   - [ ] Handlers consultam `aiadev.tools._definitions.list_definitions()`. Teste GREEN.
   - [ ] Commit: `feat(mcp-server): T022 wire prompts/list and tools/list handlers`.
 
-### T023 — `mcp_server/server.py` handlers `prompts/get` + `tools/call` (mesmo payload)
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** T015, T022
 - **Files:**
   - modify: `src/aiadev/mcp_server/server.py`
@@ -348,9 +338,7 @@
   - [ ] Handlers delegam a `aiadev.tools.<name>(**args)`. Testes GREEN.
   - [ ] Commit: `feat(mcp-server): T023 prompts/get and tools/call return identical ToolPayload`.
 
-### T024 — Catálogo do servidor reflete mudanças em `skills/`
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** T022
 - **Files:**
   - modify: `src/aiadev/mcp_server/server.py` *(se necessário invalidar cache)*
@@ -362,9 +350,7 @@
   - [ ] T022 continua passando.
   - [ ] Commit: `feat(mcp-server): T024 catalog reflects skills dir changes at runtime`.
 
-### T025 — `mcp_server/__main__.py` entry + falha rápida sem `mcp` SDK + CHANGELOG
-
-- **Status:** pending
+- **Status:** done <!-- Phase 4 commit 04c8b98 -->
 - **Depends on:** T021, T022, T023, T024
 - **Files:**
   - create: `src/aiadev/mcp_server/__main__.py`

@@ -21,8 +21,6 @@ def validate_workspace(path: str | pathlib.Path) -> pathlib.Path:
         raise InvalidWorkspaceError(str(exc)) from exc
     if not resolved.is_dir():
         raise InvalidWorkspaceError(f"Not a directory: {resolved}")
-    if p.resolve() != resolved:
-        raise InvalidWorkspaceError(f"Path resolves unexpectedly: {p} -> {resolved}")
     return resolved
 
 
