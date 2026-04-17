@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [0.13.0] - 2026-04-17
+
+New `aiadev lang` command (exposed as `/aiadev:lang`) — swap the `**Language:**` header in an in-progress feature's spec/plan/tasks without hand-editing three files.
+
+### Added
+
+- **`aiadev lang <bcp-47>`** (`src/aiadev/commands/lang.py`) — rewrites the `**Language:**` header in `spec.md`, `plan.md`, and `tasks.md` under the active feature directory. Feature is inferred from the current git branch slug; `--feature <dir>` overrides. `--dry-run` previews without writing. Only the header is touched — existing prose is not translated.
+- **`commands/lang.md`** — slash-command wrapper rendered as `/aiadev:lang` in consumer projects; propagates through `iter_framework_artifacts` like the other commands.
+- **`rules/slash-commands.md`** — `lang` added to the list of namespaced slash commands the agent must use in user-facing prose.
+
 ## [0.12.1] - 2026-04-16
 
 Hand-off messages were pointing users at bare slash commands like `/plan`, which don't resolve in consumer projects — since v0.10 every command lives under the `aiadev/` namespace.
