@@ -1,0 +1,288 @@
+{
+  "$defs": {
+    "Icon": {
+      "additionalProperties": true,
+      "description": "An icon for display in user interfaces.",
+      "properties": {
+        "src": {
+          "title": "Src",
+          "type": "string"
+        },
+        "mimeType": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mimetype"
+        },
+        "sizes": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sizes"
+        }
+      },
+      "required": [
+        "src"
+      ],
+      "title": "Icon",
+      "type": "object"
+    },
+    "Tool": {
+      "additionalProperties": true,
+      "description": "Definition for a tool the client can call.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "inputSchema": {
+          "additionalProperties": true,
+          "title": "Inputschema",
+          "type": "object"
+        },
+        "outputSchema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outputschema"
+        },
+        "icons": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Icon"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icons"
+        },
+        "annotations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolAnnotations"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "_meta": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Meta"
+        },
+        "execution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolExecution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "inputSchema"
+      ],
+      "title": "Tool",
+      "type": "object"
+    },
+    "ToolAnnotations": {
+      "additionalProperties": true,
+      "description": "Additional properties describing a Tool to clients.\n\nNOTE: all properties in ToolAnnotations are **hints**.\nThey are not guaranteed to provide a faithful description of\ntool behavior (including descriptive properties like `title`).\n\nClients should never make tool use decisions based on ToolAnnotations\nreceived from untrusted servers.",
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "readOnlyHint": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readonlyhint"
+        },
+        "destructiveHint": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destructivehint"
+        },
+        "idempotentHint": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Idempotenthint"
+        },
+        "openWorldHint": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Openworldhint"
+        }
+      },
+      "title": "ToolAnnotations",
+      "type": "object"
+    },
+    "ToolExecution": {
+      "additionalProperties": true,
+      "description": "Execution-related properties for a tool.",
+      "properties": {
+        "taskSupport": {
+          "anyOf": [
+            {
+              "enum": [
+                "forbidden",
+                "optional",
+                "required"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tasksupport"
+        }
+      },
+      "title": "ToolExecution",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "The server's response to a tools/list request from the client.",
+  "properties": {
+    "_meta": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Meta"
+    },
+    "nextCursor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Nextcursor"
+    },
+    "tools": {
+      "items": {
+        "$ref": "#/$defs/Tool"
+      },
+      "title": "Tools",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tools"
+  ],
+  "title": "ListToolsResult",
+  "type": "object"
+}

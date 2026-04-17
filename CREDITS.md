@@ -34,6 +34,13 @@ React admin" shape. They ship with placeholders (`{{BACKEND_DIR}}`,
 substituted at `aiadev install --preset mobile-ops --interactive` time.
 No project-specific domain, identifier, or path survives in the preset.
 
+### Vendored MCP schemas (`schemas/vendor/`)
+
+JSON Schemas extracted from the [`mcp`](https://pypi.org/project/mcp/) Python
+SDK v1.26.0 (Anthropic, MIT license) via `pydantic` `model_json_schema()`.
+Used for offline validation of aiadev's `tools/list` and `prompts/list`
+responses in CI. See `schemas/vendor/README.md` for extraction details.
+
 ## Reporting attribution gaps
 
 If you recognize material in this repository that should be credited here and isn't, open an issue — we will correct it.
