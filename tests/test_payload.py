@@ -43,6 +43,25 @@ class TestBuildPayload:
         result = build("specify", framework_root, tmp_path, demand="x")
         assert result["marker_format"]["next_id"] == 1
 
+    def test_specify_payload_with_markers_validates(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev._tooling.payload import build
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\n[NEEDS CLARIFICATION:cl-1 test?]\n"
+            "## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
+        result = build("clarify", framework_root, tmp_path, spec_path=str(spec))
+        schema = _load_schema()
+        jsonschema.validate(instance=result, schema=schema)
+        assert len(result["existing_markers"]) == 1
+
     def test_existing_markers_populated_for_clarify(
         self, framework_root: pathlib.Path, tmp_path: pathlib.Path
     ) -> None:
@@ -50,7 +69,13 @@ class TestBuildPayload:
 
         spec = tmp_path / "specs" / "0001-test" / "spec.md"
         spec.parent.mkdir(parents=True)
-        spec.write_text("[NEEDS CLARIFICATION:cl-1 question one]\nSome text.\n")
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\n[NEEDS CLARIFICATION:cl-1 question one]\n"
+            "## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
 
         result = build(
             "clarify", framework_root, tmp_path,

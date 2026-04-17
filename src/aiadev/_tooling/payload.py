@@ -7,9 +7,16 @@ from typing import Any
 
 import aiadev
 
+from . import SpecInvalidError
 from .markers import enumerate_markers, needs_renumbering, next_id
 from .skill_loader import load_skill
-from .workspace import compute_target_path, validate_workspace
+from .workspace import assert_within, compute_target_path, validate_workspace
+
+_SPEC_REQUIRED_SECTIONS = {
+    "Problem", "Users and stakeholders", "Success criteria", "Non-goals",
+    "User stories", "Clarifications", "Data touched", "Out-of-band effects",
+    "Open risks", "Traceability",
+}
 
 _CL_N_REGEX_PCRE = (
     r"\[NEEDS CLARIFICATION:cl-(?P<id>[1-9][0-9]*)\s+(?P<question>[^\]]+)\]"
@@ -47,6 +54,8 @@ def build(
         ws, demand or skill, _artifact_for(skill), overwrite=overwrite,
     )
 
+    assert_within(ws, target)
+
     extra_files: list[dict[str, str]] = []
     spec_text = ""
     if spec_path:
@@ -55,6 +64,8 @@ def build(
             content = sp.read_text(encoding="utf-8")
             extra_files.append({"path": str(sp), "content": content})
             spec_text = content
+            if skill in ("plan", "tasks", "clarify"):
+                _validate_spec_sections(content, str(sp))
     if plan_path:
         pp = pathlib.Path(plan_path)
         if pp.is_file():
@@ -87,6 +98,16 @@ def build(
         "existing_markers": marker_entries if marker_entries else [],
         "needs_renumbering": needs_renumbering(spec_text) if spec_text else False,
     }
+
+
+def _validate_spec_sections(content: str, path: str) -> None:
+    """Raise SpecInvalidError if mandatory spec sections are missing."""
+    headers = {m.group(1).strip() for m in re.finditer(r"^## (.+)$", content, re.MULTILINE)}
+    missing = _SPEC_REQUIRED_SECTIONS - headers
+    if missing:
+        raise SpecInvalidError(
+            f"Spec {path} is missing required sections: {sorted(missing)}"
+        )
 
 
 def _artifact_for(skill: str) -> str:
