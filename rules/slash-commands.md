@@ -22,6 +22,7 @@ Use:
 - `/aiadev:requesting-code-review`
 - `/aiadev:finishing-a-branch`
 - `/aiadev:sync`
+- `/aiadev:lang`
 
 Never use the bare form (`/plan`, `/specify`, …) when talking to the
 user. Since v0.2 every command lives under `.claude/commands/aiadev/`
