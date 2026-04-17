@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`aiadev.tools`** — Python library exposing the 8 pipeline skills (`specify`, `clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`, `constitution`) as in-process tool functions. Each returns a `ToolPayload` dict containing the skill prompt + template + context + computed `target_path`.
+- **`aiadev.mcp_server`** — MCP stdio server (via FastMCP) that exposes the same 8 skills as both `prompts` and `tools`. Run with `aiadev-mcp-server` or `python -m aiadev.mcp_server`.
+- **`aiadev._tooling`** — shared core: workspace validation, skill loading, marker generation (`cl-N`), payload assembly, and JSON-lines telemetry.
+
+### Changed
+
+- **Marker format** — `[NEEDS CLARIFICATION]` markers now require a stable id: `[NEEDS CLARIFICATION:cl-N <question>]`. Legacy markers (without `cl-N`) are accepted with a warning for back-compat. Affects `templates/spec-template.md`, `skills/specify/SKILL.md`, `skills/clarify/SKILL.md`.
 
 ## [0.12.1] - 2026-04-16
 
