@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-04-18
+
+Closes the `aiadev.tools` payload-contract gaps surfaced by the first
+live skill-as-prompt-loader run against the Anthropic API (issues #14–#21).
+
+### Fixed
+
+- **`specify(demand=...)`** now embeds the demand verbatim inside
+  `payload['prompt']` under a canonical *User demand* block. Previously
+  the demand only influenced the slug and the LLM saw a generic prompt
+  (#14).
+- **`clarify(answers=...)`** injects a *Resolved answers (batch mode)*
+  block that explicitly overrides the skill's interactive "wait for the
+  user's answer" branch. Callers can now resolve every `cl-N` marker in
+  a single turn (#16).
+- **Non-English `language`** now stamps a *Language and schema
+  invariant* block that pins the canonical `## <Section>` headings in
+  English so `_validate_spec_sections` still recognises the artifact
+  written by the LLM (#15).
+- **Skill template body** is now inlined in `payload['prompt']` as a
+  fenced markdown block, so LLMs no longer have to read
+  `templates/<skill>-template.md` from disk (the workspace initializer
+  only drops `spec-template.md`). Fixes the silent failure where `tasks`
+  wrote `contracts/` and `data-model.md` but never produced `tasks.md`
+  (#17).
+- **`target_path` is now flagged authoritative** in the prompt. Added a
+  new `slug=` kwarg on `specify()` so callers can pin the slug when the
+  demand is shorter than what the LLM will invent. Added
+  `aiadev.tools.locate_latest_artifact(workspace_path, artifact=...)`
+  as a fallback helper for callers whose prediction diverged (#19).
+
+### Added
+
+- **Single-artifact directive** — every skill prompt now carries a
+  *Single required artifact* line naming the sole required output and
+  explicitly forbidding auxiliary files (`contracts/`, `data-model.md`,
+  `research.md`, …) in the same invocation. Reduces the failure mode
+  where a `tasks` run burns budget writing the wrong artifact (#18).
+- **Payload contract documentation** (`docs/articles/llm-tool-integration.md`)
+  — table of which payload fields are already embedded in `prompt`
+  vs which are exposed only in `context`, plus a recommended wrapper
+  flow for new integrators (#21).
+- **Minimum `max_tokens` per skill** documented in the integration
+  guide (plan/tasks need 32k; 8k is unsafe) (#20).
+
 ## [0.14.0] - 2026-04-17
 
 Ships the LLM tool integration (Spec 0008) and adds framework overview articles.
