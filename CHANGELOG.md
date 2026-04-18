@@ -7,15 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-04-17
+
+Ships the LLM tool integration (Spec 0008) and adds framework overview articles.
+
 ### Added
 
 - **`aiadev.tools`** — Python library exposing the 8 pipeline skills (`specify`, `clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`, `constitution`) as in-process tool functions. Each returns a `ToolPayload` dict containing the skill prompt + template + context + computed `target_path`.
 - **`aiadev.mcp_server`** — MCP stdio server (via FastMCP) that exposes the same 8 skills as both `prompts` and `tools`. Run with `aiadev-mcp-server` or `python -m aiadev.mcp_server`.
 - **`aiadev._tooling`** — shared core: workspace validation, skill loading, marker generation (`cl-N`), payload assembly, and JSON-lines telemetry.
+- **`docs/articles/ai-augmented-developer-en.md`** and **`ai-augmented-developer-pt-br.md`** — framework overview articles (English and Brazilian Portuguese) introducing the pipeline, philosophy, and v0.3 → v0.11 release history.
 
 ### Changed
 
 - **Marker format** — `[NEEDS CLARIFICATION]` markers now require a stable id: `[NEEDS CLARIFICATION:cl-N <question>]`. Legacy markers (without `cl-N`) are accepted with a warning for back-compat. Affects `templates/spec-template.md`, `skills/specify/SKILL.md`, `skills/clarify/SKILL.md`.
+- **`.gitignore`** — ignore local `.aiadev/` install state and project-level `.mcp.json` so they stay out of framework history.
 
 ## [0.13.0] - 2026-04-17
 
