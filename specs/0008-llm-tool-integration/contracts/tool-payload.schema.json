@@ -108,6 +108,11 @@
     "needs_renumbering": {
       "type": "boolean",
       "description": "True se algum marcador em existing_markers é legacy (sem cl-N)."
+    },
+    "recommended_max_tokens": {
+      "type": "integer",
+      "minimum": 1024,
+      "description": "Piso sugerido de max_tokens para o LLM consumidor deste payload. Callers SDK-based devem usar esse valor como bound inferior do parâmetro Anthropic `max_tokens` — 8k é inseguro para plan/tasks/implement porque o artefato em si excede o budget."
     }
   }
 }

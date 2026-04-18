@@ -219,7 +219,8 @@ class TestPayloadContract:
         result = specify(
             demand="x", workspace_path=str(tmp_path), language="pt-BR",
         )
-        assert "Keep every `## <Section>` heading in **English verbatim**" in result["prompt"]
+        assert "Language and schema invariant" in result["prompt"]
+        assert "<!-- section: <name> -->" in result["prompt"]
         assert "Problem" in result["prompt"]
 
     def test_specify_inlines_template_body(
@@ -313,3 +314,89 @@ class TestPayloadContract:
         from aiadev.tools import locate_latest_artifact
 
         assert locate_latest_artifact(str(tmp_path), artifact="spec.md") is None
+
+    @pytest.mark.parametrize(
+        "skill, min_tokens",
+        [
+            ("specify", 16_384),
+            ("clarify", 16_384),
+            ("plan", 32_768),
+            ("tasks", 32_768),
+            ("implement", 32_768),
+            ("analyze", 8_192),
+            ("checklist", 8_192),
+            ("constitution", 16_384),
+        ],
+    )
+    def test_payload_includes_recommended_max_tokens(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path,
+        skill: str, min_tokens: int,
+    ) -> None:
+        """#20 — consumers should not need to read docs to size max_tokens."""
+        import aiadev.tools as tools
+
+        if skill == "specify":
+            result = tools.specify(demand="x", workspace_path=str(tmp_path))
+        elif skill in ("plan", "clarify"):
+            spec = tmp_path / "specs" / "0001-test" / "spec.md"
+            spec.parent.mkdir(parents=True)
+            sections = [
+                "Problem", "Users and stakeholders", "Success criteria",
+                "Non-goals", "User stories", "Clarifications", "Data touched",
+                "Out-of-band effects", "Open risks", "Traceability",
+            ]
+            spec.write_text(
+                "# F\n" + "\n\n".join(f"## {s}\nx" for s in sections)
+            )
+            result = getattr(tools, skill)(
+                spec_path=str(spec), workspace_path=str(tmp_path),
+            )
+        elif skill == "tasks":
+            plan_file = tmp_path / "specs" / "0001-test" / "plan.md"
+            plan_file.parent.mkdir(parents=True)
+            plan_file.write_text("# Plan\n")
+            result = tools.tasks(
+                plan_path=str(plan_file), workspace_path=str(tmp_path),
+            )
+        else:
+            result = getattr(tools, skill)(workspace_path=str(tmp_path))
+
+        assert result["recommended_max_tokens"] == min_tokens
+
+    def test_spec_with_html_anchors_passes_validation(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        """#15 — translated headings with anchors must not fail validation."""
+        from aiadev.tools import clarify
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        pt_sections = {
+            "Problem": "Problema",
+            "Users and stakeholders": "Usuários e stakeholders",
+            "Success criteria": "Critérios de sucesso",
+            "Non-goals": "Fora do escopo",
+            "User stories": "Histórias de usuário",
+            "Clarifications": "Esclarecimentos",
+            "Data touched": "Dados afetados",
+            "Out-of-band effects": "Efeitos colaterais",
+            "Open risks": "Riscos em aberto",
+            "Traceability": "Rastreabilidade",
+        }
+        body_parts = ["# Especificação\n"]
+        for english, localized in pt_sections.items():
+            body_parts.append(f"<!-- section: {english} -->")
+            body_parts.append(f"## {localized}")
+            body_parts.append("conteúdo em português\n")
+        body_parts.append(
+            "\n[NEEDS CLARIFICATION:cl-1 pergunta aberta?]\n"
+        )
+        spec.write_text("\n".join(body_parts))
+
+        # Should not raise SpecInvalidError even though every heading is
+        # translated — the HTML section anchors carry the schema.
+        result = clarify(
+            spec_path=str(spec), workspace_path=str(tmp_path),
+            answers=[{"id": "cl-1", "answer": "resposta"}],
+        )
+        assert result["skill"] == "clarify"

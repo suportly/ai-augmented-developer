@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-04-18
+
+Hardening pass that closes the remaining edges of the v0.14.1
+payload-contract work (issues #14–#22). No breaking changes to the
+`ToolPayload` shape; everything is additive.
+
+### Added
+
+- **`payload["recommended_max_tokens"]`** — every `ToolPayload` now
+  carries the minimum safe output-token budget for the skill so SDK
+  callers can size the Anthropic `max_tokens` parameter without reading
+  the docs. Values: 32,768 for `plan` / `tasks` / `implement`; 16,384
+  for `specify` / `clarify` / `constitution`; 8,192 for `analyze` /
+  `checklist`. Also documented in `tool-payload.schema.json` (#20).
+- **HTML section anchors in `templates/spec-template.md`** —
+  `<!-- section: Problem -->` anchors now precede every required
+  heading. `_validate_spec_sections` reads the anchors first and the
+  heading text second, so non-English specs are free to translate the
+  `## <Section>` text without failing validation (#15).
+
+### Changed
+
+- **`skills/plan/SKILL.md`** — reframed the auxiliary outputs
+  (`research.md`, `data-model.md`, `contracts/`) as *next-invocation
+  hints* rather than optional deliverables. The frontmatter now lists
+  only `plan.md`; the skill body tells the LLM to honour the
+  orchestrator's *Single required artifact* directive. Prevents the
+  failure mode where `aiadev.tools.tasks(...)` burns budget writing
+  `contracts/` before producing `tasks.md` (#18).
+- **Non-English language guard in `payload.build()`** — now tells the
+  LLM to preserve the template's HTML anchors verbatim instead of
+  forcing English headings. Heading text may be translated; the
+  anchors carry the schema (#15).
+
 ## [0.14.1] - 2026-04-18
 
 Closes the `aiadev.tools` payload-contract gaps surfaced by the first

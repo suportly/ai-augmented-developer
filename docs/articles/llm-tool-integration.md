@@ -190,9 +190,21 @@ if written is None:
 Anthropic's default `max_tokens` (often 8192 in SDK examples) is too low
 for the larger skills. A medium-sized `tasks.md` is ~40 KB; an LLM given
 only 8k output tokens narrates its plan and runs out of budget before the
-`Write` tool call lands. Recommended floors:
+`Write` tool call lands.
 
-| Skill | Minimum `max_tokens` per turn | Typical artifact size |
+Since v0.14.2 every payload carries a `recommended_max_tokens` field so
+SDK callers can bump the Anthropic parameter without reading this table:
+
+```python
+payload = tasks(plan_path=..., workspace_path=...)
+response = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=payload["recommended_max_tokens"],   # 32768 for tasks
+    ...
+)
+```
+
+| Skill | `recommended_max_tokens` | Typical artifact size |
 |---|---|---|
 | `specify`   | 16,384 | 8–12 KB spec |
 | `clarify`   | 16,384 | edits in place |
@@ -200,10 +212,26 @@ only 8k output tokens narrates its plan and runs out of budget before the
 | `tasks`     | 32,768 | 30–45 KB |
 | `analyze`   | 8,192  | report |
 | `checklist` | 8,192  | report |
-| `implement` | 32,768 (per task) | code + tests |
+| `implement` | 32,768 | code + tests per task |
 | `constitution` | 16,384 | article text |
 
-If your SDK caps at 8k by default, bump it globally before running the
-pipeline. aiadev prompts now include an explicit "call `Write` in your
-first response" directive so the model does not narrate before the tool
-call, but the budget still needs to fit the artifact.
+aiadev prompts also include an explicit "call `Write` in your first
+response" directive so the model does not narrate before the tool call,
+but the budget still needs to fit the artifact.
+
+### Writing specs in non-English languages
+
+When `language != "en"`, `spec-template.md` ships HTML comment anchors
+above every required section:
+
+```markdown
+<!-- section: Problem -->
+## Problema
+
+...conteúdo em português...
+```
+
+`_validate_spec_sections` looks at the anchors first and the heading text
+second, so the LLM is free to translate headings as long as it keeps the
+anchors verbatim. If both are dropped, validation fails with the usual
+`SpecInvalidError` listing the missing sections.
