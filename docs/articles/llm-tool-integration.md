@@ -138,3 +138,72 @@ All tools raise typed exceptions with a stable `.code` attribute:
 | `UnknownMarkerIdError` | `unknown_marker_id` | `clarify` answer references a `cl-N` id not in the spec |
 
 All exceptions are importable from `aiadev._tooling`.
+
+## The payload contract
+
+A caller that ships `payload["prompt"]` to an LLM (with filesystem tools
+scoped to `workspace_path`) does not need to read `payload["context"]`
+separately — `aiadev.tools` already inlines the fields below into the
+prompt body. The context dict is preserved for callers that want direct
+access (for example, a UI that renders the template before the user
+approves a run).
+
+| Payload field | Always embedded in `prompt` | Also exposed in `context`/top-level |
+|---|---|---|
+| `demand` (from `specify`)                   | Yes (issue #14) | no — call arg |
+| `resolved_answers` (from `clarify`)          | Yes, in a batch block that overrides the interactive loop (issue #16) | no — call arg |
+| `context.template.content`                  | Yes, as a fenced `markdown` block (issue #17) | `payload["context"]["template"]` |
+| `context.constitution_excerpt`              | No — pass explicitly if relevant to your LLM prompt | `payload["context"]["constitution_excerpt"]` |
+| `context.extra_files` (spec_path / plan_path) | No — pass explicitly; artifacts can be large | `payload["context"]["extra_files"]` |
+| `target_path`                               | Yes, flagged as *authoritative* (issue #19) | `payload["target_path"]` |
+| Single-artifact directive                   | Yes — the LLM is told not to write `contracts/`, `data-model.md`, etc. during this turn (issue #18) | — |
+| English schema-header guard (non-English runs) | Yes, when `language != "en"` (issue #15) | — |
+
+### Picking a slug
+
+By default, `specify(demand=...)` slugifies the demand. If the demand is
+short and your LLM is likely to invent a richer slug during writing, pass
+`slug=` explicitly so `target_path` matches what the LLM will produce:
+
+```python
+payload = specify(
+    demand="aplicativo",
+    slug="aplicativo-fornecedor",   # wins over demand-derived slug
+    workspace_path="/project",
+    language="pt-BR",
+)
+```
+
+If you cannot predict the slug, use the fallback helper after the LLM
+writes:
+
+```python
+from aiadev.tools import locate_latest_artifact
+
+written = locate_latest_artifact("/project", artifact="spec.md")
+if written is None:
+    raise RuntimeError("LLM did not produce spec.md")
+```
+
+### Minimum `max_tokens` per skill
+
+Anthropic's default `max_tokens` (often 8192 in SDK examples) is too low
+for the larger skills. A medium-sized `tasks.md` is ~40 KB; an LLM given
+only 8k output tokens narrates its plan and runs out of budget before the
+`Write` tool call lands. Recommended floors:
+
+| Skill | Minimum `max_tokens` per turn | Typical artifact size |
+|---|---|---|
+| `specify`   | 16,384 | 8–12 KB spec |
+| `clarify`   | 16,384 | edits in place |
+| `plan`      | 32,768 | 15–25 KB |
+| `tasks`     | 32,768 | 30–45 KB |
+| `analyze`   | 8,192  | report |
+| `checklist` | 8,192  | report |
+| `implement` | 32,768 (per task) | code + tests |
+| `constitution` | 16,384 | article text |
+
+If your SDK caps at 8k by default, bump it globally before running the
+pipeline. aiadev prompts now include an explicit "call `Write` in your
+first response" directive so the model does not narrate before the tool
+call, but the budget still needs to fit the artifact.

@@ -177,3 +177,139 @@ class TestRemainingTools:
         result = func(workspace_path=str(tmp_path))
         assert result["skill"] == tool_name
         assert "prompt" in result
+
+
+# ── Payload contract regression tests (issues #14–#19) ─────────────────
+
+class TestPayloadContract:
+    def test_specify_embeds_demand_verbatim(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        demand = "MY_UNIQUE_STRING_xyz build a TODO app"
+        result = specify(demand=demand, workspace_path=str(tmp_path))
+        assert demand in result["prompt"]
+
+    def test_specify_emits_target_path_directive(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        result = specify(demand="x", workspace_path=str(tmp_path))
+        assert result["target_path"] in result["prompt"]
+        assert "Target path (authoritative)" in result["prompt"]
+
+    def test_specify_respects_explicit_slug(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        result = specify(
+            demand="short", workspace_path=str(tmp_path),
+            slug="my-chosen-slug",
+        )
+        assert "0001-my-chosen-slug/spec.md" in result["target_path"]
+
+    def test_specify_non_english_adds_header_guard(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        result = specify(
+            demand="x", workspace_path=str(tmp_path), language="pt-BR",
+        )
+        assert "Keep every `## <Section>` heading in **English verbatim**" in result["prompt"]
+        assert "Problem" in result["prompt"]
+
+    def test_specify_inlines_template_body(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        result = specify(demand="x", workspace_path=str(tmp_path))
+        assert "{{FEATURE_NAME}}" in result["prompt"]
+
+    def test_specify_declares_single_artifact(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import specify
+
+        result = specify(demand="x", workspace_path=str(tmp_path))
+        assert "Single required artifact" in result["prompt"]
+        assert "spec.md" in result["prompt"]
+
+    def test_clarify_embeds_resolved_answers(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import clarify
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\n[NEEDS CLARIFICATION:cl-1 question]\n"
+            "## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
+
+        magic = "UNIQUE_ANSWER_ZZZ"
+        result = clarify(
+            spec_path=str(spec),
+            workspace_path=str(tmp_path),
+            answers=[{"id": "cl-1", "answer": f"{magic} the actual answer"}],
+        )
+        assert magic in result["prompt"]
+        assert "cl-1" in result["prompt"]
+        assert "AUTOMATED EXECUTION" in result["prompt"]
+
+    def test_plan_inlines_plan_template(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import plan
+
+        spec = tmp_path / "specs" / "0001-test" / "spec.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(
+            "# Spec\n## Problem\nX\n## Users and stakeholders\nX\n"
+            "## Success criteria\nX\n## Non-goals\nX\n## User stories\nX\n"
+            "## Clarifications\nX\n## Data touched\nX\n## Out-of-band effects\nX\n"
+            "## Open risks\nX\n## Traceability\nX\n"
+        )
+        result = plan(spec_path=str(spec), workspace_path=str(tmp_path))
+        assert "Skill template" in result["prompt"]
+        assert result["context"]["template"]["content"].splitlines()[0] in result["prompt"]
+
+    def test_tasks_prompt_forbids_auxiliary_outputs(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import tasks
+
+        plan_file = tmp_path / "specs" / "0001-test" / "plan.md"
+        plan_file.parent.mkdir(parents=True)
+        plan_file.write_text("# Plan\n")
+
+        result = tasks(plan_path=str(plan_file), workspace_path=str(tmp_path))
+        assert "Single required artifact" in result["prompt"]
+        assert "tasks.md" in result["prompt"]
+        assert "contracts/" in result["prompt"]
+
+    def test_locate_latest_artifact_finds_divergent_slug(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import locate_latest_artifact
+
+        written = tmp_path / "specs" / "0001-llm-chose-this" / "spec.md"
+        written.parent.mkdir(parents=True)
+        written.write_text("# Spec\n")
+
+        found = locate_latest_artifact(str(tmp_path), artifact="spec.md")
+        assert found == written.resolve()
+
+    def test_locate_latest_artifact_returns_none_when_missing(
+        self, framework_root: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        from aiadev.tools import locate_latest_artifact
+
+        assert locate_latest_artifact(str(tmp_path), artifact="spec.md") is None
