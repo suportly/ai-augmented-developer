@@ -131,24 +131,34 @@ class TestMcpServerCalls:
         from aiadev.mcp_server.server import create_server
 
         server = create_server(framework_root)
-        args = {"demand": "test", "workspace_path": str(tmp_path)}
+        # Use two fresh workspaces so target_path differs, and assert that
+        # tool vs prompt handlers agree on the shape of the payload. The
+        # prompt body embeds workspace-specific target_path (per issue #19),
+        # so equality holds for skill metadata and schema — not for the raw
+        # prompt text.
+        ws_a = tmp_path / "ws_a"
+        ws_b = tmp_path / "ws_b"
+        ws_a.mkdir()
+        ws_b.mkdir()
 
         tool_result = asyncio.get_event_loop().run_until_complete(
-            server.call_tool("specify", args)
+            server.call_tool("specify", {"demand": "test", "workspace_path": str(ws_a)})
         )
         tool_payload = json.loads(tool_result[0][0].text)
 
-        # Second call with fresh workspace (target_path would differ)
-        tmp2 = tmp_path / "ws2"
-        tmp2.mkdir()
-        args2 = {"demand": "test", "workspace_path": str(tmp2)}
         prompt_result = asyncio.get_event_loop().run_until_complete(
-            server.get_prompt("specify", args2)
+            server.get_prompt("specify", {"demand": "test", "workspace_path": str(ws_b)})
         )
         prompt_payload = json.loads(prompt_result.messages[0].content.text)
 
         assert tool_payload["skill"] == prompt_payload["skill"]
-        assert tool_payload["prompt"] == prompt_payload["prompt"]
+        assert tool_payload["version"] == prompt_payload["version"]
+        assert tool_payload["context"] == prompt_payload["context"]
+        assert tool_payload["marker_format"] == prompt_payload["marker_format"]
+        # Both prompts should end with the same skill body.
+        skill_body_a = tool_payload["prompt"].split("## Skill instructions", 1)[-1]
+        skill_body_b = prompt_payload["prompt"].split("## Skill instructions", 1)[-1]
+        assert skill_body_a == skill_body_b
 
 
 # ── T024 — catalog reflects skills/ changes ────────────────────────────

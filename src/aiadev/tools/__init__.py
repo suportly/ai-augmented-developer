@@ -37,9 +37,13 @@ def _call(
 
 
 def specify(
-    *, demand: str, workspace_path: str, language: str = "en", **kwargs: Any
+    *, demand: str, workspace_path: str, language: str = "en",
+    slug: str | None = None, **kwargs: Any,
 ) -> dict[str, Any]:
-    return _call("specify", workspace_path, demand=demand, language=language, **kwargs)
+    return _call(
+        "specify", workspace_path,
+        demand=demand, language=language, slug=slug, **kwargs,
+    )
 
 
 def clarify(
@@ -56,9 +60,10 @@ def clarify(
                 raise UnknownMarkerIdError(
                     f"Marker id {a['id']!r} not found in {spec_path}"
                 )
-    result = _call("clarify", workspace_path, spec_path=spec_path, **kwargs)
-    if answers:
-        result["resolved_answers"] = answers
+    result = _call(
+        "clarify", workspace_path,
+        spec_path=spec_path, answers=answers, **kwargs,
+    )
     return result
 
 
@@ -88,3 +93,25 @@ def checklist(*, workspace_path: str, **kwargs: Any) -> dict[str, Any]:
 
 def constitution(*, workspace_path: str, **kwargs: Any) -> dict[str, Any]:
     return _call("constitution", workspace_path, **kwargs)
+
+
+def locate_latest_artifact(
+    workspace_path: str,
+    *,
+    artifact: str = "spec.md",
+) -> pathlib.Path | None:
+    """Return the most recently modified ``specs/*/<artifact>`` or ``None``.
+
+    Safety net for callers whose predicted ``target_path`` diverged from the
+    slug the LLM chose when writing the file (see issue #19). Prefer pinning
+    on ``target_path`` — this helper exists only as a fallback.
+    """
+    specs_dir = pathlib.Path(workspace_path).resolve() / "specs"
+    if not specs_dir.is_dir():
+        return None
+    matches = sorted(
+        specs_dir.glob(f"*/{artifact}"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return matches[0] if matches else None
