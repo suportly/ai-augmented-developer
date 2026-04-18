@@ -30,6 +30,22 @@ _SKILL_EXCLUSIVE_ARTIFACT: dict[str, str] = {
     "constitution": "constitution.md",
 }
 
+# Per-skill minimum output-token budget. 8k is unsafe for plan/tasks/implement
+# because the artifact body alone exceeds that; the LLM ends up narrating its
+# plan and running out of budget before the Write tool call lands. Surfaced
+# on the payload as `recommended_max_tokens` so SDK-based callers can bump
+# the Anthropic `max_tokens` parameter without reading the docs.
+_RECOMMENDED_MAX_TOKENS: dict[str, int] = {
+    "specify":      16_384,
+    "clarify":      16_384,
+    "plan":         32_768,
+    "tasks":        32_768,
+    "implement":    32_768,
+    "analyze":       8_192,
+    "checklist":     8_192,
+    "constitution": 16_384,
+}
+
 
 def build(
     skill: str,
@@ -113,6 +129,7 @@ def build(
         },
         "existing_markers": marker_entries if marker_entries else [],
         "needs_renumbering": needs_renumbering(spec_text) if spec_text else False,
+        "recommended_max_tokens": _RECOMMENDED_MAX_TOKENS.get(skill, 16_384),
     }
 
 
@@ -184,10 +201,14 @@ def _augment_prompt(
         blocks.append(
             "## Language and schema invariant\n\n"
             f"- Write the artifact **content** in `{language}`.\n"
-            "- Keep every `## <Section>` heading in **English verbatim** "
-            "so aiadev validators can recognise them. Do not translate the "
-            f"headings, even when the body is in `{language}`. The "
-            f"canonical headings are: {header_list}.\n"
+            "- Preserve every `<!-- section: <name> -->` HTML anchor "
+            "from the template verbatim. These anchors — not the "
+            "heading text — are what aiadev validators read, so they "
+            "must stay in English exactly as the template ships them.\n"
+            "- Translating the `## <Section>` heading text is allowed "
+            "for `{language}` content as long as the anchors above each "
+            "heading are kept intact. If you drop the anchors, keep the "
+            f"heading in **English verbatim**: {header_list}.\n"
             "- Inline placeholder labels that aiadev parses "
             "(`[NEEDS CLARIFICATION:cl-N ...]`, `{{SPEC_ID}}`, etc.) also "
             "stay in English."
@@ -215,10 +236,28 @@ def _augment_prompt(
     return "\n\n".join(blocks) + "\n"
 
 
+_SECTION_ANCHOR_RE = re.compile(
+    r"<!--\s*section:\s*([^-][^>]*?)\s*-->",
+    re.IGNORECASE,
+)
+
+
 def _validate_spec_sections(content: str, path: str) -> None:
-    """Raise SpecInvalidError if mandatory spec sections are missing."""
-    headers = {m.group(1).strip() for m in re.finditer(r"^## (.+)$", content, re.MULTILINE)}
-    missing = _SPEC_REQUIRED_SECTIONS - headers
+    """Raise SpecInvalidError if mandatory spec sections are missing.
+
+    A section counts as present if either (a) a `## <canonical English name>`
+    heading exists verbatim, or (b) an HTML comment anchor of the form
+    `<!-- section: <canonical English name> -->` exists. The anchor form
+    lets non-English specs translate heading text while keeping a stable
+    parse target for aiadev tooling.
+    """
+    headers = {
+        m.group(1).strip()
+        for m in re.finditer(r"^## (.+)$", content, re.MULTILINE)
+    }
+    anchors = {m.group(1).strip() for m in _SECTION_ANCHOR_RE.finditer(content)}
+    present = headers | anchors
+    missing = _SPEC_REQUIRED_SECTIONS - present
     if missing:
         raise SpecInvalidError(
             f"Spec {path} is missing required sections: {sorted(missing)}"

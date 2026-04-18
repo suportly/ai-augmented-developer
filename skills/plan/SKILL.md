@@ -8,15 +8,9 @@ inputs:
 outputs:
   - type: file
     path: specs/<branch>/plan.md
-  - type: file
-    path: specs/<branch>/research.md
-    optional: true
-  - type: file
-    path: specs/<branch>/data-model.md
-    optional: true
-  - type: dir
-    path: specs/<branch>/contracts/
-    optional: true
+# Auxiliary artifacts (research.md, data-model.md, contracts/) are
+# follow-up invocations — the plan references them but does not write
+# them in the same call. See the "Next-invocation hints" block below.
 requires:
   - constitution
   - templates/plan-template.md
@@ -44,10 +38,17 @@ Write the implementation plan from a clean `spec.md`. The plan says **how** the 
 4. **Add Architecture decisions.** Short ADR-style entries — decision, rationale, trade-off. One per non-trivial choice.
 5. **Project structure changes.** Diff-style listing of files to create, modify, or remove.
 6. **Phase breakdown.** Group the work into phases whose order matters. Within a phase, tasks will be independent. Do not enumerate individual tasks here — that is `tasks`'s job.
-7. **Auxiliary artifacts** if the plan warrants them:
+7. **Next-invocation hints — do NOT write in this call.** The plan may
+   reference auxiliary artifacts that, when needed, belong in follow-up
+   invocations of this skill (or in a separate spec). This call writes
+   `plan.md` **only**. Hints for future invocations:
    - `research.md` for investigations the plan depends on.
    - `data-model.md` for schema diagrams or field lists.
    - `contracts/` for API payloads, event shapes, CLI grammars.
+
+   When `aiadev.tools.plan(...)` is the entry point, the orchestrator
+   passes a *Single required artifact* directive that forbids these
+   auxiliary paths in the current turn — honour it.
 8. **Dispatch `plan-document-reviewer`** if available. Iterate until approved.
 9. **Report** in 3-5 lines: phases, #tasks forecast, any waivers requested, link to the file.
 

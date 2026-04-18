@@ -10,11 +10,16 @@
 
 ---
 
+<!-- section: Problem -->
 ## Problem
 
 <!-- 2-3 sentences. What is broken, missing, or slow today? Who notices?
-     Link to supporting evidence (issue, analytics screenshot, user quote). -->
+     Link to supporting evidence (issue, analytics screenshot, user quote).
+     You may translate the heading text for non-English specs; the
+     `<!-- section: Problem -->` comment above is the schema anchor that
+     aiadev validators read, so do not remove or translate it. -->
 
+<!-- section: Users and stakeholders -->
 ## Users and stakeholders
 
 <!-- Who benefits from this being done? Who is affected (positive or
@@ -22,6 +27,7 @@
 
 -
 
+<!-- section: Success criteria -->
 ## Success criteria
 
 <!-- Observable outcomes after this ships. Each one should be testable
@@ -30,6 +36,7 @@
 
 -
 
+<!-- section: Non-goals -->
 ## Non-goals
 
 <!-- Things explicitly out of scope. List them so the plan does not
@@ -37,6 +44,7 @@
 
 -
 
+<!-- section: User stories -->
 ## User stories
 
 ### Story 1 — {{SHORT_TITLE}} (P1)
@@ -51,6 +59,7 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 ### Story 2 — {{SHORT_TITLE}} (P2) <!-- optional -->
 
+<!-- section: Clarifications -->
 ## Clarifications
 
 <!-- Put one [NEEDS CLARIFICATION:cl-N <precise question>] marker here for
@@ -61,6 +70,7 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 - [NEEDS CLARIFICATION:cl-1 example — is this feature gated behind the Pro plan?]
 
+<!-- section: Data touched -->
 ## Data touched
 
 <!-- Entities, fields, events created or modified. Not implementation —
@@ -68,6 +78,7 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 -
 
+<!-- section: Out-of-band effects -->
 ## Out-of-band effects
 
 <!-- Anything that reaches beyond this process: notifications sent,
@@ -76,6 +87,7 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 -
 
+<!-- section: Open risks -->
 ## Open risks
 
 <!-- Risks known at spec time. Do not promise mitigations here —
@@ -83,6 +95,7 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 -
 
+<!-- section: Traceability -->
 ## Traceability
 
 - Originating issue: {{ISSUE_URL}}
