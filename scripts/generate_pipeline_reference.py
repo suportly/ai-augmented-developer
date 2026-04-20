@@ -100,11 +100,11 @@ def render(repo_root: Path) -> str:
         fm = skills.get(name)
         if fm is None:
             # Skill not yet landed; render a placeholder so drift is visible.
-            lines.append(f"| `/aiadev:{name}` | _missing_ | — |")
+            lines.append(f"| `/aia:{name}` | _missing_ | — |")
             continue
         description = _compose_one_liner(fm.get("description", ""))
         nxt = _format_handoffs(fm.get("handoffs"))
-        lines.append(f"| `/aiadev:{name}` | {description} | → {nxt} |")
+        lines.append(f"| `/aia:{name}` | {description} | → {nxt} |")
     lines.append("")
     return "\n".join(lines)
 

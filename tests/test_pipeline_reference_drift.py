@@ -22,7 +22,7 @@ REFERENCE = ROOT / "docs" / "pipeline-reference.md"
 CLAUDE_MD = ROOT / "CLAUDE.md"
 GENERATOR = ROOT / "scripts" / "generate_pipeline_reference.py"
 
-REF_COMMAND_RE = re.compile(r"`/aiadev:([a-z][a-z0-9-]*)`")
+REF_COMMAND_RE = re.compile(r"`/aia:([a-z][a-z0-9-]*)`")
 # CLAUDE.md's "Skill to invoke" column uses bare backticked names.
 CLAUDE_TABLE_RE = re.compile(r"\|\s*`([a-z][a-z0-9-]*)`\s*\|")
 

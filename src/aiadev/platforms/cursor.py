@@ -48,7 +48,7 @@ def resolve_target(
     if role == "command":
         if not name:
             raise ValueError("command artifact requires a non-empty name")
-        return install_root / ".cursor" / "commands" / "aiadev" / f"{name}.md"
+        return install_root / ".cursor" / "commands" / "aia" / f"{name}.md"
     if role == "agent":
         if not name:
             raise ValueError("agent artifact requires a non-empty name")

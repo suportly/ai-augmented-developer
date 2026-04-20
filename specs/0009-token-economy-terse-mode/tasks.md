@@ -182,8 +182,8 @@
 - **Spec scenarios:** Story 2 scenario 1.
 - **Acceptance:**
   - [ ] Failing grep-based test (`tests/test_claude_md_pointer.py`) — asserts the exact line is present.
-  - [ ] Insert, immediately after the bullet list under `## What lives where`: `> **Quick reference:** run \`/aiadev:help\` for a one-screen summary of the pipeline commands.`
-  - [ ] Commit: `docs(root): T012 point to /aiadev:help`.
+  - [ ] Insert, immediately after the bullet list under `## What lives where`: `> **Quick reference:** run \`/aia:help\` for a one-screen summary of the pipeline commands.`
+  - [ ] Commit: `docs(root): T012 point to /aia:help`.
 
 ### T013 — Benchmark provider interface + FakeProvider
 
@@ -262,7 +262,7 @@
 
 <!-- T018 removed in tasks v2 (2026-04-20): cli.py has no pipeline subcommands;
      echoing from validate/init/install/sync/doctor/extension would be YAGNI.
-     The rule-file path (T017) covers every /aiadev:* slash invocation via
+     The rule-file path (T017) covers every /aia:* slash invocation via
      Claude Code rule loading. Plan.md Phase 5 updated to match.
      Task ids T019–T021 kept stable to preserve commit-message traceability. -->
 
@@ -292,17 +292,34 @@
   - [ ] Test invokes `python3 scripts/validate_skills.py` twice: once with `AIADEV_TERSE=0`, once with `AIADEV_TERSE=1`. Asserts exit code 0 for both. Captures both outputs for PR evidence.
   - [ ] Commit: `test(validators): T020 assert terse-mode does not regress existing checks`.
 
+### T022 — Rename slash-command prefix `/aiadev:` → `/aia:` (breaking)
+
+- **Status:** done <!-- added mid-implementation per user request; part of the terse-mode release -->
+- **Depends on:** —
+- **Files:**
+  - modify: 5 platform handlers (`src/aiadev/platforms/{claude_code,codex,cursor,gemini,opencode}.py`) — change `"aiadev"` subdir segment to `"aia"`.
+  - modify: `tests/test_install_command_and_agent_roles.py` — 5 parametrize rows.
+  - modify: 13 Markdown / Python files carrying the 67 occurrences of `/aiadev:` prose (generator, CLAUDE.md, rules, help skill, docs, spec/plan/tasks, agents, articles, CHANGELOG). Bulk sed-equivalent.
+  - rename (local, gitignored): `.claude/commands/aiadev/` → `.claude/commands/aia/`.
+- **Spec scenarios:** — (framework-wide rename; improves terse-mode theme but is not itself an acceptance criterion).
+- **Acceptance:**
+  - [x] Every platform handler routes commands under `<platform>/commands/aia/`.
+  - [x] Install tests still pass (489 passed, 1 skipped).
+  - [x] Regenerated `docs/pipeline-reference.md` uses the new prefix and drift test passes.
+  - [x] No `/aiadev:` remains in tracked code or docs (HTML markers like `aiadev:auto-stack` are internal — left untouched).
+  - [x] Commit: `feat!: rename /aiadev: slash prefix to /aia:`.
+
 ### T021 — CHANGELOG entry + final gate
 
 - **Status:** pending
-- **Depends on:** T001–T020
+- **Depends on:** T001–T020, T022
 - **Files:**
   - modify: `CHANGELOG.md`
   - test: `tests/test_changelog_entry.py` — asserts `[Unreleased]` contains a line mentioning `terse-mode` and the `0009` spec id.
 - **Spec scenarios:** — (final bookkeeping)
 - **Acceptance:**
   - [ ] Failing test.
-  - [ ] Add `[Unreleased] → Added` bullet: terse-mode reviewer contract, `/aiadev:help` pipeline reference, pinned Sonnet 4.6 benchmark. Link to spec 0009.
+  - [ ] Add `[Unreleased] → Added` bullet: terse-mode reviewer contract, `/aia:help` pipeline reference, pinned Sonnet 4.6 benchmark. Link to spec 0009.
   - [ ] Run full gate: `pytest && python3 scripts/validate_skills.py && npx markdownlint-cli2 '**/*.md'`. Paste outputs in the PR.
   - [ ] Commit: `docs(changelog): T021 record 0009 terse-mode feature`.
 

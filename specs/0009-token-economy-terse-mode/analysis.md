@@ -13,7 +13,7 @@
 | S1.1 | Terse off → current multi-paragraph format preserved | Phase 2 · `tests/test_off_mode_unchanged.py` golden-file check | ✅ covered |
 | S1.2 | Terse on → one-line-per-issue + ≥ 30 % fewer tokens | Phase 2 · terse-mode block in 3 reviewer agents; Phase 4 · benchmark delta test | ✅ covered |
 | S1.3 | Terse on + violating output → schema validation fails loudly | Phase 1 · `schemas/terse-output.schema.json`; Phase 2 · `tests/test_terse_output_schema.py` | ✅ covered |
-| S2.1 | Help lists every `/aiadev:*` pipeline command + **predecessor / successor** step | Phase 3 · `generate_pipeline_reference.py` walks skill catalog | ⚠️ partial — see gap A |
+| S2.1 | Help lists every `/aia:*` pipeline command + **predecessor / successor** step | Phase 3 · `generate_pipeline_reference.py` walks skill catalog | ⚠️ partial — see gap A |
 | S2.2 | CI fails when help drifts from `CLAUDE.md` | Phase 3 · `tests/test_pipeline_reference_drift.py` + pre-commit hook + CI diff | ✅ covered |
 | S2.3 | Terse on → help within 24 lines / 600 tokens; enforced on every change | Phase 3 · drift test dual assertion | ⚠️ partial — see gap B |
 | S3.1 | No config → off by default; artifacts byte-for-byte unchanged | Phase 1 · `resolve_terse_mode()` default `false`; Phase 2 · `test_off_mode_unchanged.py` | ✅ covered |
@@ -42,9 +42,9 @@
 
 ### C. Slash-command path vs `cli.py` echo mechanism
 
-**Evidence.** Plan Phase 5 says `src/aiadev/cli.py` prints the `terse-mode: <on|off> (<source>)` line before each pipeline command's output. In Claude Code, `/aiadev:<name>` slash commands are routed through `.claude/commands/aiadev/<name>.md` (Markdown prompts), **not** through `cli.py`. `cli.py` is invoked when the user runs `aiadev <subcommand>` from a shell, which is a different entry point.
+**Evidence.** Plan Phase 5 says `src/aiadev/cli.py` prints the `terse-mode: <on|off> (<source>)` line before each pipeline command's output. In Claude Code, `/aia:<name>` slash commands are routed through `.claude/commands/aiadev/<name>.md` (Markdown prompts), **not** through `cli.py`. `cli.py` is invoked when the user runs `aiadev <subcommand>` from a shell, which is a different entry point.
 
-**Impact.** If the hand-off line is emitted only from `cli.py`, users invoking skills via `/aiadev:plan` inside Claude Code never see the "switch state visible" guarantee required by Story 3 Scenario 2.
+**Impact.** If the hand-off line is emitted only from `cli.py`, users invoking skills via `/aia:plan` inside Claude Code never see the "switch state visible" guarantee required by Story 3 Scenario 2.
 
 **Suggested next skill.** `plan` — either (a) move the echo into each `.claude/commands/aiadev/<name>.md` template as a literal first-line instruction (rendered by the agent), or (b) add the echo instruction to the shared `.claude/rules/terse-mode.md` that every skill loads. Keeping the `cli.py` echo is still valuable for the shell path but is not sufficient on its own.
 

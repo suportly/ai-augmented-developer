@@ -18,7 +18,7 @@ The AI-Augmented Developer pipeline dispatches many subagents per feature (spec-
 <!-- section: Users and stakeholders -->
 ## Users and stakeholders
 
-- **Framework users** running `/aiadev:*` commands on real features — pay subagent token bills, read the artifacts.
+- **Framework users** running `/aia:*` commands on real features — pay subagent token bills, read the artifacts.
 - **Subagent authors** (reviewers, implementers) — must follow the output contract.
 - **Framework maintainers** — own the skill catalog, templates, and constitution; sign off on any article-touching change.
 - **Consumer projects** (e.g. `django-drf-react` preset) — inherit whatever defaults ship here.
@@ -28,7 +28,7 @@ The AI-Augmented Developer pipeline dispatches many subagents per feature (spec-
 
 - Running a representative pipeline (`specify → plan → tasks → implement` on a ≤ 5-task feature — exact fixture in `cl-4`, stored under `specs/0009-token-economy-terse-mode/benchmark/`) with terse-mode enabled produces ≥ 30 % fewer output tokens than the same run with it disabled, measured on reviewer + implementer subagent turns against a pinned model family. Baseline captured before merge.
 - Reviewer subagents (`spec-document-reviewer`, `plan-document-reviewer`, `code-reviewer`) emit findings in a one-line-per-issue contract when terse-mode is on, and a schema validator rejects multi-paragraph findings in that mode.
-- A `/aiadev:help` (or equivalent) quick-reference is reachable in ≤ 1 command and lists every pipeline skill with its one-line purpose, matching the table in root `CLAUDE.md`.
+- A `/aia:help` (or equivalent) quick-reference is reachable in ≤ 1 command and lists every pipeline skill with its one-line purpose, matching the table in root `CLAUDE.md`.
 - Terse-mode is **off by default**. Enabling it is a single, discoverable switch (per-invocation flag or project setting) and the mechanism is documented in exactly one place.
 - No regression in artifact schema validation: every existing `scripts/validate_skills.py` and schema check still passes with terse-mode on and off.
 
@@ -48,7 +48,7 @@ The AI-Augmented Developer pipeline dispatches many subagents per feature (spec-
 
 ### Story 1 — Terse reviewer output (P1)
 
-As a **framework user** running `/aiadev:plan` on a mid-size feature, I want the plan-reviewer subagent to emit findings in a compact one-line-per-issue format when terse-mode is on, so that I spend less time reading and less money on output tokens.
+As a **framework user** running `/aia:plan` on a mid-size feature, I want the plan-reviewer subagent to emit findings in a compact one-line-per-issue format when terse-mode is on, so that I spend less time reading and less money on output tokens.
 
 **Acceptance scenarios:**
 
@@ -62,7 +62,7 @@ As a **new framework user** who just installed the preset, I want a single comma
 
 **Acceptance scenarios:**
 
-1. Given the framework is installed in a consumer project, when the user invokes the help command, then the output lists every `/aiadev:*` pipeline command with its one-line purpose and the expected predecessor/successor step.
+1. Given the framework is installed in a consumer project, when the user invokes the help command, then the output lists every `/aia:*` pipeline command with its one-line purpose and the expected predecessor/successor step.
 2. Given the skill catalog changes (new skill added or renamed), when the help output is regenerated, then it stays in sync with the authoritative list in root `CLAUDE.md` — a CI check fails if they drift.
 3. Given terse-mode is on, when the help command runs, then the output fits within the budget defined by `cl-1` (below) and a test enforces that budget on every change to the help artifact.
 
@@ -72,7 +72,7 @@ As a **framework maintainer**, I want terse-mode to be a single documented switc
 
 **Acceptance scenarios:**
 
-1. Given a consumer project with no terse-mode configuration, when any `/aiadev:*` command runs, then terse-mode is off and every artifact matches the pre-feature behaviour byte-for-byte on a recorded fixture.
+1. Given a consumer project with no terse-mode configuration, when any `/aia:*` command runs, then terse-mode is off and every artifact matches the pre-feature behaviour byte-for-byte on a recorded fixture.
 2. Given a consumer project that has enabled terse-mode via the supported switch, when a pipeline command runs, then every reviewer subagent in scope for v1 (per `cl-3`) spawned by that command adopts the terse output contract, and the switch state is visible in the run's hand-off message.
 3. Given terse-mode is enabled project-wide but a single invocation passes an explicit override, when the command runs, then the per-invocation override wins and a one-line note in the hand-off explains which level resolved.
 
@@ -81,7 +81,7 @@ As a **framework maintainer**, I want terse-mode to be a single documented switc
 
 - **cl-1 — Help budget:** Both caps apply — **≤ 24 lines** (single-screen) **and ≤ 600 output tokens** against the pinned model family from `cl-4`. A single test enforces both; either violation fails. Applies only when terse-mode is on; off-mode help has no cap.
 - **cl-2 — Switch location:** Project-level key in `.claude/settings.json` (e.g. `"aiadev.terseMode": true|false`, off by default) with a per-invocation env-var override (`AIADEV_TERSE=1` enables, `AIADEV_TERSE=0` disables). Env wins over settings; the resolved level is echoed in the skill's hand-off message. Aligned with the `update-config` skill; no new config file introduced.
-- **cl-3 — Subagent scope:** Reviewers only in v1 (`spec-document-reviewer`, `plan-document-reviewer`, `code-reviewer`). Implementer subagents spawned by `/aiadev:implement` keep their current narrative output, because the two-stage review depends on the hand-off context. Extending terse-mode to implementers is a follow-up informed by v1 results.
+- **cl-3 — Subagent scope:** Reviewers only in v1 (`spec-document-reviewer`, `plan-document-reviewer`, `code-reviewer`). Implementer subagents spawned by `/aia:implement` keep their current narrative output, because the two-stage review depends on the hand-off context. Extending terse-mode to implementers is a follow-up informed by v1 results.
 - **cl-4 — Baseline fixture:** A synthetic 3-task micro-feature stored under `specs/0009-token-economy-terse-mode/benchmark/` that exercises `spec-document-reviewer`, `plan-document-reviewer`, and `code-reviewer` with realistic inputs. Runs pinned to the **Claude Sonnet 4.6** tokenizer (`claude-sonnet-4-6`). Captured twice (terse-mode on / off), checked into the repo, and re-executed by a CI job. Implementer turns are out of scope for this measurement per cl-3.
 - **cl-5 — Commit-message analogue:** Deferred. `finishing-a-branch` and `.claude/rules/git-workflow.md` already cap commit subjects at 72 chars with imperative mood; the marginal token win does not justify forking the commit pipeline in v1. Added to the Non-goals list. Revisit only if reviewer terse-mode demonstrates the ≥ 30 % target and commit verbosity becomes the next bottleneck.
 - **cl-6 — Handler reach:** Claude Code only in v1. Other handlers (Codex, Gemini CLI, Cursor, Windsurf, Cline, Copilot, etc.) inherit the terse contract in a follow-up once Claude Code has a working reference. Keeps the first iteration's scope tight and testable.

@@ -1,6 +1,6 @@
 ---
 name: help
-description: Print the pipeline quick-reference — a one-screen summary of every /aiadev:* command and its hand-offs.
+description: Print the pipeline quick-reference — a one-screen summary of every /aia:* command and its hand-offs.
 version: 0.1.0
 inputs: []
 outputs:

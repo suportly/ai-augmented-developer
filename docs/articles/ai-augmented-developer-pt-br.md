@@ -83,7 +83,7 @@ Talvez a maior virada. O `install` agora equipa o projeto com **toda a esteira**
 
 ### v0.10 — Namespacing e specs sequenciais
 
-Slash commands ganham namespace: `/aiadev:specify`, `/aiadev:plan`, `/aiadev:implement`. Specs deixam o esquema `feature-<slug>/` e adotam IDs sequenciais zero-padded: `specs/0001-<slug>/`, `0002-…`. Plus: `aiadev init --language pt-BR` faz toda a esteira (clarify, plan, tasks, implement, analyze, checklist) responder no idioma escolhido.
+Slash commands ganham namespace: `/aia:specify`, `/aia:plan`, `/aia:implement`. Specs deixam o esquema `feature-<slug>/` e adotam IDs sequenciais zero-padded: `specs/0001-<slug>/`, `0002-…`. Plus: `aiadev init --language pt-BR` faz toda a esteira (clarify, plan, tasks, implement, analyze, checklist) responder no idioma escolhido.
 
 ### v0.11 — MCP em todas as plataformas
 

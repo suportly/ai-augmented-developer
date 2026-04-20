@@ -13,7 +13,7 @@
 
 ## Summary
 
-We will add an opt-in **terse-mode** to the three reviewer subagents (`spec-document-reviewer`, `plan-document-reviewer`, `code-reviewer`), wire a single project switch (`aiadev.terseMode` in `.claude/settings.json` with an `AIADEV_TERSE` env override), publish a drift-checked `/aiadev:help` quick-reference, and land a pinned Sonnet 4.6 benchmark fixture that proves ≥ 30 % output-token savings on reviewer turns. Work lands in `agents/`, `skills/`, `schemas/`, `scripts/`, `presets/*/`, plus the new benchmark directory under the current spec. Credit to `juliusbrussee/caveman` is added to `CREDITS.md`. Implementer subagents, non-Claude handlers, and commit-message compression are explicitly out of v1.
+We will add an opt-in **terse-mode** to the three reviewer subagents (`spec-document-reviewer`, `plan-document-reviewer`, `code-reviewer`), wire a single project switch (`aiadev.terseMode` in `.claude/settings.json` with an `AIADEV_TERSE` env override), publish a drift-checked `/aia:help` quick-reference, and land a pinned Sonnet 4.6 benchmark fixture that proves ≥ 30 % output-token savings on reviewer turns. Work lands in `agents/`, `skills/`, `schemas/`, `scripts/`, `presets/*/`, plus the new benchmark directory under the current spec. Credit to `juliusbrussee/caveman` is added to `CREDITS.md`. Implementer subagents, non-Claude handlers, and commit-message compression are explicitly out of v1.
 
 ## Changes in plan v2 (2026-04-20)
 
@@ -21,7 +21,7 @@ Derived from `analysis.md`. Each item names the gap it closes.
 
 - **Gap A · Help predecessor/successor links.** Phase 3 generator now reads each skill's `handoffs:` frontmatter and emits `→ <next>` per row.
 - **Gap B · Tokenizer choice.** Technical-context row pins `anthropic.messages.count_tokens` for the help-budget drift check (cheap, non-inference). Benchmark delta continues to use live `usage.output_tokens`.
-- **Gap C · Echo-mechanism reach.** Authoritative echo instruction lives **only** in `.claude/rules/terse-mode.md` (covers every `/aiadev:*` slash-command invocation via rule loading). `cli.py` intentionally has **no** echo — it exposes `validate/init/install/lang/sync/doctor/extension`, none of which are pipeline skills, so a shell-path mirror would be YAGNI (Article III). The "echo-consistency" test downgrades to a rule-file static check: asserts the rule contains the literal echo template and the three source labels.
+- **Gap C · Echo-mechanism reach.** Authoritative echo instruction lives **only** in `.claude/rules/terse-mode.md` (covers every `/aia:*` slash-command invocation via rule loading). `cli.py` intentionally has **no** echo — it exposes `validate/init/install/lang/sync/doctor/extension`, none of which are pipeline skills, so a shell-path mirror would be YAGNI (Article III). The "echo-consistency" test downgrades to a rule-file static check: asserts the rule contains the literal echo template and the three source labels.
 - **Gap D · Dropped `terse_output_contract` frontmatter flag.** Resolved by documenting the scope reduction here: the contract lives in `agents/` + `schemas/terse-output.schema.json` only. Skill frontmatter is untouched. Spec's data-touched bullet accepted "names subject to plan"; this tightens it.
 - **Gap E · CI secret for the benchmark.** Benchmark live runs (`AIADEV_RUN_BENCH=1`) execute only on `push` to `main` via a GitHub Actions workflow secret `ANTHROPIC_API_KEY_BENCHMARK` (scoped to the benchmark job). PRs — including PRs from forks — validate against the committed `benchmark/recorded/` golden files and never re-record. Operational note added to `benchmark/README.md`.
 - **Gap F · Regression of existing validators.** New test `tests/test_existing_validators_regress.py` runs `scripts/validate_skills.py` with `AIADEV_TERSE=0` and then `AIADEV_TERSE=1`; both must exit 0. Paste both outputs in the PR per Article IV.
@@ -36,7 +36,7 @@ Derived from `analysis.md`. Each item names the gap it closes.
 | Storage | File-system only. Benchmark artifacts (inputs + recorded outputs + token counts) checked into `specs/0009-token-economy-terse-mode/benchmark/`. |
 | Testing framework | `pytest` for validators and drift checks; Markdown golden-file comparison for reviewer outputs. |
 | Target platform(s) | Claude Code (v1). Non-Claude handlers deferred per spec `cl-6`. |
-| Performance budget | Terse-mode reviewer responses: ≥ 30 % fewer output tokens than off-mode on the benchmark fixture (Sonnet 4.6). `/aiadev:help` (terse): ≤ 24 lines **and** ≤ 600 output tokens. |
+| Performance budget | Terse-mode reviewer responses: ≥ 30 % fewer output tokens than off-mode on the benchmark fixture (Sonnet 4.6). `/aia:help` (terse): ≤ 24 lines **and** ≤ 600 output tokens. |
 | Security considerations | None beyond baseline. No new network egress, no new secrets, no new logs. Benchmark runs read the pinned Anthropic API via the existing provider pattern (Article V). |
 
 ## Constitution check
@@ -61,10 +61,10 @@ No `FAIL` rows → `Complexity tracking` table below stays empty.
   **Trade-offs.** We cannot *force* the model to obey at inference time; we detect violation after-the-fact. Acceptable because the benchmark fixture fails loudly in CI and the contract is simple (one line per finding, severity + location prefix).
 
 - **Decision.** Switch lives in `.claude/settings.json` as `"aiadev.terseMode": boolean` (default `false`), with `AIADEV_TERSE` env var as a per-invocation override (env wins). A tiny helper `aiadev.config.resolve_terse_mode()` reads both and returns `(value, source)` so the hand-off message can echo "terse-mode: on (env)".
-  **Rationale.** Aligns with the existing `update-config` skill; no new config file; env var satisfies spec Story 3 Scenario 3 without needing CLI arg parsing for `/aiadev:*` commands.
+  **Rationale.** Aligns with the existing `update-config` skill; no new config file; env var satisfies spec Story 3 Scenario 3 without needing CLI arg parsing for `/aia:*` commands.
   **Trade-offs.** Settings-based toggles are per-project rather than per-run; env override mitigates that. An alternative — a dedicated `aiadev.toml` — was rejected to avoid a second source of truth.
 
-- **Decision.** The `/aiadev:help` artifact is a **generated** Markdown file (`docs/pipeline-reference.md`) plus a thin `skills/help/SKILL.md` that reads and returns it. A pytest check in `scripts/validate_skills.py` (new function `check_help_matches_claude_md`) asserts the generated file lists the same pipeline skills as root `CLAUDE.md`.
+- **Decision.** The `/aia:help` artifact is a **generated** Markdown file (`docs/pipeline-reference.md`) plus a thin `skills/help/SKILL.md` that reads and returns it. A pytest check in `scripts/validate_skills.py` (new function `check_help_matches_claude_md`) asserts the generated file lists the same pipeline skills as root `CLAUDE.md`.
   **Rationale.** Single source of truth lives in the skill catalog; generation keeps drift impossible to introduce silently. Terse-mode budget (≤ 24 lines, ≤ 600 tokens) is enforced by the same check.
   **Trade-offs.** One more generator to maintain. Acceptable because the alternative — manual maintenance of a second list — is precisely what caused the problem the spec calls out.
 
@@ -108,7 +108,7 @@ tests/test_off_mode_unchanged.py                                     (new — go
 tests/test_existing_validators_regress.py                            (new — runs scripts/validate_skills.py with AIADEV_TERSE=0 and AIADEV_TERSE=1; both must exit 0 — closes spec success criterion 5)
 tests/test_benchmark_delta.py                                        (new — asserts recorded on/off token delta ≥ 30 %; live run gated by AIADEV_RUN_BENCH=1)
 CREDITS.md                                                           (modified — caveman attribution)
-CLAUDE.md                                                            (modified — one-line "Quick reference: run /aiadev:help" inserted under the "What lives where" heading)
+CLAUDE.md                                                            (modified — one-line "Quick reference: run /aia:help" inserted under the "What lives where" heading)
 .claude/rules/terse-mode.md                                          (new — documents the switch (settings key + env var) and the hand-off line template; loaded by consumer projects via aiadev sync)
 CHANGELOG.md                                                         (modified — [Unreleased] entry)
 src/aiadev/_assets/rules/terse-mode.md                               (new — mirror of .claude/rules/terse-mode.md that aiadev sync ships to consumer projects)
@@ -140,7 +140,7 @@ Apply the contract to the three reviewer agents and verify via schema.
 - A `.pre-commit-config.yaml` hook re-runs the generator on every commit touching `skills/**` or `CLAUDE.md`; CI re-runs it and fails if `git diff` is non-empty. Regeneration is never manual.
 - `skills/help/SKILL.md` reads and returns the generated file.
 - Drift test `tests/test_pipeline_reference_drift.py` asserts (a) the generated file matches the pipeline commands table in root `CLAUDE.md` and (b) stays within 24 lines / 600 tokens (Sonnet 4.6 count, computed via the benchmark provider's tokenizer helper).
-- Insert exactly this line under the root `CLAUDE.md` "What lives where" section, immediately after the bullet list: `> **Quick reference:** run \`/aiadev:help\` for a one-screen summary of the pipeline commands.`
+- Insert exactly this line under the root `CLAUDE.md` "What lives where" section, immediately after the bullet list: `> **Quick reference:** run \`/aia:help\` for a one-screen summary of the pipeline commands.`
 
 ### Phase 4 — Benchmark
 
@@ -150,8 +150,8 @@ Apply the contract to the three reviewer agents and verify via schema.
 
 ### Phase 5 — Integration, docs & changelog
 
-- **Single echo surface.** `/aiadev:<name>` slash commands are routed via `.claude/commands/aiadev/*.md` and never reach `cli.py`, so the rule-loading path is the only place the echo can live without duplication.
-  - **Authoritative instruction** lives in `.claude/rules/terse-mode.md` (with mirrors at `rules/terse-mode.md` — the framework-root copy that `framework_artifacts.iter_framework_artifacts` ships via `aiadev sync` — and at `src/aiadev/_assets/rules/terse-mode.md` — the packaged asset). The rule states: *"Before your first substantive line of output, emit exactly one line: `terse-mode: <on|off> (<source>)` where `<source>` is one of `default`, `settings`, `env`. Read the project's `.claude/settings.json` key `aiadev.terseMode` and the environment variable `AIADEV_TERSE` (env wins)."* Every Claude Code session loads rules from `.claude/rules/`, so every `/aiadev:*` invocation sees it.
+- **Single echo surface.** `/aia:<name>` slash commands are routed via `.claude/commands/aiadev/*.md` and never reach `cli.py`, so the rule-loading path is the only place the echo can live without duplication.
+  - **Authoritative instruction** lives in `.claude/rules/terse-mode.md` (with mirrors at `rules/terse-mode.md` — the framework-root copy that `framework_artifacts.iter_framework_artifacts` ships via `aiadev sync` — and at `src/aiadev/_assets/rules/terse-mode.md` — the packaged asset). The rule states: *"Before your first substantive line of output, emit exactly one line: `terse-mode: <on|off> (<source>)` where `<source>` is one of `default`, `settings`, `env`. Read the project's `.claude/settings.json` key `aiadev.terseMode` and the environment variable `AIADEV_TERSE` (env wins)."* Every Claude Code session loads rules from `.claude/rules/`, so every `/aia:*` invocation sees it.
   - **No shell-path mirror in `cli.py`.** The binary's existing subcommands (`validate`, `init`, `install`, `lang`, `sync`, `doctor`, `extension`) are not pipeline skills; echoing from them would be YAGNI. Dropped from this plan and from tasks.
   - `tests/test_terse_mode_rule.py` doubles as the echo-consistency check: asserts the rule file contains the literal echo template and the three source labels, and that the three rule copies (`.claude/rules/`, `rules/`, `src/aiadev/_assets/rules/`) are byte-for-byte identical.
 - Propagate assets to consumer projects: confirm `src/aiadev/framework_artifacts.py` (and/or `install_manifest.py`) already walks `skills/` and `.claude/rules/`; add `src/aiadev/_assets/rules/terse-mode.md` + `skills/help/SKILL.md` to whichever manifest actually drives `aiadev sync` (located by reading the module before the task starts). If the manifest is auto-generated, no code change is needed and the task is a verification-only step with evidence pasted into the PR.

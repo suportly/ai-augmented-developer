@@ -83,7 +83,7 @@ Maybe the biggest turn. `install` now equips a project with the **entire pipelin
 
 ### v0.10 — Namespacing and sequential specs
 
-Slash commands gain a namespace: `/aiadev:specify`, `/aiadev:plan`, `/aiadev:implement`. Specs leave the `feature-<slug>/` scheme behind for zero-padded sequential IDs: `specs/0001-<slug>/`, `0002-…`. Plus: `aiadev init --language pt-BR` makes the whole pipeline (clarify, plan, tasks, implement, analyze, checklist) speak the chosen language.
+Slash commands gain a namespace: `/aia:specify`, `/aia:plan`, `/aia:implement`. Specs leave the `feature-<slug>/` scheme behind for zero-padded sequential IDs: `specs/0001-<slug>/`, `0002-…`. Plus: `aiadev init --language pt-BR` makes the whole pipeline (clarify, plan, tasks, implement, analyze, checklist) speak the chosen language.
 
 ### v0.11 — MCP across every platform
 

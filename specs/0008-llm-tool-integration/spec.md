@@ -26,7 +26,7 @@ Evidência: ao construir um pipeline autônomo de geração de issue→spec→pl
 
 ## Success criteria
 
-- Um agente LLM rodando fora do Claude Code consegue invocar pelo menos os skills `specify`, `clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`, `constitution` como **tools MCP (stdio) ou objetos de tool em biblioteca Python**, receber o prompt canônico + contexto correspondente, e — executando o prompt com seus próprios tools de filesystem — produzir os mesmos artefatos (`spec.md`, `plan.md`, etc.) que um humano obteria via `/aiadev:specify`.
+- Um agente LLM rodando fora do Claude Code consegue invocar pelo menos os skills `specify`, `clarify`, `plan`, `tasks`, `implement`, `analyze`, `checklist`, `constitution` como **tools MCP (stdio) ou objetos de tool em biblioteca Python**, receber o prompt canônico + contexto correspondente, e — executando o prompt com seus próprios tools de filesystem — produzir os mesmos artefatos (`spec.md`, `plan.md`, etc.) que um humano obteria via `/aia:specify`.
 - Quando o caller segue o prompt retornado, cada artefato resultante (ex: `spec.md`) contém **todas as seções obrigatórias do template canônico** correspondente (`templates/spec-template.md`, `templates/plan-template.md`, etc.) — verificável por checagem de presença de header de seção.
 - O `plan.md` produzido após invocar a tool `plan` contém uma seção **Constitution Check** que lista os 7 artigos da `constitution.md` com status `ok | waiver | fail` para cada, conforme a estrutura definida em `templates/plan-template.md`.
 - Um projeto consumidor que hoje reimplementa a geração de spec/plan ad-hoc consegue substituir essa lógica por chamadas às tools sem regressão funcional observável (mesmas seções obrigatórias presentes nos artefatos gerados).

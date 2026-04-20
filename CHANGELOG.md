@@ -104,12 +104,12 @@ Ships the LLM tool integration (Spec 0008) and adds framework overview articles.
 
 ## [0.13.0] - 2026-04-17
 
-New `aiadev lang` command (exposed as `/aiadev:lang`) — swap the `**Language:**` header in an in-progress feature's spec/plan/tasks without hand-editing three files.
+New `aiadev lang` command (exposed as `/aia:lang`) — swap the `**Language:**` header in an in-progress feature's spec/plan/tasks without hand-editing three files.
 
 ### Added
 
 - **`aiadev lang <bcp-47>`** (`src/aiadev/commands/lang.py`) — rewrites the `**Language:**` header in `spec.md`, `plan.md`, and `tasks.md` under the active feature directory. Feature is inferred from the current git branch slug; `--feature <dir>` overrides. `--dry-run` previews without writing. Only the header is touched — existing prose is not translated.
-- **`commands/lang.md`** — slash-command wrapper rendered as `/aiadev:lang` in consumer projects; propagates through `iter_framework_artifacts` like the other commands.
+- **`commands/lang.md`** — slash-command wrapper rendered as `/aia:lang` in consumer projects; propagates through `iter_framework_artifacts` like the other commands.
 - **`rules/slash-commands.md`** — `lang` added to the list of namespaced slash commands the agent must use in user-facing prose.
 
 ## [0.12.1] - 2026-04-16
@@ -118,7 +118,7 @@ Hand-off messages were pointing users at bare slash commands like `/plan`, which
 
 ### Fixed
 
-- **New `rules/slash-commands.md`** — cross-cutting rule that tells the agent to use the namespaced form (`/aiadev:plan`, `/aiadev:clarify`, …) whenever it references a pipeline command in user-facing prose. Skill invocation (the `Skill` tool) and internal skill-to-skill hand-off references stay on the bare name; the rule only governs what the user sees.
+- **New `rules/slash-commands.md`** — cross-cutting rule that tells the agent to use the namespaced form (`/aia:plan`, `/aia:clarify`, …) whenever it references a pipeline command in user-facing prose. Skill invocation (the `Skill` tool) and internal skill-to-skill hand-off references stay on the bare name; the rule only governs what the user sees.
 - The file propagates to every consumer project through `framework_artifacts.iter_framework_artifacts` and loads automatically from `.claude/rules/` on each Claude Code session.
 
 ## [0.12.0] - 2026-04-15
@@ -171,7 +171,7 @@ Namespaced slash commands, numbered spec directories, and a `--language` flag fo
 
 ### Changed
 
-- **Slash commands are namespaced under `aiadev/`** across every platform (`.claude/commands/aiadev/<name>.md`, `.codex/`, `.cursor/`, `.opencode/` equivalents, and `.gemini/commands/aiadev/<name>.toml`). Claude Code and Gemini CLI render them as `/aiadev:specify`, `/aiadev:plan`, etc. Consumer projects must run `aiadev sync` to migrate; the old flat layout leaves orphan files until cleaned up.
+- **Slash commands are namespaced under `aiadev/`** across every platform (`.claude/commands/aiadev/<name>.md`, `.codex/`, `.cursor/`, `.opencode/` equivalents, and `.gemini/commands/aiadev/<name>.toml`). Claude Code and Gemini CLI render them as `/aia:specify`, `/aia:plan`, etc. Consumer projects must run `aiadev sync` to migrate; the old flat layout leaves orphan files until cleaned up.
 - **Spec directories carry the zero-padded `SPEC_ID` prefix** (`specs/0001-<slug>/`, `specs/0002-<slug>/`, …) instead of the legacy `specs/feature-<slug>/`. `aiadev init` computes the next id monotonically from existing specs. Skills and the `specify` command doc updated to reflect the `specs/<NNNN-slug>/` convention.
 
 ## [0.9.0] - 2026-04-15
