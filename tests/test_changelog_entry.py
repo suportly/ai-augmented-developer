@@ -5,20 +5,20 @@ from pathlib import Path
 CHANGELOG = Path(__file__).resolve().parents[1] / "CHANGELOG.md"
 
 
-def test_unreleased_mentions_terse_mode_and_spec_id():
+def test_0_15_0_section_records_terse_mode_feature():
     body = CHANGELOG.read_text(encoding="utf-8")
-    unreleased = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
-    lower = unreleased.lower()
+    section = body.split("## [0.15.0]", 1)[1].split("\n## [", 1)[0]
+    lower = section.lower()
 
     assert "terse-mode" in lower or "terse mode" in lower, (
-        "[Unreleased] must mention terse-mode"
+        "[0.15.0] must mention terse-mode"
     )
-    assert "0009" in unreleased, (
-        "[Unreleased] must reference spec id 0009 for traceability"
+    assert "0009" in section, (
+        "[0.15.0] must reference spec id 0009 for traceability"
     )
-    assert "/aia:help" in unreleased, (
-        "[Unreleased] must mention the new /aia:help surface"
+    assert "/aia:help" in section, (
+        "[0.15.0] must mention the new /aia:help surface"
     )
-    assert "breaking" in lower or "!" in unreleased, (
-        "[Unreleased] must flag the /aiadev: → /aia: rename as breaking"
+    assert "breaking" in lower or "!" in section, (
+        "[0.15.0] must flag the /aiadev: → /aia: rename as breaking"
     )

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-04-20
+
 Spec **0009 — token-economy-terse-mode** (caveman-inspired). Opt-in terse
 output contract for reviewer subagents, a generated pipeline quick-reference,
 and a shorter `/aia:` command prefix. Phase 4 (Sonnet 4.6 benchmark) is
