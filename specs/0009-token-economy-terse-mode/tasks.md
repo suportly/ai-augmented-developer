@@ -63,7 +63,7 @@
 
 ### T004 — Append terse-mode block to spec-document-reviewer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `agents/spec-document-reviewer.md`
