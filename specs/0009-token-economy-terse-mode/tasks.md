@@ -117,7 +117,7 @@
 
 ### T008 — Pipeline reference generator with hand-off links
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - create: `scripts/generate_pipeline_reference.py`
