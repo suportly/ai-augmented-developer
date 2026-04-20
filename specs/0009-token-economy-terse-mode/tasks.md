@@ -269,7 +269,8 @@
 
 ### T019 — Propagate new rule + help skill via `aiadev sync`
 
-- **Status:** pending
+- **Status:** done <!-- verification-only: framework_artifacts.iter_framework_artifacts auto-discovers rules/*.md and skills/*/SKILL.md; no manifest code change needed, test asserts the coverage. -->
+
 - **Depends on:** T009, T017
 - **Files:**
   - modify: `src/aiadev/framework_artifacts.py` **or** `src/aiadev/install_manifest.py` (whichever is the manifest driver — inspect before editing; if both are auto-generated from the file system, no code change and the task becomes verification-only)
