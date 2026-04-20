@@ -19,7 +19,7 @@ SECTION_HEADER = "## Terse-mode output contract"
     [
         "agents/spec-document-reviewer.md",
         "agents/plan-document-reviewer.md",
-        # T006 appends its row below.
+        "agents/code-reviewer.md",
     ],
 )
 def test_agent_has_terse_block(agent_path: str):

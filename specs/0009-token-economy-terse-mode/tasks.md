@@ -89,7 +89,7 @@
 
 ### T006 — Append terse-mode block to code-reviewer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005 <!-- serialized for the same reason as T005 -->
 - **Files:**
   - modify: `agents/code-reviewer.md`
