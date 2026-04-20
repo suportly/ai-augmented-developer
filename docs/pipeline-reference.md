@@ -13,4 +13,4 @@
 | `/aiadev:checklist` | Run a category-specific quality pass (security / performance / accessibility / i18n / p… | → — |
 | `/aiadev:requesting-code-review` | Use before opening a PR. | → — |
 | `/aiadev:finishing-a-branch` | Use after code review is approved to finalize, push, open PR, and clean up the developm… | → — |
-| `/aiadev:help` | _missing_ | — |
+| `/aiadev:help` | Print the pipeline quick-reference — a one-screen summary of every /aiadev:* command an… | → — |

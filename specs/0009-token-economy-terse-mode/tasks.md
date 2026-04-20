@@ -132,7 +132,7 @@
 
 ### T009 — `skills/help/SKILL.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - create: `skills/help/SKILL.md`
