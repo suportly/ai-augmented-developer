@@ -76,7 +76,7 @@
 
 ### T005 — Append terse-mode block to plan-document-reviewer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004 <!-- serialized to avoid fighting over the shared parametrize table in test_agents_have_terse_block.py -->
 - **Files:**
   - modify: `agents/plan-document-reviewer.md`
