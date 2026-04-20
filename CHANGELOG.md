@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0009 — token-economy-terse-mode** (caveman-inspired). Opt-in terse
+output contract for reviewer subagents, a generated pipeline quick-reference,
+and a shorter `/aia:` command prefix. Phase 4 (Sonnet 4.6 benchmark) is
+deferred to a follow-up release; every other phase lands here.
+
+### Added
+
+- **Terse-output contract** for `spec-document-reviewer`,
+  `plan-document-reviewer`, and `code-reviewer`. One line per finding,
+  severity glyph + `file:line` + ≤ 140-char message; schema at
+  `schemas/terse-output.schema.json`. Off by default.
+- **`aiadev.terseMode`** setting in `.claude/settings.json` with
+  `AIADEV_TERSE` env override (env wins). Resolved via
+  `aiadev.config.resolve_terse_mode()`, returning `(enabled, source)`
+  where source is `default`, `settings`, or `env`.
+- **`/aia:help`** — a generated, drift-checked pipeline quick-reference
+  (`docs/pipeline-reference.md`) listing every pipeline command with
+  one-line purpose and hand-off link. Pre-commit hook and CI workflow
+  fail on drift. Pointer added to root `CLAUDE.md`.
+- **Terse-mode rule** (`rules/terse-mode.md`) shipped to consumer
+  projects via `aiadev sync`; documents the switch, the echo template
+  `terse-mode: <on|off> (<source>)`, and the one-line-per-finding
+  contract.
+- Attribution for [`juliusbrussee/caveman`](https://github.com/JuliusBrussee/caveman)
+  in `CREDITS.md` per Article VII.
+
+### Changed
+
+- **BREAKING:** slash-command prefix renamed from `/aiadev:` to `/aia:`
+  across Claude Code, Codex, Cursor, Gemini CLI, and OpenCode. Consumer
+  projects must re-run `aiadev sync` (or re-install) after upgrading.
+  Old `/aiadev:*` commands will not resolve.
+
+### Deferred
+
+- Phase 4 live Sonnet 4.6 benchmark (T013–T016). Off-mode golden files
+  are hand-crafted representatives today; the benchmark runner will
+  overwrite them with real transcripts when Phase 4 lands.
+
 ## [0.14.2] - 2026-04-18
 
 Hardening pass that closes the remaining edges of the v0.14.1

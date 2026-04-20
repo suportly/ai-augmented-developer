@@ -312,7 +312,7 @@
 
 ### T021 — CHANGELOG entry + final gate
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001–T020, T022
 - **Files:**
   - modify: `CHANGELOG.md`
