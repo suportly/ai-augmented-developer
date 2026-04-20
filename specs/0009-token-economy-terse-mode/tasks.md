@@ -50,7 +50,7 @@
 
 ### T003 — `resolve_terse_mode()` helper in `src/aiadev/config.py`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/config.py`
