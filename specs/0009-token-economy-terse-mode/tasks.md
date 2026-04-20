@@ -36,7 +36,7 @@
 
 ### T002 — Terse-output JSON schema
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `schemas/terse-output.schema.json`
