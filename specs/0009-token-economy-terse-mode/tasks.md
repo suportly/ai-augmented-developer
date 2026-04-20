@@ -283,7 +283,7 @@
 
 ### T020 — Existing-validators regression test
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T017
 - **Files:**
   - create: `tests/test_existing_validators_regress.py`
