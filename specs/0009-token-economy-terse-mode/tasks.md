@@ -175,7 +175,7 @@
 
 ### T012 — Root `CLAUDE.md` quick-reference pointer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009
 - **Files:**
   - modify: `CLAUDE.md`
