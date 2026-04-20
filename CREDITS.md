@@ -8,6 +8,10 @@ AI-Augmented Developer stands on the shoulders of several open-source projects a
 
 The original source for the "skill-first, opinionated workflow" structure. Early versions of this repository were a fork; commits `ea7a5d6` ("add multi-platform support") and `d3a3470` ("parity with superpowers structure") acknowledge that lineage. Several skill names, the brainstorming → plan → subagent pipeline idea, and the overall README voice trace back to superpowers.
 
+### [juliusbrussee/caveman](https://github.com/JuliusBrussee/caveman)
+
+The terse-output contract for reviewer subagents (feature `0009-token-economy-terse-mode`) is adapted from caveman's one-line-per-finding output style — originally a Claude Code skill that compresses model output by roughly 22–87 % (MIT license at time of adaptation). We do not bundle caveman itself; we borrow the shape of its reviewer output and codify it in `schemas/terse-output.schema.json`. The meme/caveman-voice aesthetic and the companion `cavemem` / `cavekit` tools are out of scope for this framework.
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).

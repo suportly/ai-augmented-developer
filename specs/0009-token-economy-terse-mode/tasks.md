@@ -22,7 +22,7 @@
 
 ### T001 — Credit juliusbrussee/caveman in CREDITS.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `CREDITS.md`
