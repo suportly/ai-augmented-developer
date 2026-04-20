@@ -44,7 +44,7 @@ def resolve_terse_mode(settings_path: Path | None = None) -> tuple[bool, Source]
             f"{sorted(_TRUTHY | _FALSY)}"
         )
 
-    if settings_path is not None and settings_path.exists():
+    if settings_path is not None and settings_path.is_file():
         try:
             payload = json.loads(settings_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:

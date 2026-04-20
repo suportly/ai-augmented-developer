@@ -31,8 +31,8 @@
         },
         "location": {
           "type": "string",
-          "pattern": "^\\S+(:\\d+)?$",
-          "description": "file or file:line pointer — no whitespace, optional :N suffix."
+          "pattern": "^\\S+$",
+          "description": "Non-whitespace pointer: typically `file:line` but plan-reviewer findings use `file:TASK` (e.g. `tasks.md:T015`). The regex enforces only the no-whitespace invariant; semantic shape is documented here."
         },
         "message": {
           "type": "string",
