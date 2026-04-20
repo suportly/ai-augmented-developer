@@ -247,7 +247,7 @@
 
 ### T017 — Terse-mode rule (three synchronized copies)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `rules/terse-mode.md` — **framework-root copy** shipped by `aiadev sync` via `framework_artifacts.iter_framework_artifacts` (scans `rules/*.md` at repo root).
