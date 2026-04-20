@@ -102,7 +102,8 @@
 
 ### T007 — Off-mode golden-file test
 
-- **Status:** pending
+- **Status:** done <!-- Phase 4 deferred: fixtures are hand-crafted representatives today; the benchmark runner (T014) will overwrite them with live Sonnet 4.6 transcripts when Phase 4 lands, and the test keeps working. -->
+
 - **Depends on:** T006
 - **Files:**
   - create: `tests/test_off_mode_unchanged.py`
