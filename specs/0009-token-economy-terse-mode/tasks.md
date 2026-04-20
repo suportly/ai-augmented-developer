@@ -160,7 +160,7 @@
 
 ### T011 — Pre-commit hook + CI drift enforcement
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - create: `.pre-commit-config.yaml` (absent today — confirm via `ls` before starting; switch to "modify" if a prior task added it)

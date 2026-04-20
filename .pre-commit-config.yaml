@@ -1,0 +1,15 @@
+# Pre-commit configuration for the aiadev framework repo.
+# See https://pre-commit.com/ — install hooks with `pre-commit install`.
+
+repos:
+  - repo: local
+    hooks:
+      - id: pipeline-reference
+        name: Regenerate docs/pipeline-reference.md
+        entry: python scripts/generate_pipeline_reference.py
+        language: system
+        pass_filenames: false
+        files: '^(skills/.*/SKILL\.md|CLAUDE\.md|scripts/generate_pipeline_reference\.py)$'
+        description: >-
+          Re-emits docs/pipeline-reference.md from the skill catalog whenever a
+          pipeline skill or the root CLAUDE.md changes. Keeps /aia:help in sync.
