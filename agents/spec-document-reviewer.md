@@ -76,3 +76,20 @@ Minor (should address):
 - Do not request changes for style preferences only
 - Do not add new requirements — only verify existing ones are clear
 - Do not comment on implementation details unless they reveal a spec gap
+
+## Terse-mode output contract
+
+When terse-mode is on (see `.claude/rules/terse-mode.md`), replace the
+verbose review prose with **one line per finding**. Each line:
+
+- starts with a severity glyph — `🔴` blocking, `🟡` should-fix, `🟢` nit,
+- names a location — `file:line` or `file:section`,
+- carries a ≤ 140-char single-line message.
+
+Example: `spec.md:42 🔴 acceptance scenario lacks Given/When/Then`
+
+The structured shape lives in
+[`schemas/terse-output.schema.json`](../schemas/terse-output.schema.json).
+A validator rejects multi-paragraph findings, so do not smuggle context
+across newlines — fold it into the message or add another finding line.
+When terse-mode is off, fall back to the verbose output above.

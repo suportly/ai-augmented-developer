@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/terse-output.schema.json",
+  "title": "Terse reviewer output",
+  "description": "When aiadev.terseMode is on, reviewer subagents (spec-document-reviewer, plan-document-reviewer, code-reviewer) must emit findings in this shape. One finding = one line. Multi-paragraph messages are rejected so the 30% token-reduction target (spec 0009) remains measurable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "findings"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["APPROVED", "CHANGES_REQUESTED", "BLOCKED"],
+      "description": "The reviewer's top-line decision. Mirrors the existing non-terse verdict vocabulary."
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" },
+      "description": "Zero or more one-line findings. APPROVED verdict typically has an empty list."
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "location", "message"],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["🔴", "🟡", "🟢"],
+          "description": "Glyph prefix. Red = blocking, yellow = should-fix, green = nit/FYI."
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^\\S+$",
+          "description": "Non-whitespace pointer: typically `file:line` but plan-reviewer findings use `file:TASK` (e.g. `tasks.md:T015`). The regex enforces only the no-whitespace invariant; semantic shape is documented here."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140,
+          "pattern": "^[^\\r\\n]+$",
+          "description": "Single-line finding. No newlines. 140-char ceiling keeps lines terminal-friendly and keeps the token-reduction target honest."
+        }
+      }
+    }
+  }
+}

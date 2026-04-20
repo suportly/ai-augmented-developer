@@ -8,25 +8,25 @@ When you reference an `aiadev` pipeline command in a message to the user
 
 Use:
 
-- `/aiadev:specify`
-- `/aiadev:clarify`
-- `/aiadev:plan`
-- `/aiadev:tasks`
-- `/aiadev:implement`
-- `/aiadev:analyze`
-- `/aiadev:checklist`
-- `/aiadev:constitution`
-- `/aiadev:systematic-debugging`
-- `/aiadev:test-driven-development`
-- `/aiadev:frontend-design`
-- `/aiadev:requesting-code-review`
-- `/aiadev:finishing-a-branch`
-- `/aiadev:sync`
-- `/aiadev:lang`
+- `/aia:specify`
+- `/aia:clarify`
+- `/aia:plan`
+- `/aia:tasks`
+- `/aia:implement`
+- `/aia:analyze`
+- `/aia:checklist`
+- `/aia:constitution`
+- `/aia:systematic-debugging`
+- `/aia:test-driven-development`
+- `/aia:frontend-design`
+- `/aia:requesting-code-review`
+- `/aia:finishing-a-branch`
+- `/aia:sync`
+- `/aia:lang`
 
 Never use the bare form (`/plan`, `/specify`, …) when talking to the
 user. Since v0.2 every command lives under `.claude/commands/aiadev/`
-(rendered by Claude Code as `/aiadev:<name>`); consumer projects never
+(rendered by Claude Code as `/aia:<name>`); consumer projects never
 install the bare variant, so `/plan` would simply not resolve.
 
 ## Scope
@@ -46,6 +46,6 @@ reply. It does **not** change:
 
 The agent's "next step" message is a concrete instruction the user is
 meant to execute. Pointing them at `/plan` in an environment where only
-`/aiadev:plan` exists produces a 404 and a confused user. The cost of
+`/aia:plan` exists produces a 404 and a confused user. The cost of
 typing five extra characters is zero; the cost of a dead command is a
 broken hand-off.

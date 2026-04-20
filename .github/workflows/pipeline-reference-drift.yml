@@ -1,0 +1,27 @@
+name: pipeline-reference drift
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**/SKILL.md'
+      - 'presets/**/SKILL.md'
+      - 'CLAUDE.md'
+      - 'scripts/generate_pipeline_reference.py'
+      - 'docs/pipeline-reference.md'
+  push:
+    branches: [main]
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install runtime deps
+        run: pip install pyyaml
+      - name: Regenerate pipeline-reference.md
+        run: python scripts/generate_pipeline_reference.py
+      - name: Fail if output drifted
+        run: git diff --exit-code -- docs/pipeline-reference.md

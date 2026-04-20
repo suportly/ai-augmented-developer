@@ -99,3 +99,21 @@ Non-blocking (should address):
 - Do not approve code with security vulnerabilities even as "non-blocking"
 - Do not approve code missing tests for acceptance scenarios
 - Do not add new requirements that weren't in the spec
+
+## Terse-mode output contract
+
+When terse-mode is on (see `.claude/rules/terse-mode.md`), replace the
+verbose blocking/non-blocking prose with **one line per finding**.
+Each line:
+
+- starts with a severity glyph — `🔴` blocking, `🟡` should-fix, `🟢` nit,
+- names a location — `path/to/file.py:<line>`,
+- carries a ≤ 140-char single-line message.
+
+Example: `src/aiadev/config.py:42 🔴 env read without sanitisation`
+
+The structured shape lives in
+[`schemas/terse-output.schema.json`](../schemas/terse-output.schema.json).
+A validator rejects multi-paragraph findings, so keep every finding as
+one line per finding and split into multiple lines rather than wrapping.
+When terse-mode is off, fall back to the verbose output above.

@@ -91,3 +91,21 @@ Non-blocking:
 - Do not approve if file paths are vague or missing
 - Do not add implementation details beyond what's needed for the plan
 - Do not request style changes to working code examples
+
+## Terse-mode output contract
+
+When terse-mode is on (see `.claude/rules/terse-mode.md`), replace the
+verbose `ISSUES_FOUND` / `APPROVED` prose with **one line per finding**.
+Each line:
+
+- starts with a severity glyph — `🔴` blocking, `🟡` should-fix, `🟢` nit,
+- names a location — `plan.md:<line>` or `tasks.md:T0NN`,
+- carries a ≤ 140-char single-line message.
+
+Example: `plan.md:42 🔴 Constitution Check row blank for Article II`
+
+The structured shape lives in
+[`schemas/terse-output.schema.json`](../schemas/terse-output.schema.json).
+A validator rejects multi-paragraph findings, so keep every finding on
+one line per finding and add another line rather than wrapping prose.
+When terse-mode is off, fall back to the verbose output above.
