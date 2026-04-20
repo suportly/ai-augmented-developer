@@ -4,7 +4,7 @@
 
 **Branch:** `feature/token-economy-terse-mode`
 **Created:** 2026-04-20
-**Status:** Draft
+**Status:** PR Open — [#25](https://github.com/suportly/ai-augmented-developer/pull/25)
 **Spec ID:** 0009
 **Language:** en
 
