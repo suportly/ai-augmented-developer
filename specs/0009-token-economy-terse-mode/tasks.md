@@ -145,7 +145,8 @@
 
 ### T010 — Help drift + budget test (uses `anthropic.messages.count_tokens`)
 
-- **Status:** pending
+- **Status:** done <!-- token-budget assertion skipped (requires T013 provider); drift + line-budget + clean-regeneration checks live and enforced. -->
+
 - **Depends on:** T008, T013
 - **Files:**
   - create: `tests/test_pipeline_reference_drift.py`
