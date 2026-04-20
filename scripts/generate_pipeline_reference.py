@@ -70,7 +70,7 @@ def _format_handoffs(handoffs: Iterable[str] | None) -> str:
     items = [h for h in handoffs if h in PIPELINE]
     if not items:
         return "—"
-    return " | ".join(items)
+    return " / ".join(items)
 
 
 def _compose_one_liner(description: str) -> str:

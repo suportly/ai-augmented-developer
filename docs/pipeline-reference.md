@@ -4,12 +4,12 @@
 
 | Command | What it does | Next |
 |---|---|---|
-| `/aia:specify` | Turn a natural-language demand into a numbered spec.md under specs/<NNNN-slug>/. | → clarify | plan |
+| `/aia:specify` | Turn a natural-language demand into a numbered spec.md under specs/<NNNN-slug>/. | → clarify / plan |
 | `/aia:clarify` | Surface [NEEDS CLARIFICATION] markers in spec.md (or plan.md) to the user, one at a tim… | → plan |
-| `/aia:plan` | Turn an approved spec.md into a plan.md (plus research, data-model, contracts as needed… | → tasks | clarify |
-| `/aia:tasks` | Decompose an approved plan.md into an ordered tasks.md ready for `implement`. | → implement | analyze |
-| `/aia:implement` | Execute an approved plan + tasks list by dispatching one fresh subagent per task and ap… | → requesting-code-review | finishing-a-branch |
-| `/aia:analyze` | Check for drift between spec.md, plan.md, tasks.md, and the actual code. | → plan | tasks | clarify |
+| `/aia:plan` | Turn an approved spec.md into a plan.md (plus research, data-model, contracts as needed… | → tasks / clarify |
+| `/aia:tasks` | Decompose an approved plan.md into an ordered tasks.md ready for `implement`. | → implement / analyze |
+| `/aia:implement` | Execute an approved plan + tasks list by dispatching one fresh subagent per task and ap… | → requesting-code-review / finishing-a-branch |
+| `/aia:analyze` | Check for drift between spec.md, plan.md, tasks.md, and the actual code. | → plan / tasks / clarify |
 | `/aia:checklist` | Run a category-specific quality pass (security / performance / accessibility / i18n / p… | → — |
 | `/aia:requesting-code-review` | Use before opening a PR. | → — |
 | `/aia:finishing-a-branch` | Use after code review is approved to finalize, push, open PR, and clean up the developm… | → — |

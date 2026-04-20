@@ -45,9 +45,10 @@ def test_generator_lists_pipeline_skills_with_handoffs(tmp_path):
         assert skill in output, f"generator missed pipeline skill {skill}"
 
     # The arrow-link convention lands at least once, and a multi-handoff
-    # skill (clarify → plan | …) renders with the pipe separator.
+    # skill (e.g. specify → clarify / plan) renders with a slash separator
+    # (the pipe character would collide with Markdown table cells).
     assert "→" in output
-    assert " | " in output or "specify" in output  # one or the other is enough
+    assert " / " in output, "multi-handoff rows must use '/' as separator"
 
 
 def test_generator_is_deterministic(tmp_path):
