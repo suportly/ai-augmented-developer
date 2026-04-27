@@ -4,7 +4,7 @@
 
 **Branch:** `feature/specify-reconnaissance`
 **Created:** 2026-04-27
-**Status:** Draft
+**Status:** PR Open
 **Spec ID:** 0011
 **Language:** en
 
