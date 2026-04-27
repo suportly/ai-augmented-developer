@@ -4,7 +4,7 @@
 
 **Branch:** `feature/pipeline-preflight-checks`
 **Created:** 2026-04-20
-**Status:** Draft
+**Status:** PR Open — #28
 **Spec ID:** 0010
 **Language:** en
 
