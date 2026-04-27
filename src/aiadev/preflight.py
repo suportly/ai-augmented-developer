@@ -13,6 +13,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
 
+PIPELINE_SKILLS = (
+    "specify",
+    "clarify",
+    "plan",
+    "tasks",
+    "implement",
+    "analyze",
+    "requesting-code-review",
+    "finishing-a-branch",
+)
+
+# Skills that consume an upstream spec.md. ``specify`` produces it and is
+# therefore exempt.
+_REQUIRES_SPEC = tuple(s for s in PIPELINE_SKILLS if s != "specify")
+
 
 @dataclass(frozen=True)
 class PreflightIssue:
@@ -42,6 +57,11 @@ def check(
     """
 
     issues: list[PreflightIssue] = []
+
+    if skill in _REQUIRES_SPEC and not (feature_dir / "spec.md").is_file():
+        issues.append(
+            PreflightIssue("pre-flight: spec.md missing — run /aiadev:specify first")
+        )
 
     if skill == "implement" and not (feature_dir / "tasks.md").is_file():
         issues.append(

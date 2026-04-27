@@ -70,3 +70,51 @@ def test_missing_tasks_md_emits_run_tasks_message(feature_dir: pathlib.Path) -> 
 
     messages = [issue.message for issue in issues]
     assert "pre-flight: tasks.md missing — run /aiadev:tasks first" in messages
+
+
+# -- T002: Story 1 scenario 2 -------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "skill",
+    [
+        "clarify",
+        "plan",
+        "tasks",
+        "implement",
+        "analyze",
+        "requesting-code-review",
+        "finishing-a-branch",
+    ],
+)
+def test_missing_spec_aborts_all_downstream_skills(
+    feature_dir: pathlib.Path, skill: str
+) -> None:
+    from aiadev.preflight import check
+
+    (feature_dir / "spec.md").unlink()
+
+    issues = check(
+        skill,
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    messages = [issue.message for issue in issues]
+    assert "pre-flight: spec.md missing — run /aiadev:specify first" in messages
+
+
+def test_specify_skill_does_not_require_spec_md(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    (feature_dir / "spec.md").unlink()
+
+    issues = check(
+        "specify",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    assert not any("spec.md missing" in issue.message for issue in issues)
