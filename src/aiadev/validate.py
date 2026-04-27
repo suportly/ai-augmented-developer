@@ -212,6 +212,12 @@ def validate_paths(
             report.failed.append(SkillIssue(skill_path, "file does not exist"))
             continue
 
+        if skill_path.name == "spec.md":
+            spec_report = validate_spec(skill_path, root=root)
+            report.passed.extend(spec_report.passed)
+            report.failed.extend(spec_report.failed)
+            continue
+
         data, error = extract_frontmatter(skill_path)
         if data is None:
             report.failed.append(SkillIssue(skill_path, error or "unknown error"))

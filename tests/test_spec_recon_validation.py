@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import pathlib
 
-from aiadev.validate import validate_spec
+from aiadev.validate import validate_paths, validate_spec
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "spec-recon"
 
@@ -56,6 +56,32 @@ def test_recon_path_does_not_exist_fails_validation(framework_root: pathlib.Path
     """cl-2 resolution: validator is structural — every cited path must
     exist on disk."""
     report = validate_spec(FIXTURES / "nonexistent-path-recon.md", root=framework_root)
+    assert not report.ok
+    assert any(
+        "does not exist" in issue.message and "does/not/exist.py" in issue.message
+        for issue in report.failed
+    ), report.as_lines()
+
+
+def test_validate_paths_routes_spec_md_to_validate_spec(
+    framework_root: pathlib.Path,
+) -> None:
+    """The unified entry point dispatches by basename: spec.md goes to
+    the recon validator, not the SKILL.md frontmatter validator."""
+    nonexistent = FIXTURES / "nonexistent-path-recon.md"
+    # Copy to a temp directory shaped like specs/<slug>/spec.md so the
+    # dispatcher's basename check fires.
+    import shutil
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        target_dir = pathlib.Path(tmp) / "specs" / "0095-fixture"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "spec.md"
+        shutil.copy(nonexistent, target)
+
+        report = validate_paths([target], root=framework_root)
+
     assert not report.ok
     assert any(
         "does not exist" in issue.message and "does/not/exist.py" in issue.message
