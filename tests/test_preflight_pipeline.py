@@ -61,7 +61,7 @@ def test_deleting_tasks_md_causes_implement_preflight_failure(
     )
 
     assert result.exit_code != 0
-    assert "pre-flight: tasks.md missing — run /aiadev:tasks first" in result.output
+    assert "pre-flight: tasks.md missing — run /aia:tasks first" in result.output
 
 
 # -- T024: Success criterion #5 (parametrised) ------------------------------

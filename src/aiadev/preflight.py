@@ -97,7 +97,7 @@ def check(
     spec_path = feature_dir / "spec.md"
     if skill in _REQUIRES_SPEC and not spec_path.is_file():
         issues.append(
-            PreflightIssue("pre-flight: spec.md missing — run /aiadev:specify first")
+            PreflightIssue("pre-flight: spec.md missing — run /aia:specify first")
         )
     elif skill == "plan" and spec_path.is_file():
         spec_text = spec_path.read_text(encoding="utf-8")
@@ -106,7 +106,7 @@ def check(
             issues.append(
                 PreflightIssue(
                     f"pre-flight: spec.md has {marker_count} unresolved "
-                    "[NEEDS CLARIFICATION] markers — run /aiadev:clarify first"
+                    "[NEEDS CLARIFICATION] markers — run /aia:clarify first"
                 )
             )
         for anchor in _missing_anchors(spec_text, SPEC_ANCHORS):
@@ -118,12 +118,12 @@ def check(
 
     if skill in _REQUIRES_PLAN and not (feature_dir / "plan.md").is_file():
         issues.append(
-            PreflightIssue("pre-flight: plan.md missing — run /aiadev:plan first")
+            PreflightIssue("pre-flight: plan.md missing — run /aia:plan first")
         )
 
     if skill in _REQUIRES_TASKS and not (feature_dir / "tasks.md").is_file():
         issues.append(
-            PreflightIssue("pre-flight: tasks.md missing — run /aiadev:tasks first")
+            PreflightIssue("pre-flight: tasks.md missing — run /aia:tasks first")
         )
 
     if skill == "tasks" and spec_path.is_file():
@@ -153,7 +153,7 @@ def check(
             issues.append(
                 PreflightIssue(
                     "pre-flight: review approval missing — "
-                    "run /aiadev:requesting-code-review first"
+                    "run /aia:requesting-code-review first"
                 )
             )
 

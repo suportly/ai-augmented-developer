@@ -69,7 +69,7 @@ def test_missing_tasks_md_emits_run_tasks_message(feature_dir: pathlib.Path) -> 
     )
 
     messages = [issue.message for issue in issues]
-    assert "pre-flight: tasks.md missing — run /aiadev:tasks first" in messages
+    assert "pre-flight: tasks.md missing — run /aia:tasks first" in messages
 
 
 # -- T002: Story 1 scenario 2 -------------------------------------------------
@@ -102,7 +102,7 @@ def test_missing_spec_aborts_all_downstream_skills(
     )
 
     messages = [issue.message for issue in issues]
-    assert "pre-flight: spec.md missing — run /aiadev:specify first" in messages
+    assert "pre-flight: spec.md missing — run /aia:specify first" in messages
 
 
 def test_specify_skill_does_not_require_spec_md(feature_dir: pathlib.Path) -> None:
@@ -143,7 +143,7 @@ def test_needs_clarification_markers_block_plan(feature_dir: pathlib.Path) -> No
     messages = [issue.message for issue in issues]
     assert (
         "pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — "
-        "run /aiadev:clarify first"
+        "run /aia:clarify first"
     ) in messages
 
 
@@ -168,7 +168,7 @@ def test_missing_review_yaml_blocks_finishing_branch(
     issues = _run_finishing(feature_dir, repo_root=tmp_path)
     messages = [i.message for i in issues]
     assert (
-        "pre-flight: review approval missing — run /aiadev:requesting-code-review first"
+        "pre-flight: review approval missing — run /aia:requesting-code-review first"
         in messages
     )
 
@@ -186,7 +186,7 @@ def test_changes_requested_review_yaml_blocks_finishing_branch(
     issues = _run_finishing(feature_dir, repo_root=tmp_path)
     messages = [i.message for i in issues]
     assert (
-        "pre-flight: review approval missing — run /aiadev:requesting-code-review first"
+        "pre-flight: review approval missing — run /aia:requesting-code-review first"
         in messages
     )
 
@@ -473,5 +473,6 @@ def test_cli_all_flag_iterates_every_feature_dir(
     result = _run_cli(["preflight", "--all"], cwd=repo)
 
     assert result.exit_code != 0
-    # The valid dir should not produce diagnostics; the broken dir should.
-    assert "0011-broken-feature" in result.output or "branch" in result.output
+    # The valid dir should pass silently; the broken dir's branch mismatch is
+    # the only diagnostic we expect, and it must name the broken slug.
+    assert "0011-broken-feature" in result.output

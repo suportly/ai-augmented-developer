@@ -78,11 +78,11 @@ pre-flight: <what is wrong> — <how to fix it>
 Examples:
 
 ```
-pre-flight: tasks.md missing — run /aiadev:tasks first
-pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — run /aiadev:clarify first
+pre-flight: tasks.md missing — run /aia:tasks first
+pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — run /aia:clarify first
 pre-flight: language mismatch — spec.md=en, plan.md=pt-BR
 pre-flight: git branch 'feature/other-thing' does not match feature directory '0010-pipeline-preflight-checks'
-pre-flight: review approval missing — run /aiadev:requesting-code-review first
+pre-flight: review approval missing — run /aia:requesting-code-review first
 ```
 
 The string is stable: scripts and CI may grep for it. Changes to the
