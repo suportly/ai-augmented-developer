@@ -29,6 +29,8 @@ This skill replaces the previous `speckit` and `subagent-driven-development` ski
 
 ## When to use
 
+Run pre-flight first: `aiadev preflight implement --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
+
 Invoke when the repository already contains:
 
 - `specs/<branch>/spec.md` with no `[NEEDS CLARIFICATION]` markers,
