@@ -28,6 +28,12 @@ PIPELINE_SKILLS = (
 # therefore exempt.
 _REQUIRES_SPEC = tuple(s for s in PIPELINE_SKILLS if s != "specify")
 
+# Skills that consume plan.md (i.e. run after `plan`).
+_REQUIRES_PLAN = ("tasks", "implement", "analyze", "finishing-a-branch")
+
+# Skills that consume tasks.md (i.e. run after `tasks`).
+_REQUIRES_TASKS = ("implement", "analyze", "finishing-a-branch")
+
 # Required ``<!-- section: ... -->`` anchors per artifact. These are pinned
 # literals — ``test_every_anchor_exists_in_its_template`` round-trips them
 # against the live templates so drift fails CI.
@@ -110,7 +116,12 @@ def check(
                 )
             )
 
-    if skill == "implement" and not (feature_dir / "tasks.md").is_file():
+    if skill in _REQUIRES_PLAN and not (feature_dir / "plan.md").is_file():
+        issues.append(
+            PreflightIssue("pre-flight: plan.md missing — run /aiadev:plan first")
+        )
+
+    if skill in _REQUIRES_TASKS and not (feature_dir / "tasks.md").is_file():
         issues.append(
             PreflightIssue("pre-flight: tasks.md missing — run /aiadev:tasks first")
         )
@@ -201,7 +212,7 @@ def _language_of(text: str) -> str:
 
 
 def _branch_header_of(text: str) -> str:
-    """Extract the branch tag from a ``**Branch:** \`<tag>\``` header."""
+    r"""Extract the branch tag from a ``**Branch:** `<tag>` `` header."""
     import re
 
     match = re.search(r"\*\*Branch:\*\*\s*`([^`]+)`", text)

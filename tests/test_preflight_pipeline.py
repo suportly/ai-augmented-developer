@@ -62,3 +62,47 @@ def test_deleting_tasks_md_causes_implement_preflight_failure(
 
     assert result.exit_code != 0
     assert "pre-flight: tasks.md missing — run /aiadev:tasks first" in result.output
+
+
+# -- T024: Success criterion #5 (parametrised) ------------------------------
+
+
+@pytest.mark.parametrize(
+    ("skill", "deleted", "needle"),
+    [
+        ("plan", "spec.md", "spec.md missing"),
+        ("tasks", "spec.md", "spec.md missing"),
+        ("tasks", "plan.md", "plan.md missing"),
+        ("implement", "spec.md", "spec.md missing"),
+        ("implement", "plan.md", "plan.md missing"),
+        ("implement", "tasks.md", "tasks.md missing"),
+        ("analyze", "tasks.md", "tasks.md missing"),
+        ("finishing-a-branch", ".aiadev/review.yaml", "review approval missing"),
+    ],
+)
+def test_deleting_each_prior_artifact_fails_the_next_skill(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    skill: str,
+    deleted: str,
+    needle: str,
+) -> None:
+    repo, feature_dir = _build_repo(tmp_path)
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "aiadev.preflight._git_current_branch", lambda: "feature/reference"
+    )
+
+    target = repo / deleted if deleted.startswith(".aiadev") else feature_dir / deleted
+    if target.exists():
+        target.unlink()
+
+    result = _run_cli(
+        ["preflight", skill, "--feature", feature_dir.name],
+        cwd=repo,
+    )
+
+    assert result.exit_code != 0, f"{skill}/{deleted}: expected failure, got 0"
+    assert needle in result.output, (
+        f"{skill}/{deleted}: expected {needle!r} in {result.output!r}"
+    )
