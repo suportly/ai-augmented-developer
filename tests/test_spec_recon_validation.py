@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+import shutil
+import tempfile
 
 from aiadev.validate import validate_paths, validate_spec
 
@@ -71,9 +73,6 @@ def test_validate_paths_routes_spec_md_to_validate_spec(
     nonexistent = FIXTURES / "nonexistent-path-recon.md"
     # Copy to a temp directory shaped like specs/<slug>/spec.md so the
     # dispatcher's basename check fires.
-    import shutil
-    import tempfile
-
     with tempfile.TemporaryDirectory() as tmp:
         target_dir = pathlib.Path(tmp) / "specs" / "0095-fixture"
         target_dir.mkdir(parents=True)

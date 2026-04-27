@@ -198,7 +198,14 @@ def validate_paths(
     *,
     root: pathlib.Path | None = None,
 ) -> ValidationReport:
-    """Validate the given SKILL.md paths. If empty, validate every skill under root."""
+    """Validate the given paths.
+
+    Files are dispatched by basename: ``spec.md`` → :func:`validate_spec`
+    (recon rule, issue #26), every other ``SKILL.md``-style path → the
+    skill-frontmatter validator. When ``paths`` is empty, the function
+    sweeps every ``SKILL.md`` under ``root``; spec sweeping is explicit
+    only — pass the ``spec.md`` paths the caller wants validated.
+    """
     root = (root or find_framework_root()).resolve()
     schema = json.loads(skill_frontmatter_schema(root).read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
