@@ -144,7 +144,7 @@ Exit criterion: Phase 1 tests for schema/validator turn green; `pytest tests/tes
 - Update `skills/specify/SKILL.md`:
   - new Loop step (between current 2 and 3) — "**Reconnaissance.** For each surface in the demand not yet inspected this session, read its entry point and auth/session module, grep for the integration points the demand claims to use, record findings in the spec's `<!-- section: Reconnaissance -->` block as bullets matching the recon micro-format. If findings contradict the demand's premise, **pause and surface the mismatch to the user before drafting any user story** — cite the specific file and line that contradicts the premise."
   - new entry under "What not to do" — "Drafting user stories by analogy with another surface without recording a recon entry for the surface in question."
-- Update `skills/using-ai-augmented-developer/SKILL.md`: add one line under "Pipeline skills" or as a separate one-line callout — "Before drafting user stories on a surface you have not yet inspected this session, perform a Reconnaissance pass — see [skills/specify/SKILL.md](../specify/SKILL.md)."
+- Update `skills/using-ai-augmented-developer/SKILL.md`: add one line under "Pipeline skills" or as a separate one-line callout — "Before drafting user stories on a surface you have not yet inspected this session, perform a Reconnaissance pass — see `[skills/specify/SKILL.md](../specify/SKILL.md)`." (the link target is relative to the orientation skill's own location, not to this plan).
 
 Exit criterion: Phase 1 tests for skill/orientation/template prose turn green; `python3 scripts/validate_skills.py` stays clean; no SKILL.md frontmatter regression.
 
