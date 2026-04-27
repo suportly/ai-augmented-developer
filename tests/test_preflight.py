@@ -391,3 +391,38 @@ def test_cli_happy_path_exits_zero_silently(
 
     assert result.exit_code == 0, result.output
     assert result.output == ""
+
+
+# -- T011: Story 3 scenario 2 -------------------------------------------------
+
+
+def test_cli_reports_same_message_as_in_skill_check(
+    feature_dir: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aiadev.preflight import check
+
+    repo = feature_dir.parents[1]
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "aiadev.preflight._git_current_branch",
+        lambda: "feature/pipeline-preflight-checks",
+    )
+    (feature_dir / "tasks.md").unlink()
+
+    in_skill = check(
+        "implement",
+        feature_dir,
+        env={},
+        current_branch=lambda: "feature/pipeline-preflight-checks",
+        repo_root=repo,
+    )
+
+    result = _run_cli(
+        ["preflight", "implement", "--feature", feature_dir.name],
+        cwd=repo,
+    )
+
+    assert result.exit_code == 1
+    assert in_skill, "in-skill check should report at least one issue"
+    for issue in in_skill:
+        assert issue.message in result.output
