@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0010 — pipeline-preflight-checks**. Read-only `aiadev preflight`
+checker that aborts pipeline skills when upstream artifacts are missing,
+malformed, or incoherent. Same diagnostics in CI and in-skill.
+
 ### Added
 
 - **Specify reconnaissance step (#26).** `specify` now requires a
@@ -20,6 +24,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   premise, the skill instructs the agent to pause and surface the
   mismatch instead of drafting analogy-driven user stories. Schema:
   `schemas/spec-recon.schema.json`. Spec: [0011](specs/0011-specify-reconnaissance/spec.md).
+- **`aiadev.preflight.check(skill, feature_dir, …)`** + dataclass
+  `PreflightIssue`. Verifies artifact presence, `<!-- section: ... -->`
+  anchors, `**Language:**` and `**Branch:**` header coherence, current
+  git branch / feature-dir alignment, unresolved
+  `[NEEDS CLARIFICATION]` markers, and `.aiadev/review.yaml` approval
+  for `finishing-a-branch`.
+- **`aiadev preflight <skill> --feature <slug>`** CLI subcommand plus
+  `aiadev preflight --all` for one-shot migration sweeps.
+- Migration article `docs/articles/preflight.md`.
+
+### Changed
+
+- Pipeline `SKILL.md` files (`clarify`, `plan`, `tasks`, `implement`,
+  `analyze`, `requesting-code-review`, `finishing-a-branch`) now call
+  `aiadev preflight` in their Preconditions section and abort on
+  non-zero unless `AIADEV_PREFLIGHT=warn` is set.
+- `requesting-code-review` writes `.aiadev/review.yaml` (`status`,
+  `timestamp`, optional `reason`) so the next stage can verify approval.
+
+### Breaking
+
+- In-flight feature directories that lack required `<!-- section: ... -->`
+  anchors, drifted `**Language:**` headers, or branch / feature-dir
+  mismatches now fail pre-flight on the next pipeline invocation. Run
+  `aiadev preflight --all` to discover which branches need attention.
+- `finishing-a-branch` aborts unless `.aiadev/review.yaml` records
+  `status: approved`. Existing branches that completed review before
+  this change need a manual stub.
 
 ## [0.15.0] - 2026-04-20
 
