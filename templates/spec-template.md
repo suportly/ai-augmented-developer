@@ -28,13 +28,8 @@
      backticks. The validator (issue #26) checks each cited path for
      existence; prose without a backticked path fails.
 
-     Example bullets (replace with the real surfaces of this feature):
-
-     - **<surface-name>** — entry: `<path>` · auth: `<path|none>` · integration: `<path-or-grep-term>`
-     - **<another-surface>** — entry: `<path>` · auth: `<path|none>` · integration: `<path-or-grep-term>`
-
-     If this is a single-surface change, replace the bullets with a
-     single line of the exact form (and nothing else):
+     If this is a single-surface change, replace the bullets below
+     with a single line of the exact form (and nothing else):
 
      Reconnaissance: not required (single-surface change: <surface-name>)
 
@@ -42,7 +37,7 @@
      section-anchor comment above must not be translated (anchors are
      the schema contract that aiadev validators read). -->
 
--
+- **<surface-name>** — entry: `<path>` · auth: `<path|none>` · integration: `<path-or-grep-term>`
 
 <!-- section: Users and stakeholders -->
 ## Users and stakeholders
