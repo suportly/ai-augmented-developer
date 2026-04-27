@@ -285,3 +285,24 @@ def test_env_abort_explicit(feature_dir: pathlib.Path) -> None:
     )
 
     assert all(i.would_abort for i in issues)
+
+
+# -- T007: Story 2 scenario 1 -------------------------------------------------
+
+
+def test_missing_section_anchor_in_spec_aborts_plan(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    spec = feature_dir / "spec.md"
+    text = spec.read_text(encoding="utf-8").replace("<!-- section: Problem -->\n", "")
+    spec.write_text(text, encoding="utf-8")
+
+    issues = check(
+        "plan",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    messages = [i.message for i in issues]
+    assert "pre-flight: spec.md missing required section anchor 'Problem'" in messages

@@ -28,6 +28,24 @@ PIPELINE_SKILLS = (
 # therefore exempt.
 _REQUIRES_SPEC = tuple(s for s in PIPELINE_SKILLS if s != "specify")
 
+# Required ``<!-- section: ... -->`` anchors per artifact. These are pinned
+# literals — ``test_every_anchor_exists_in_its_template`` round-trips them
+# against the live templates so drift fails CI.
+SPEC_ANCHORS: tuple[str, ...] = (
+    "Problem",
+    "Users and stakeholders",
+    "Success criteria",
+    "Non-goals",
+    "User stories",
+    "Clarifications",
+    "Data touched",
+    "Out-of-band effects",
+    "Open risks",
+    "Traceability",
+)
+PLAN_ANCHORS: tuple[str, ...] = ()
+TASKS_ANCHORS: tuple[str, ...] = ()
+
 
 @dataclass(frozen=True)
 class PreflightIssue:
@@ -76,12 +94,19 @@ def check(
             PreflightIssue("pre-flight: spec.md missing — run /aiadev:specify first")
         )
     elif skill == "plan" and spec_path.is_file():
-        marker_count = _count_needs_clarification(spec_path.read_text(encoding="utf-8"))
+        spec_text = spec_path.read_text(encoding="utf-8")
+        marker_count = _count_needs_clarification(spec_text)
         if marker_count:
             issues.append(
                 PreflightIssue(
                     f"pre-flight: spec.md has {marker_count} unresolved "
                     "[NEEDS CLARIFICATION] markers — run /aiadev:clarify first"
+                )
+            )
+        for anchor in _missing_anchors(spec_text, SPEC_ANCHORS):
+            issues.append(
+                PreflightIssue(
+                    f"pre-flight: spec.md missing required section anchor {anchor!r}"
                 )
             )
 
@@ -139,6 +164,10 @@ def _git_current_branch() -> str:
 
 def _count_needs_clarification(text: str) -> int:
     return text.count("[NEEDS CLARIFICATION")
+
+
+def _missing_anchors(text: str, anchors: tuple[str, ...]) -> list[str]:
+    return [a for a in anchors if f"<!-- section: {a} -->" not in text]
 
 
 def _review_is_approved(repo_root: Path | None) -> bool:
