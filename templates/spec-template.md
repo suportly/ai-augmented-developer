@@ -19,6 +19,31 @@
      `<!-- section: Problem -->` comment above is the schema anchor that
      aiadev validators read, so do not remove or translate it. -->
 
+<!-- section: Reconnaissance -->
+## Reconnaissance
+
+<!-- One bullet per surface (app, service, top-level directory) the
+     demand touches that you have not already inspected this session.
+     The bullet must cite at least one real on-disk file path in
+     backticks. The validator (issue #26) checks each cited path for
+     existence; prose without a backticked path fails.
+
+     Example bullets (replace with the real surfaces of this feature):
+
+     - **<surface-name>** — entry: `<path>` · auth: `<path|none>` · integration: `<path-or-grep-term>`
+     - **<another-surface>** — entry: `<path>` · auth: `<path|none>` · integration: `<path-or-grep-term>`
+
+     If this is a single-surface change, replace the bullets with a
+     single line of the exact form (and nothing else):
+
+     Reconnaissance: not required (single-surface change: <surface-name>)
+
+     Heading text may be translated for non-English specs; the
+     section-anchor comment above must not be translated (anchors are
+     the schema contract that aiadev validators read). -->
+
+-
+
 <!-- section: Users and stakeholders -->
 ## Users and stakeholders
 
