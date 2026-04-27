@@ -15,6 +15,18 @@
 
 When `specify` is invoked for a feature whose demand touches an app, service, or surface the agent has not inspected during the current session, the agent often drafts user stories **by analogy** with a sibling surface it knows better. If the analogy is wrong (different entry point, different auth model, different data flow) the spec ships with structurally invalid user stories. Neither `clarify` (which probes behavior of the proposed flow) nor `plan`'s Constitution Check (which does not verify that the user stories have a real touchpoint in the code) detects the mismatch. The cost is paid downstream when `implement` reads the actual code: spec, plan, and tasks all need to be rewritten — multiple hours of churn per occurrence (real example: nzr-kdp spec 025, where 3 of 5 user stories were invalidated by the first 30 lines of `mobile/app/index.tsx`).
 
+<!-- section: Reconnaissance -->
+## Reconnaissance
+
+Backfilled per T013 — this spec was authored before the recon rule shipped (cutover_spec_id = 10; this spec is id 11). Each bullet cites paths actually inspected during spec authoring.
+
+- **skills/specify** — entry: `skills/specify/SKILL.md` · auth: `none` · integration: `templates/spec-template.md`
+- **templates** — entry: `templates/spec-template.md` · auth: `none` · integration: `schemas/spec-recon.schema.json`
+- **schemas** — entry: `schemas/spec-recon.schema.json` · auth: `none` · integration: `src/aiadev/validate.py`
+- **src/aiadev** — entry: `src/aiadev/validate.py` · auth: `none` · integration: `src/aiadev/commands/validate.py`
+- **skills/using-ai-augmented-developer** — entry: `skills/using-ai-augmented-developer/SKILL.md` · auth: `none` · integration: `skills/specify/SKILL.md`
+- **tests** — entry: `tests/test_validate.py` · auth: `none` · integration: `tests/conftest.py`
+
 <!-- section: Users and stakeholders -->
 ## Users and stakeholders
 
