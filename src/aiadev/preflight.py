@@ -115,6 +115,19 @@ def check(
             PreflightIssue("pre-flight: tasks.md missing — run /aiadev:tasks first")
         )
 
+    if skill == "tasks" and spec_path.is_file():
+        plan_path = feature_dir / "plan.md"
+        if plan_path.is_file():
+            spec_lang = _language_of(spec_path.read_text(encoding="utf-8"))
+            plan_lang = _language_of(plan_path.read_text(encoding="utf-8"))
+            if spec_lang and plan_lang and spec_lang != plan_lang:
+                issues.append(
+                    PreflightIssue(
+                        f"pre-flight: language mismatch — spec.md={spec_lang}, "
+                        f"plan.md={plan_lang}"
+                    )
+                )
+
     if skill == "finishing-a-branch":
         if not _review_is_approved(repo_root):
             issues.append(
@@ -168,6 +181,14 @@ def _count_needs_clarification(text: str) -> int:
 
 def _missing_anchors(text: str, anchors: tuple[str, ...]) -> list[str]:
     return [a for a in anchors if f"<!-- section: {a} -->" not in text]
+
+
+def _language_of(text: str) -> str:
+    """Extract the language tag from a ``**Language:** <tag>`` header."""
+    import re
+
+    match = re.search(r"\*\*Language:\*\*\s*([A-Za-z][A-Za-z0-9_-]*)", text)
+    return match.group(1) if match else ""
 
 
 def _review_is_approved(repo_root: Path | None) -> bool:

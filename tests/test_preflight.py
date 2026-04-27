@@ -306,3 +306,28 @@ def test_missing_section_anchor_in_spec_aborts_plan(feature_dir: pathlib.Path) -
 
     messages = [i.message for i in issues]
     assert "pre-flight: spec.md missing required section anchor 'Problem'" in messages
+
+
+# -- T008: Story 2 scenario 2 -------------------------------------------------
+
+
+def test_language_header_mismatch_spec_vs_plan_aborts_tasks(
+    feature_dir: pathlib.Path,
+) -> None:
+    from aiadev.preflight import check
+
+    plan = feature_dir / "plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace("Language:** en", "Language:** pt-BR"),
+        encoding="utf-8",
+    )
+
+    issues = check(
+        "tasks",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    messages = [i.message for i in issues]
+    assert "pre-flight: language mismatch — spec.md=en, plan.md=pt-BR" in messages
