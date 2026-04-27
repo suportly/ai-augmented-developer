@@ -67,3 +67,9 @@ def test_implement_skill_md_has_preflight_callout() -> None:
 
 def test_analyze_skill_md_has_preflight_callout() -> None:
     assert "aiadev preflight analyze --feature" in _read_skill("analyze")
+
+
+def test_review_skill_md_documents_review_yaml_emission() -> None:
+    text = _read_skill("requesting-code-review")
+    for needle in (".aiadev/review.yaml", "status: approved", "status: changes_requested", "timestamp:"):
+        assert needle in text, f"missing {needle!r} in requesting-code-review SKILL.md"
