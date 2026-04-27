@@ -38,3 +38,9 @@ def test_empty_recon_section_exits_nonzero(framework_root: pathlib.Path) -> None
     assert any(
         "Reconnaissance section required" in issue.message for issue in report.failed
     ), report.as_lines()
+
+
+def test_optout_line_passes_validation(framework_root: pathlib.Path) -> None:
+    """A single-surface opt-out line satisfies the recon rule."""
+    report = validate_spec(FIXTURES / "optout-recon.md", root=framework_root)
+    assert report.ok, report.as_lines()
