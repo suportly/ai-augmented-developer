@@ -24,6 +24,8 @@ Compare what the spec said, what the plan scheduled, what the tasks listed, and 
 
 ## When to use
 
+Run pre-flight first: `aiadev preflight analyze --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
+
 - Before opening the PR — sanity check that implementation matches spec.
 - Mid-implementation, when something "feels off" — usually a missing task or a spec the plan ignored.
 - After a long break — quickly regain context on a branch.
