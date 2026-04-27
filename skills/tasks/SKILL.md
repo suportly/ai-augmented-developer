@@ -24,6 +24,7 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 
 ## Preconditions
 
+- Run pre-flight first: `aiadev preflight tasks --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
 - `plan.md` exists with a fully ticked Constitution Check.
 - `templates/tasks-template.md` is available.
 
