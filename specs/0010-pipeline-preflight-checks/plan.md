@@ -93,7 +93,7 @@ Each bullet is one task: write the test, run `pytest -x <file>::<function>`, obs
 
 - `tests/test_preflight.py::test_missing_tasks_md_emits_run_tasks_message` — Story 1 sc1. Expected RED: `ModuleNotFoundError: aiadev.preflight`.
 - `tests/test_preflight.py::test_missing_spec_aborts_all_downstream_skills` — Story 1 sc2. Parametrised over `clarify, plan, tasks, implement, analyze, requesting-code-review, finishing-a-branch`.
-- `tests/test_preflight.py::test_needs_clarification_markers_block_plan` — Story 1 sc3. Asserts message `pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — run /aiadev:clarify first`.
+- `tests/test_preflight.py::test_needs_clarification_markers_block_plan` — Story 1 sc3. Asserts message `pre-flight: spec.md has 2 unresolved `​`[NEEDS CLARIFICATION]`​` markers — run /aia:clarify first`.
 - `tests/test_preflight.py::test_missing_review_yaml_blocks_finishing_branch` — Story 1 sc4.
 - `tests/test_preflight.py::test_branch_slug_mismatch_aborts` — Story 1 sc5. Git branch is read via `git rev-parse --abbrev-ref HEAD` shelled through `subprocess.run` with `check=False`; tests monkeypatch the call.
 - `tests/test_preflight.py::test_env_warn_downgrades_to_stderr_diagnostic` — Story 1 sc6.

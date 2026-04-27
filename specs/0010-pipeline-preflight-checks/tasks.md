@@ -47,7 +47,7 @@
   - [ ] No regression.
   - [ ] Commit: `feat(preflight): T002 abort downstream skills when spec.md missing`.
 
-### T003 — Block plan when spec.md has [NEEDS CLARIFICATION] markers
+### T003 — Block plan when spec.md has`[NEEDS CLARIFICATION]` markers
 
 - **Status:** pending
 - **Depends on:** T002
@@ -56,7 +56,7 @@
   - test: `tests/test_preflight.py`
 - **Spec scenarios:** Story 1 scenario 3
 - **Acceptance:**
-  - [ ] `test_needs_clarification_markers_block_plan` asserts message `pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — run /aiadev:clarify first`. Observed RED.
+  - [ ] `test_needs_clarification_markers_block_plan` asserts message `pre-flight: spec.md has 2 unresolved `​`[NEEDS CLARIFICATION]`​` markers — run /aia:clarify first`. Observed RED.
   - [ ] Implement `_count_needs_clarification(text)` and wire into the `plan` rule.
   - [ ] No regression.
   - [ ] Commit: `feat(preflight): T003 block plan on unresolved clarification markers`.

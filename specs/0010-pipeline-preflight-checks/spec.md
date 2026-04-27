@@ -57,7 +57,7 @@ As a framework user, I want any pipeline skill I invoke out of order to refuse t
 
 1. Given a feature directory with `spec.md` and `plan.md` but no `tasks.md`, when I invoke `implement`, then the skill aborts with `pre-flight: tasks.md missing — run /aiadev:tasks first`.
 2. Given a feature directory missing `spec.md` entirely, when I invoke any pipeline skill except `specify`, then it aborts with `pre-flight: spec.md missing — run /aiadev:specify first`.
-3. Given a feature directory whose `spec.md` still contains unresolved `[NEEDS CLARIFICATION]` markers, when I invoke `plan`, then the skill aborts with `pre-flight: spec.md has N unresolved [NEEDS CLARIFICATION] markers — run /aiadev:clarify first`.
+3. Given a feature directory whose `spec.md` still contains unresolved `[NEEDS CLARIFICATION]` markers, when I invoke `plan`, then the skill aborts with `pre-flight: spec.md has N unresolved `​`[NEEDS CLARIFICATION]`​` markers — run /aia:clarify first`.
 4. Given a feature directory with an approved `plan.md` and `tasks.md` but no `.aiadev/review.yaml` recording an approved review, when I invoke `finishing-a-branch`, then it aborts with `pre-flight: review approval missing — run /aiadev:requesting-code-review first`.
 5. Given the feature directory is `0010-pipeline-preflight-checks` but the current git branch is `feature/other-thing`, when I invoke any pipeline skill, then pre-flight aborts with `pre-flight: git branch 'feature/other-thing' does not match feature directory '0010-pipeline-preflight-checks'`.
 6. Given `AIADEV_PREFLIGHT=warn` is set and `tasks.md` is missing, when I invoke `implement`, then pre-flight emits the diagnostic to stderr, exits with status 0, and the skill continues executing.
