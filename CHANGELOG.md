@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Specify reconnaissance step (#26).** `specify` now requires a
+  Reconnaissance pass that records the entry point, auth/session module,
+  and integration points of every surface mentioned in the demand —
+  before any user story is drafted. The `<!-- section: Reconnaissance -->`
+  block in `templates/spec-template.md` and a new bullet micro-format
+  give authors a copy-paste-passing shape, and `aiadev validate
+  <spec.md>` enforces the rule for specs whose `Spec ID > 10` (earlier
+  specs are grandfathered). When recon contradicts the demand's
+  premise, the skill instructs the agent to pause and surface the
+  mismatch instead of drafting analogy-driven user stories. Schema:
+  `schemas/spec-recon.schema.json`. Spec: [0011](specs/0011-specify-reconnaissance/spec.md).
+
 ## [0.15.0] - 2026-04-20
 
 Spec **0009 — token-economy-terse-mode** (caveman-inspired). Opt-in terse
