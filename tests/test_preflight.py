@@ -447,3 +447,31 @@ def test_cli_unknown_skill_lists_known_skills(
         "unknown skill 'bogus'; expected one of: clarify, plan, tasks, implement, "
         "analyze, requesting-code-review, finishing-a-branch"
     ) in result.output
+
+
+# -- T013: spec Breaking-Changes line 46 (`aiadev preflight --all`) -----------
+
+
+def test_cli_all_flag_iterates_every_feature_dir(
+    feature_dir: pathlib.Path, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = feature_dir.parents[1]
+    # Build a second feature dir that lacks tasks.md so the `--all` sweep
+    # surfaces exactly one diagnostic.
+    broken = repo / "specs" / "0011-broken-feature"
+    (broken / "spec.md").parent.mkdir(parents=True, exist_ok=True)
+    (broken / "spec.md").write_text(
+        (feature_dir / "spec.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "aiadev.preflight._git_current_branch",
+        lambda: "feature/pipeline-preflight-checks",
+    )
+
+    result = _run_cli(["preflight", "--all"], cwd=repo)
+
+    assert result.exit_code != 0
+    # The valid dir should not produce diagnostics; the broken dir should.
+    assert "0011-broken-feature" in result.output or "branch" in result.output
