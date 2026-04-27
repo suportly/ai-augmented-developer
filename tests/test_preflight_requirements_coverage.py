@@ -79,3 +79,12 @@ def test_finishing_skill_md_has_preflight_and_review_gate() -> None:
     text = _read_skill("finishing-a-branch")
     assert "aiadev preflight finishing-a-branch --feature" in text
     assert ".aiadev/review.yaml" in text
+
+
+def test_migration_doc_exists_and_mentions_aiadev_preflight_all() -> None:
+    doc = REPO_ROOT / "docs" / "articles" / "preflight.md"
+    assert doc.is_file(), "docs/articles/preflight.md is missing"
+    text = doc.read_text(encoding="utf-8")
+    assert "aiadev preflight --all" in text
+    assert "AIADEV_PREFLIGHT=warn" in text
+    assert ".aiadev/review.yaml" in text
