@@ -21,3 +21,25 @@ def test_every_pipeline_skill_has_a_skill_directory() -> None:
         assert (skills_dir / skill / "SKILL.md").is_file(), (
             f"PIPELINE_SKILLS lists {skill!r} but skills/{skill}/SKILL.md is missing"
         )
+
+
+@pytest.mark.parametrize(
+    ("anchors_attr", "template_name"),
+    [
+        ("SPEC_ANCHORS", "spec-template.md"),
+        ("PLAN_ANCHORS", "plan-template.md"),
+        ("TASKS_ANCHORS", "tasks-template.md"),
+    ],
+)
+def test_every_anchor_exists_in_its_template(
+    anchors_attr: str, template_name: str
+) -> None:
+    import aiadev.preflight as mod
+
+    anchors = getattr(mod, anchors_attr)
+    template = (REPO_ROOT / "templates" / template_name).read_text(encoding="utf-8")
+    missing = [a for a in anchors if f"<!-- section: {a} -->" not in template]
+    assert not missing, (
+        f"{anchors_attr} contains anchors not present in templates/{template_name}: "
+        f"{missing}"
+    )
