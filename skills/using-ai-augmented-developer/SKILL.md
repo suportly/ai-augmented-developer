@@ -46,6 +46,8 @@ When in conflict, the user wins.
 | `requesting-code-review` | the branch is ready, before opening the PR |
 | `finishing-a-branch` | review approved; time to open the PR and clean up |
 
+> **Reconnaissance before `specify`.** When a demand touches an app, service, or surface you have not yet inspected this session, perform a Reconnaissance pass before drafting any user story — read the entry point, read the auth/session module, grep for the integration points, and record the findings in the spec's recon section. See [skills/specify/SKILL.md](../specify/SKILL.md) for the full procedure.
+
 ### Preset skills
 
 Skills specific to a stack (Django + React, React Native + Expo, etc.) live under `presets/<preset>/skills/` and load only when that preset is active. Check `CLAUDE.md` to see which preset the current project uses.
