@@ -127,3 +127,24 @@ def test_reference_dir_completes_under_500ms(tmp_path: pathlib.Path) -> None:
     elapsed = time.perf_counter() - start
 
     assert elapsed < 0.5, f"pre-flight took {elapsed:.3f}s — exceeds 500ms budget"
+
+
+# -- T026: Story 1 scenario 4 (positive) -------------------------------------
+
+
+def test_review_yaml_approved_lets_finishing_branch_pass(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, feature_dir = _build_repo(tmp_path)
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "aiadev.preflight._git_current_branch", lambda: "feature/reference"
+    )
+
+    result = _run_cli(
+        ["preflight", "finishing-a-branch", "--feature", feature_dir.name],
+        cwd=repo,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.output == ""
