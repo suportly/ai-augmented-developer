@@ -99,7 +99,19 @@ def check(
                 )
             )
 
+    if not _should_abort(env):
+        issues = [PreflightIssue(i.message, would_abort=False) for i in issues]
+
     return issues
+
+
+def _should_abort(env: Mapping[str, str] | None) -> bool:
+    """Return ``True`` unless ``AIADEV_PREFLIGHT=warn`` (case-insensitive)."""
+    if env is None:
+        import os
+
+        env = os.environ
+    return env.get("AIADEV_PREFLIGHT", "").strip().lower() != "warn"
 
 
 def _strip_numeric_prefix(slug: str) -> str:

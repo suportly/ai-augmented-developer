@@ -236,3 +236,52 @@ def test_branch_slug_match_passes(feature_dir: pathlib.Path) -> None:
     )
 
     assert not any("does not match feature directory" in i.message for i in issues)
+
+
+# -- T006: Story 1 scenario 6 -------------------------------------------------
+
+
+def test_env_warn_downgrades_to_stderr_diagnostic(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    (feature_dir / "tasks.md").unlink()
+
+    issues = check(
+        "implement",
+        feature_dir,
+        env={"AIADEV_PREFLIGHT": "warn"},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    assert issues, "warn mode must still report the issue"
+    assert all(not i.would_abort for i in issues)
+
+
+def test_default_env_aborts(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    (feature_dir / "tasks.md").unlink()
+
+    issues = check(
+        "implement",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    assert all(i.would_abort for i in issues)
+
+
+def test_env_abort_explicit(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    (feature_dir / "tasks.md").unlink()
+
+    issues = check(
+        "implement",
+        feature_dir,
+        env={"AIADEV_PREFLIGHT": "abort"},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    assert all(i.would_abort for i in issues)
