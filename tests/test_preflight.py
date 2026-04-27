@@ -118,3 +118,30 @@ def test_specify_skill_does_not_require_spec_md(feature_dir: pathlib.Path) -> No
     )
 
     assert not any("spec.md missing" in issue.message for issue in issues)
+
+
+# -- T003: Story 1 scenario 3 -------------------------------------------------
+
+
+def test_needs_clarification_markers_block_plan(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    spec = feature_dir / "spec.md"
+    spec.write_text(
+        spec.read_text(encoding="utf-8")
+        + "\n[NEEDS CLARIFICATION: foo?]\n[NEEDS CLARIFICATION: bar?]\n",
+        encoding="utf-8",
+    )
+
+    issues = check(
+        "plan",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    messages = [issue.message for issue in issues]
+    assert (
+        "pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — "
+        "run /aiadev:clarify first"
+    ) in messages

@@ -58,10 +58,20 @@ def check(
 
     issues: list[PreflightIssue] = []
 
-    if skill in _REQUIRES_SPEC and not (feature_dir / "spec.md").is_file():
+    spec_path = feature_dir / "spec.md"
+    if skill in _REQUIRES_SPEC and not spec_path.is_file():
         issues.append(
             PreflightIssue("pre-flight: spec.md missing — run /aiadev:specify first")
         )
+    elif skill == "plan" and spec_path.is_file():
+        marker_count = _count_needs_clarification(spec_path.read_text(encoding="utf-8"))
+        if marker_count:
+            issues.append(
+                PreflightIssue(
+                    f"pre-flight: spec.md has {marker_count} unresolved "
+                    "[NEEDS CLARIFICATION] markers — run /aiadev:clarify first"
+                )
+            )
 
     if skill == "implement" and not (feature_dir / "tasks.md").is_file():
         issues.append(
@@ -69,3 +79,7 @@ def check(
         )
 
     return issues
+
+
+def _count_needs_clarification(text: str) -> int:
+    return text.count("[NEEDS CLARIFICATION")
