@@ -1,0 +1,6 @@
+{
+  "$comment": "Config-as-schema for the spec-recon validator (issue #26). Spec.md is Markdown, not JSON, so jsonschema cannot validate it directly — this file pins the regex patterns and the cutover constant the Python validator reads at runtime. cutover_spec_id is strict-greater-than: specs with id <= cutover are grandfathered.",
+  "cutover_spec_id": 10,
+  "recon_entry_pattern": "^- \\*\\*[^*]+\\*\\* — entry: `([^`]+)`",
+  "opt_out_pattern": "^Reconnaissance: not required \\(single-surface change: [^)]+\\)\\s*$"
+}
