@@ -360,3 +360,34 @@ def test_plan_branch_header_mismatch_aborts_tasks(feature_dir: pathlib.Path) -> 
         "pre-flight: plan.md branch header 'feature/foo' does not match feature "
         "directory '0010-pipeline-preflight-checks'"
     ) in messages
+
+
+# -- T010: Story 3 scenario 1 -------------------------------------------------
+
+
+def _run_cli(args: list[str], cwd: pathlib.Path):
+    from click.testing import CliRunner
+
+    from aiadev.cli import main
+
+    runner = CliRunner()
+    return runner.invoke(main, args, catch_exceptions=False, env={"PWD": str(cwd)})
+
+
+def test_cli_happy_path_exits_zero_silently(
+    feature_dir: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = feature_dir.parents[1]
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "aiadev.preflight._git_current_branch",
+        lambda: "feature/pipeline-preflight-checks",
+    )
+
+    result = _run_cli(
+        ["preflight", "plan", "--feature", feature_dir.name],
+        cwd=repo,
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.output == ""
