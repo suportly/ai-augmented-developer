@@ -43,3 +43,11 @@ def test_every_anchor_exists_in_its_template(
         f"{anchors_attr} contains anchors not present in templates/{template_name}: "
         f"{missing}"
     )
+
+
+def _read_skill(name: str) -> str:
+    return (REPO_ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+
+
+def test_clarify_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight clarify --feature" in _read_skill("clarify")
