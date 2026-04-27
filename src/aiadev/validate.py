@@ -157,13 +157,25 @@ def validate_spec(
         return report
 
     entry_re = re.compile(schema["recon_entry_pattern"], re.MULTILINE)
-    if not entry_re.search(body):
+    matches = list(entry_re.finditer(body))
+    if not matches:
         report.failed.append(
             SkillIssue(
                 path,
                 "Reconnaissance entries must cite at least one file path per surface",
             )
         )
+        return report
+
+    missing = [
+        m.group(1) for m in matches
+        if not (root / m.group(1)).exists()
+    ]
+    if missing:
+        for cited in missing:
+            report.failed.append(
+                SkillIssue(path, f"Reconnaissance path '{cited}' does not exist")
+            )
         return report
 
     report.passed.append(path)

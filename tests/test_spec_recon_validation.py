@@ -46,6 +46,23 @@ def test_optout_line_passes_validation(framework_root: pathlib.Path) -> None:
     assert report.ok, report.as_lines()
 
 
+def test_valid_recon_passes_validation(framework_root: pathlib.Path) -> None:
+    """A recon block with bullets citing real on-disk paths is the happy path."""
+    report = validate_spec(FIXTURES / "valid-recon.md", root=framework_root)
+    assert report.ok, report.as_lines()
+
+
+def test_recon_path_does_not_exist_fails_validation(framework_root: pathlib.Path) -> None:
+    """cl-2 resolution: validator is structural — every cited path must
+    exist on disk."""
+    report = validate_spec(FIXTURES / "nonexistent-path-recon.md", root=framework_root)
+    assert not report.ok
+    assert any(
+        "does not exist" in issue.message and "does/not/exist.py" in issue.message
+        for issue in report.failed
+    ), report.as_lines()
+
+
 def test_prose_only_recon_fails_validation(framework_root: pathlib.Path) -> None:
     """Recon body with prose but no bulleted file-path entries must fail
     with the message named in spec Story 2 scenario 3."""
