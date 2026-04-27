@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -14,6 +15,10 @@ import yaml
 from jsonschema import Draft202012Validator
 
 from .paths import find_framework_root, skill_frontmatter_schema
+
+_SPEC_ID_RE = re.compile(r"^\*\*Spec ID:\*\*\s*(\d+)", re.MULTILINE)
+_RECON_ANCHOR = "<!-- section: Reconnaissance -->"
+_NEXT_ANCHOR_RE = re.compile(r"<!-- section: [^>]+ -->")
 
 
 @dataclass
@@ -70,6 +75,84 @@ def extract_frontmatter(path: pathlib.Path) -> tuple[dict | None, str | None]:
     if not isinstance(parsed, dict):
         return None, "frontmatter is not a mapping"
     return parsed, None
+
+
+def _spec_recon_schema(root: pathlib.Path) -> dict:
+    return json.loads(
+        (root / "schemas" / "spec-recon.schema.json").read_text(encoding="utf-8")
+    )
+
+
+def _extract_recon_body(text: str) -> str | None:
+    """Return the body between the recon anchor and the next section anchor.
+
+    Returns ``None`` when the recon anchor is missing entirely.
+    """
+    anchor_pos = text.find(_RECON_ANCHOR)
+    if anchor_pos == -1:
+        return None
+    after = text[anchor_pos + len(_RECON_ANCHOR):]
+    next_match = _NEXT_ANCHOR_RE.search(after)
+    return after[: next_match.start()] if next_match else after
+
+
+def _recon_body_is_empty(body: str) -> bool:
+    """The recon body counts as empty when it carries no non-blank,
+    non-heading, non-comment content."""
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith("<!--"):
+            continue
+        return False
+    return True
+
+
+def validate_spec(
+    path: pathlib.Path,
+    *,
+    root: pathlib.Path | None = None,
+) -> ValidationReport:
+    """Validate one ``spec.md`` against the recon rule (issue #26).
+
+    The validator is structural: it does not enforce session-freshness
+    (cl-2 resolution in spec 0011). It checks the cutover guard, the
+    presence of the recon section, and that entries cite on-disk paths
+    or use the explicit opt-out line.
+    """
+    root = (root or find_framework_root()).resolve()
+    schema = _spec_recon_schema(root)
+    cutover = int(schema["cutover_spec_id"])
+
+    report = ValidationReport()
+    path = path.resolve()
+    if not path.exists():
+        report.failed.append(SkillIssue(path, "file does not exist"))
+        return report
+
+    text = path.read_text(encoding="utf-8")
+
+    spec_id_match = _SPEC_ID_RE.search(text)
+    if not spec_id_match:
+        report.failed.append(SkillIssue(path, "missing or unparseable Spec ID header"))
+        return report
+    spec_id = int(spec_id_match.group(1))
+
+    if spec_id <= cutover:
+        report.passed.append(path)
+        return report
+
+    body = _extract_recon_body(text)
+    if body is None or _recon_body_is_empty(body):
+        report.failed.append(
+            SkillIssue(
+                path,
+                "Reconnaissance section required; add at least one surface entry or opt-out line",
+            )
+        )
+        return report
+
+    report.passed.append(path)
+    return report
 
 
 def iter_skill_files(root: pathlib.Path) -> Iterable[pathlib.Path]:
