@@ -59,6 +59,17 @@ def check(
 
     issues: list[PreflightIssue] = []
 
+    feature_slug = feature_dir.name
+    branch_name = (current_branch or _git_current_branch)()
+    expected_branch = f"feature/{_strip_numeric_prefix(feature_slug)}"
+    if branch_name and branch_name != expected_branch and branch_name != f"feature/{feature_slug}":
+        issues.append(
+            PreflightIssue(
+                f"pre-flight: git branch {branch_name!r} does not match feature "
+                f"directory {feature_slug!r}"
+            )
+        )
+
     spec_path = feature_dir / "spec.md"
     if skill in _REQUIRES_SPEC and not spec_path.is_file():
         issues.append(
@@ -89,6 +100,29 @@ def check(
             )
 
     return issues
+
+
+def _strip_numeric_prefix(slug: str) -> str:
+    """Drop a leading ``NNNN-`` from a feature directory name."""
+    head, sep, tail = slug.partition("-")
+    if sep and head.isdigit():
+        return tail
+    return slug
+
+
+def _git_current_branch() -> str:
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 def _count_needs_clarification(text: str) -> int:

@@ -203,3 +203,36 @@ def test_approved_review_yaml_lets_finishing_branch_pass(
 
     issues = _run_finishing(feature_dir, repo_root=tmp_path)
     assert not any("review approval missing" in i.message for i in issues)
+
+
+# -- T005: Story 1 scenario 5 -------------------------------------------------
+
+
+def test_branch_slug_mismatch_aborts(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    issues = check(
+        "plan",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/other-thing"),
+    )
+
+    messages = [i.message for i in issues]
+    assert (
+        "pre-flight: git branch 'feature/other-thing' does not match feature "
+        "directory '0010-pipeline-preflight-checks'"
+    ) in messages
+
+
+def test_branch_slug_match_passes(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    issues = check(
+        "plan",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    assert not any("does not match feature directory" in i.message for i in issues)
