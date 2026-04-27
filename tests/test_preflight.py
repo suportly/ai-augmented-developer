@@ -426,3 +426,24 @@ def test_cli_reports_same_message_as_in_skill_check(
     assert in_skill, "in-skill check should report at least one issue"
     for issue in in_skill:
         assert issue.message in result.output
+
+
+# -- T012: Story 3 scenario 3 -------------------------------------------------
+
+
+def test_cli_unknown_skill_lists_known_skills(
+    feature_dir: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = feature_dir.parents[1]
+    monkeypatch.chdir(repo)
+
+    result = _run_cli(
+        ["preflight", "bogus", "--feature", feature_dir.name],
+        cwd=repo,
+    )
+
+    assert result.exit_code != 0
+    assert (
+        "unknown skill 'bogus'; expected one of: clarify, plan, tasks, implement, "
+        "analyze, requesting-code-review, finishing-a-branch"
+    ) in result.output
