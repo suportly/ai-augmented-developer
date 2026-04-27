@@ -106,3 +106,24 @@ def test_deleting_each_prior_artifact_fails_the_next_skill(
     assert needle in result.output, (
         f"{skill}/{deleted}: expected {needle!r} in {result.output!r}"
     )
+
+
+# -- T025: Success criterion #3 ----------------------------------------------
+
+
+def test_reference_dir_completes_under_500ms(tmp_path: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    repo, feature_dir = _build_repo(tmp_path)
+
+    start = time.perf_counter()
+    check(
+        "analyze",
+        feature_dir,
+        env={},
+        current_branch=lambda: "feature/reference",
+        repo_root=repo,
+    )
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < 0.5, f"pre-flight took {elapsed:.3f}s — exceeds 500ms budget"
