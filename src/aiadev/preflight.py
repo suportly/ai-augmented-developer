@@ -118,13 +118,22 @@ def check(
     if skill == "tasks" and spec_path.is_file():
         plan_path = feature_dir / "plan.md"
         if plan_path.is_file():
+            plan_text = plan_path.read_text(encoding="utf-8")
             spec_lang = _language_of(spec_path.read_text(encoding="utf-8"))
-            plan_lang = _language_of(plan_path.read_text(encoding="utf-8"))
+            plan_lang = _language_of(plan_text)
             if spec_lang and plan_lang and spec_lang != plan_lang:
                 issues.append(
                     PreflightIssue(
                         f"pre-flight: language mismatch — spec.md={spec_lang}, "
                         f"plan.md={plan_lang}"
+                    )
+                )
+            plan_branch = _branch_header_of(plan_text)
+            if plan_branch and plan_branch != expected_branch and plan_branch != f"feature/{feature_slug}":
+                issues.append(
+                    PreflightIssue(
+                        f"pre-flight: plan.md branch header {plan_branch!r} does not "
+                        f"match feature directory {feature_slug!r}"
                     )
                 )
 
@@ -188,6 +197,14 @@ def _language_of(text: str) -> str:
     import re
 
     match = re.search(r"\*\*Language:\*\*\s*([A-Za-z][A-Za-z0-9_-]*)", text)
+    return match.group(1) if match else ""
+
+
+def _branch_header_of(text: str) -> str:
+    """Extract the branch tag from a ``**Branch:** \`<tag>\``` header."""
+    import re
+
+    match = re.search(r"\*\*Branch:\*\*\s*`([^`]+)`", text)
     return match.group(1) if match else ""
 
 

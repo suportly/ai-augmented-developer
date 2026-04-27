@@ -331,3 +331,32 @@ def test_language_header_mismatch_spec_vs_plan_aborts_tasks(
 
     messages = [i.message for i in issues]
     assert "pre-flight: language mismatch — spec.md=en, plan.md=pt-BR" in messages
+
+
+# -- T009: Story 2 scenario 3 -------------------------------------------------
+
+
+def test_plan_branch_header_mismatch_aborts_tasks(feature_dir: pathlib.Path) -> None:
+    from aiadev.preflight import check
+
+    plan = feature_dir / "plan.md"
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace(
+            "Branch:** `feature/pipeline-preflight-checks`",
+            "Branch:** `feature/foo`",
+        ),
+        encoding="utf-8",
+    )
+
+    issues = check(
+        "tasks",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+    )
+
+    messages = [i.message for i in issues]
+    assert (
+        "pre-flight: plan.md branch header 'feature/foo' does not match feature "
+        "directory '0010-pipeline-preflight-checks'"
+    ) in messages
