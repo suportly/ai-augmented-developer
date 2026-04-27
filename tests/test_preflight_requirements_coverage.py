@@ -1,0 +1,90 @@
+"""Coverage tests for ``aiadev.preflight``.
+
+Asserts that the pipeline skill list, the section-anchor lists, and the
+SKILL.md hand-off documentation stay in sync. See plan ADR #2 and
+``test_preflight.py`` for the per-scenario behaviour.
+"""
+from __future__ import annotations
+
+import pathlib
+
+import pytest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def test_every_pipeline_skill_has_a_skill_directory() -> None:
+    from aiadev.preflight import PIPELINE_SKILLS
+
+    skills_dir = REPO_ROOT / "skills"
+    for skill in PIPELINE_SKILLS:
+        assert (skills_dir / skill / "SKILL.md").is_file(), (
+            f"PIPELINE_SKILLS lists {skill!r} but skills/{skill}/SKILL.md is missing"
+        )
+
+
+@pytest.mark.parametrize(
+    ("anchors_attr", "template_name"),
+    [
+        ("SPEC_ANCHORS", "spec-template.md"),
+        ("PLAN_ANCHORS", "plan-template.md"),
+        ("TASKS_ANCHORS", "tasks-template.md"),
+    ],
+)
+def test_every_anchor_exists_in_its_template(
+    anchors_attr: str, template_name: str
+) -> None:
+    import aiadev.preflight as mod
+
+    anchors = getattr(mod, anchors_attr)
+    template = (REPO_ROOT / "templates" / template_name).read_text(encoding="utf-8")
+    missing = [a for a in anchors if f"<!-- section: {a} -->" not in template]
+    assert not missing, (
+        f"{anchors_attr} contains anchors not present in templates/{template_name}: "
+        f"{missing}"
+    )
+
+
+def _read_skill(name: str) -> str:
+    return (REPO_ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+
+
+def test_clarify_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight clarify --feature" in _read_skill("clarify")
+
+
+def test_plan_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight plan --feature" in _read_skill("plan")
+
+
+def test_tasks_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight tasks --feature" in _read_skill("tasks")
+
+
+def test_implement_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight implement --feature" in _read_skill("implement")
+
+
+def test_analyze_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight analyze --feature" in _read_skill("analyze")
+
+
+def test_review_skill_md_documents_review_yaml_emission() -> None:
+    text = _read_skill("requesting-code-review")
+    for needle in (".aiadev/review.yaml", "status: approved", "status: changes_requested", "timestamp:"):
+        assert needle in text, f"missing {needle!r} in requesting-code-review SKILL.md"
+
+
+def test_finishing_skill_md_has_preflight_and_review_gate() -> None:
+    text = _read_skill("finishing-a-branch")
+    assert "aiadev preflight finishing-a-branch --feature" in text
+    assert ".aiadev/review.yaml" in text
+
+
+def test_migration_doc_exists_and_mentions_aiadev_preflight_all() -> None:
+    doc = REPO_ROOT / "docs" / "articles" / "preflight.md"
+    assert doc.is_file(), "docs/articles/preflight.md is missing"
+    text = doc.read_text(encoding="utf-8")
+    assert "aiadev preflight --all" in text
+    assert "AIADEV_PREFLIGHT=warn" in text
+    assert ".aiadev/review.yaml" in text

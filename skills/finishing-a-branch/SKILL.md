@@ -13,6 +13,7 @@ Complete the development cycle: final checks, push, open PR, link to issue, clea
 
 Before pushing:
 
+- [ ] Run `aiadev preflight finishing-a-branch --feature <slug>` and confirm exit 0. The CLI checks every upstream artifact and refuses to proceed unless `.aiadev/review.yaml` records `status: approved`. Bypass is `AIADEV_PREFLIGHT=warn` (debug only).
 - [ ] Code review approved (no outstanding CHANGES_REQUESTED)
 - [ ] All tests pass
   ```bash

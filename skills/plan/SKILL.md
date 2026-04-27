@@ -27,6 +27,7 @@ Write the implementation plan from a clean `spec.md`. The plan says **how** the 
 
 ## Preconditions
 
+- Run pre-flight first: `aiadev preflight plan --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
 - `spec.md` exists, reviewer-approved, and contains zero `[NEEDS CLARIFICATION]` markers. If not → invoke `clarify` or `specify` first.
 - `constitution.md` is readable.
 

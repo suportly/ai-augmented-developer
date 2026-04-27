@@ -82,13 +82,25 @@ Check for:
 Return: APPROVED or CHANGES_REQUESTED with specific issues and suggested fixes.
 ```
 
+## Recording the review verdict
+
+Once the reviewer returns a verdict, write `.aiadev/review.yaml` at the repo root so `finishing-a-branch` can verify approval. Schema:
+
+```yaml
+status: approved          # or: changes_requested
+timestamp: 2026-04-21T12:34:56Z   # ISO-8601 UTC
+reason: <one line>        # required only when status: changes_requested
+```
+
+`aiadev preflight finishing-a-branch` reads this file and aborts unless `status: approved`.
+
 ## Handling Review Feedback
 
 ### APPROVED
-Proceed to `finishing-a-branch`.
+Write `.aiadev/review.yaml` with `status: approved` and a UTC `timestamp:`. Then proceed to `finishing-a-branch`.
 
 ### CHANGES_REQUESTED
-For each issue:
+Write `.aiadev/review.yaml` with `status: changes_requested`, a `timestamp:`, and a one-line `reason:`. For each issue:
 1. Fix the specific issue
 2. Add or update tests if needed
 3. Re-run the full test suite

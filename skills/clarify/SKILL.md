@@ -22,6 +22,7 @@ Resolve every `[NEEDS CLARIFICATION: <question>]` marker in a spec or plan befor
 
 ## Preconditions
 
+- Run pre-flight first: `aiadev preflight clarify --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
 - At least one `[NEEDS CLARIFICATION: ...]` marker exists in the target file.
 
 ## Loop
