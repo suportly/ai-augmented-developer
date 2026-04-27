@@ -44,3 +44,14 @@ def test_optout_line_passes_validation(framework_root: pathlib.Path) -> None:
     """A single-surface opt-out line satisfies the recon rule."""
     report = validate_spec(FIXTURES / "optout-recon.md", root=framework_root)
     assert report.ok, report.as_lines()
+
+
+def test_prose_only_recon_fails_validation(framework_root: pathlib.Path) -> None:
+    """Recon body with prose but no bulleted file-path entries must fail
+    with the message named in spec Story 2 scenario 3."""
+    report = validate_spec(FIXTURES / "prose-only-recon.md", root=framework_root)
+    assert not report.ok
+    assert any(
+        "Reconnaissance entries must cite at least one file path" in issue.message
+        for issue in report.failed
+    ), report.as_lines()

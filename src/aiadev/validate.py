@@ -151,6 +151,21 @@ def validate_spec(
         )
         return report
 
+    opt_out_re = re.compile(schema["opt_out_pattern"], re.MULTILINE)
+    if opt_out_re.search(body):
+        report.passed.append(path)
+        return report
+
+    entry_re = re.compile(schema["recon_entry_pattern"], re.MULTILINE)
+    if not entry_re.search(body):
+        report.failed.append(
+            SkillIssue(
+                path,
+                "Reconnaissance entries must cite at least one file path per surface",
+            )
+        )
+        return report
+
     report.passed.append(path)
     return report
 
