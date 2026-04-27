@@ -51,3 +51,19 @@ def _read_skill(name: str) -> str:
 
 def test_clarify_skill_md_has_preflight_callout() -> None:
     assert "aiadev preflight clarify --feature" in _read_skill("clarify")
+
+
+def test_plan_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight plan --feature" in _read_skill("plan")
+
+
+def test_tasks_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight tasks --feature" in _read_skill("tasks")
+
+
+def test_implement_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight implement --feature" in _read_skill("implement")
+
+
+def test_analyze_skill_md_has_preflight_callout() -> None:
+    assert "aiadev preflight analyze --feature" in _read_skill("analyze")
