@@ -73,3 +73,9 @@ def test_review_skill_md_documents_review_yaml_emission() -> None:
     text = _read_skill("requesting-code-review")
     for needle in (".aiadev/review.yaml", "status: approved", "status: changes_requested", "timestamp:"):
         assert needle in text, f"missing {needle!r} in requesting-code-review SKILL.md"
+
+
+def test_finishing_skill_md_has_preflight_and_review_gate() -> None:
+    text = _read_skill("finishing-a-branch")
+    assert "aiadev preflight finishing-a-branch --feature" in text
+    assert ".aiadev/review.yaml" in text
