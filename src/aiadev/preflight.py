@@ -48,6 +48,7 @@ def check(
     *,
     env: Mapping[str, str] | None = None,
     current_branch: Callable[[], str] | None = None,
+    repo_root: Path | None = None,
 ) -> list[PreflightIssue]:
     """Return the pre-flight issues for ``skill`` against ``feature_dir``.
 
@@ -78,8 +79,30 @@ def check(
             PreflightIssue("pre-flight: tasks.md missing — run /aiadev:tasks first")
         )
 
+    if skill == "finishing-a-branch":
+        if not _review_is_approved(repo_root):
+            issues.append(
+                PreflightIssue(
+                    "pre-flight: review approval missing — "
+                    "run /aiadev:requesting-code-review first"
+                )
+            )
+
     return issues
 
 
 def _count_needs_clarification(text: str) -> int:
     return text.count("[NEEDS CLARIFICATION")
+
+
+def _review_is_approved(repo_root: Path | None) -> bool:
+    if repo_root is None:
+        repo_root = Path.cwd()
+    review_path = repo_root / ".aiadev" / "review.yaml"
+    if not review_path.is_file():
+        return False
+
+    import yaml  # local import keeps the module import-cheap
+
+    payload = yaml.safe_load(review_path.read_text(encoding="utf-8")) or {}
+    return payload.get("status") == "approved"

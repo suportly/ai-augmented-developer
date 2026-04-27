@@ -145,3 +145,61 @@ def test_needs_clarification_markers_block_plan(feature_dir: pathlib.Path) -> No
         "pre-flight: spec.md has 2 unresolved [NEEDS CLARIFICATION] markers — "
         "run /aiadev:clarify first"
     ) in messages
+
+
+# -- T004: Story 1 scenario 4 -------------------------------------------------
+
+
+def _run_finishing(feature_dir: pathlib.Path, repo_root: pathlib.Path):
+    from aiadev.preflight import check
+
+    return check(
+        "finishing-a-branch",
+        feature_dir,
+        env={},
+        current_branch=_stub_branch("feature/pipeline-preflight-checks"),
+        repo_root=repo_root,
+    )
+
+
+def test_missing_review_yaml_blocks_finishing_branch(
+    feature_dir: pathlib.Path, tmp_path: pathlib.Path
+) -> None:
+    issues = _run_finishing(feature_dir, repo_root=tmp_path)
+    messages = [i.message for i in issues]
+    assert (
+        "pre-flight: review approval missing — run /aiadev:requesting-code-review first"
+        in messages
+    )
+
+
+def test_changes_requested_review_yaml_blocks_finishing_branch(
+    feature_dir: pathlib.Path, tmp_path: pathlib.Path
+) -> None:
+    review = tmp_path / ".aiadev" / "review.yaml"
+    review.parent.mkdir(parents=True, exist_ok=True)
+    review.write_text(
+        "status: changes_requested\ntimestamp: 2026-04-21T00:00:00Z\nreason: x\n",
+        encoding="utf-8",
+    )
+
+    issues = _run_finishing(feature_dir, repo_root=tmp_path)
+    messages = [i.message for i in issues]
+    assert (
+        "pre-flight: review approval missing — run /aiadev:requesting-code-review first"
+        in messages
+    )
+
+
+def test_approved_review_yaml_lets_finishing_branch_pass(
+    feature_dir: pathlib.Path, tmp_path: pathlib.Path
+) -> None:
+    review = tmp_path / ".aiadev" / "review.yaml"
+    review.parent.mkdir(parents=True, exist_ok=True)
+    review.write_text(
+        "status: approved\ntimestamp: 2026-04-21T00:00:00Z\n",
+        encoding="utf-8",
+    )
+
+    issues = _run_finishing(feature_dir, repo_root=tmp_path)
+    assert not any("review approval missing" in i.message for i in issues)
