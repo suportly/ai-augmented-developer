@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-04-27
+
 Spec **0010 — pipeline-preflight-checks**. Read-only `aiadev preflight`
 checker that aborts pipeline skills when upstream artifacts are missing,
 malformed, or incoherent. Same diagnostics in CI and in-skill.
