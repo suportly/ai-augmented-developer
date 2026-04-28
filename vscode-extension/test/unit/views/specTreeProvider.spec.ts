@@ -591,7 +591,6 @@ describe('SpecTreeProvider — ClarificationGroupNode rendering (T020)', () => {
     expect((item as unknown as StubTreeItem).collapsibleState).to.equal(
       StubTreeItemCollapsibleState.None,
     );
-    expect((item as unknown as StubTreeItem).command).to.be.undefined;
   });
 
   it('shows a short question untruncated with no trailing ellipsis', () => {
@@ -621,5 +620,87 @@ describe('SpecTreeProvider — ClarificationGroupNode rendering (T020)', () => {
     const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
 
     expect(provider.getChildren(clNode)).to.deep.equal([]);
+  });
+});
+
+describe('SpecTreeProvider — ClarificationNode reveal command (T021)', () => {
+  function buildClarification(overrides: Partial<Clarification> = {}): Clarification {
+    return {
+      id: 'cl-1',
+      question: 'What is the retention policy?',
+      line: 5,
+      ...overrides,
+    };
+  }
+
+  it('sets a vscode.open command with title "Open clarification" on the ClarificationNode TreeItem', () => {
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-1', line: 7 }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    const item = provider.getTreeItem(clNode);
+    const command = (item as unknown as StubTreeItem).command as
+      | { command: string; title: string; arguments: unknown[] }
+      | undefined;
+
+    expect(command).to.exist;
+    expect(command!.command).to.equal('vscode.open');
+    expect(command!.title).to.equal('Open clarification');
+  });
+
+  it('passes a Uri pointing at specModel.specPath as the first argument', () => {
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-1', line: 5 }),
+    ];
+    const model = buildModel({
+      tasks: [],
+      clarifications,
+      specPath: '/work/root/specs/0012-vscode-spec-explorer/spec.md',
+    });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    const item = provider.getTreeItem(clNode);
+    const command = (item as unknown as StubTreeItem).command as {
+      arguments: [StubUri, { selection: StubRange }];
+    };
+
+    expect(command.arguments[0]).to.be.instanceOf(StubUri);
+    expect(command.arguments[0].fsPath).to.equal(
+      '/work/root/specs/0012-vscode-spec-explorer/spec.md',
+    );
+  });
+
+  it('passes a Range covering the marker line (cl.line - 1, 0) as the selection', () => {
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-9', line: 42 }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    const item = provider.getTreeItem(clNode);
+    const command = (item as unknown as StubTreeItem).command as {
+      arguments: [StubUri, { selection: StubRange }];
+    };
+
+    const range = command.arguments[1].selection;
+    expect(range).to.be.instanceOf(StubRange);
+    expect(range.startLine).to.equal(41);
+    expect(range.startCharacter).to.equal(0);
+    expect(range.endLine).to.equal(41);
+    expect(range.endCharacter).to.equal(0);
   });
 });

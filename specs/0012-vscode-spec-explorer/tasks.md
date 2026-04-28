@@ -320,7 +320,7 @@
 
 ### T021 — Click cl row opens `spec.md` at marker line
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T020
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`

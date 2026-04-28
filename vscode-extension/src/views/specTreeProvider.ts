@@ -216,7 +216,7 @@ export class SpecTreeProvider {
       case 'clGroup':
         return this.renderClarificationGroup(element.specModel);
       case 'cl':
-        return this.renderClarification(element.clarification);
+        return this.renderClarification(element.clarification, element.specModel);
       default:
         return assertNever(element);
     }
@@ -292,7 +292,10 @@ export class SpecTreeProvider {
     return item;
   }
 
-  private renderClarification(clarification: Clarification): MutableTreeItem {
+  private renderClarification(
+    clarification: Clarification,
+    specModel: SpecModel,
+  ): MutableTreeItem {
     const item = new this.ctors.TreeItem(
       clarification.id,
       this.ctors.TreeItemCollapsibleState.None,
@@ -300,7 +303,20 @@ export class SpecTreeProvider {
     item.description = truncateQuestion(clarification.question);
     item.tooltip = clarification.question;
     item.contextValue = 'aiadev.clarification';
-    // command intentionally left undefined; T021 wires the navigation.
+    // T021: clicking the row opens spec.md and reveals the marker line.
+    // VS Code Position is 0-based; clarification.line is 1-based.
+    // specPath is always defined: a SpecModel only exists when spec.md was found.
+    const markerLine = clarification.line - 1;
+    item.command = {
+      command: 'vscode.open',
+      title: 'Open clarification',
+      arguments: [
+        this.ctors.Uri.file(specModel.specPath),
+        {
+          selection: new this.ctors.Range(markerLine, 0, markerLine, 0),
+        },
+      ],
+    };
     return item;
   }
 }
