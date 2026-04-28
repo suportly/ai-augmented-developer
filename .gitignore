@@ -21,3 +21,8 @@ build/
 # truth lives at the repo root and is shipped in the wheel via
 # pyproject.toml package-data + MANIFEST.in.
 src/aiadev/_assets/
+
+# VS Code extension build artefacts (see vscode-extension/)
+vscode-extension/node_modules/
+vscode-extension/out/
+*.vsix

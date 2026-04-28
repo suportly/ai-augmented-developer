@@ -1,0 +1,28 @@
+{
+  "name": "aiadev-spec-explorer",
+  "displayName": "aiadev Spec Explorer",
+  "description": "Browse aiadev specs (spec.md / plan.md / tasks.md) from the VS Code activity bar.",
+  "publisher": "aiadev",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./out/extension.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.mjs",
+    "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "chai": "^4.4.1",
+    "esbuild": "^0.20.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
