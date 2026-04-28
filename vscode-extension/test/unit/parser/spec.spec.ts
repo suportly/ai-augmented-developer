@@ -83,6 +83,87 @@ describe('parseSpec', () => {
     expect(bogus.parseError).to.match(/Unrecognised/);
   });
 
+  it('strips a UTF-8 BOM at the start of the source before parsing', () => {
+    const source =
+      '﻿' +
+      [
+        '# Feature specification: BOM prefixed',
+        '',
+        '**Branch:** `feature/bom`',
+        '**Status:** Draft',
+        '**Spec ID:** 0001',
+        '**Language:** en',
+        '',
+        '---',
+      ].join('\n');
+
+    const result = parseSpec(source);
+
+    expect(result.title).to.equal('BOM prefixed');
+    expect(result.title ?? '').to.not.match(/﻿/);
+    expect(result.branch).to.equal('feature/bom');
+    expect(result.status).to.equal('draft');
+    expect(result.specId).to.equal('0001');
+    expect(result.language).to.equal('en');
+    expect(result.parseError).to.equal(undefined);
+  });
+
+  it('parses CRLF line endings identically to LF', () => {
+    const lines = [
+      '# Feature specification: CRLF source',
+      '',
+      '**Branch:** `feature/crlf`',
+      '**Status:** Approved',
+      '**Spec ID:** 0002',
+      '**Language:** en',
+      '',
+      '---',
+    ];
+    const lf = parseSpec(lines.join('\n'));
+    const crlf = parseSpec(lines.join('\r\n'));
+
+    expect(crlf).to.deep.equal(lf);
+    expect(crlf.title).to.equal('CRLF source');
+    expect(crlf.status).to.equal('approved');
+  });
+
+  const caseVariants: Array<{ label: string; key: string }> = [
+    { label: 'lowercase', key: '**status:**' },
+    { label: 'titlecase', key: '**Status:**' },
+    { label: 'uppercase', key: '**STATUS:**' },
+    { label: 'mixedcase', key: '**StAtUs:**' },
+  ];
+
+  for (const variant of caseVariants) {
+    it(`treats ${variant.label} bold key (${variant.key}) as Status`, () => {
+      const source = [
+        '# Feature specification: Case variant',
+        '',
+        `${variant.key} approved`,
+        '**Spec ID:** 0003',
+        '',
+        '---',
+      ].join('\n');
+
+      const result = parseSpec(source);
+
+      expect(result.status).to.equal('approved');
+      expect(result.parseError).to.equal(undefined);
+    });
+  }
+
+  it('parses the bom-crlf fixture end-to-end (BOM + CRLF on disk)', () => {
+    const result = parseSpec(readFixture('bom-crlf'));
+
+    expect(result.title).to.equal('BOM CRLF fixture');
+    expect(result.title ?? '').to.not.match(/﻿/);
+    expect(result.branch).to.equal('feature/bom-crlf');
+    expect(result.language).to.equal('en');
+    expect(result.specId).to.equal('0100');
+    expect(result.status).to.equal('approved');
+    expect(result.parseError).to.equal(undefined);
+  });
+
   it('normalises multi-word status values to lowercase canonical form', () => {
     const inReview = parseSpec(
       [

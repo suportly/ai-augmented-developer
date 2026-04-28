@@ -97,7 +97,7 @@
 
 ### T006 — `parser/spec.ts` tolerates BOM, CRLF, mixed-case keys
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - modify: `vscode-extension/src/parser/spec.ts`

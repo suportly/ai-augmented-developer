@@ -29,7 +29,8 @@ export interface SpecHeaderFields {
 }
 
 const TITLE_PREFIX = '# Feature specification:';
-const BOLD_KEY_RE = /^\*\*([^*]+):\*\*\s*(.+?)\s*$/;
+const BOLD_KEY_RE = /^\*\*([^*]+):\*\*\s*(.+?)\s*$/i;
+const UTF8_BOM = '﻿';
 
 const STATUS_MAP: Record<string, SpecStatus> = {
   draft: 'draft',
@@ -62,7 +63,8 @@ function normaliseStatus(raw: string): {
 }
 
 export function parseSpec(source: string): SpecHeaderFields {
-  const lines = source.split('\n');
+  const normalised = source.startsWith(UTF8_BOM) ? source.slice(UTF8_BOM.length) : source;
+  const lines = normalised.split(/\r?\n/);
 
   let title: string | undefined;
   let branch: string | undefined;
