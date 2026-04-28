@@ -171,7 +171,7 @@
 
 ### T011 — `io/filesystem.ts` `FileSystem` interface + fake
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/io/filesystem.ts` (`FileSystem` interface; `VsCodeFileSystem` impl wrapping `vscode.workspace.fs` + `findFiles`)
