@@ -67,7 +67,7 @@
 
 ### T004 — `parser/spec.ts` parses bold-key headers
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/parser/spec.ts` (pure `parseSpec(source: string): SpecModel`)
