@@ -28,6 +28,7 @@
 
 import {
   assertNever,
+  type Clarification,
   type SpecModel,
   type SpecStatus,
   type Task,
@@ -59,10 +60,38 @@ export interface EmptyStateNode {
 }
 
 /**
- * Discriminated-union node type for the tree. Future tasks add
- * `ClarificationGroupNode` etc.
+ * Parent row for the per-spec clarifications group ("Clarifications (N)").
+ * Carries a back-reference to the owning {@link SpecModel} so children can
+ * be enumerated and so future navigation commands (T021) can locate the
+ * source `spec.md`. Only emitted when `specModel.clarifications.length > 0`.
+ * Spec Story 3 scenario 1 / task T020.
  */
-export type Node = SpecNode | TaskNode | EmptyStateNode;
+export interface ClarificationGroupNode {
+  readonly kind: 'clGroup';
+  readonly specModel: SpecModel;
+}
+
+/**
+ * One row per clarification under its parent {@link ClarificationGroupNode}.
+ * Carries both a back-reference to the owning {@link SpecModel} and the
+ * specific {@link Clarification} record so the row can render id + question
+ * text without re-querying the aggregate.
+ */
+export interface ClarificationNode {
+  readonly kind: 'cl';
+  readonly specModel: SpecModel;
+  readonly clarification: Clarification;
+}
+
+/**
+ * Discriminated-union node type for the tree.
+ */
+export type Node =
+  | SpecNode
+  | TaskNode
+  | EmptyStateNode
+  | ClarificationGroupNode
+  | ClarificationNode;
 
 /**
  * Subset of `vscode.TreeItem` that this provider mutates. Kept structural so
@@ -103,6 +132,7 @@ export interface TreeItemCtors {
     endLine: number,
     endChar: number,
   ) => unknown;
+  ThemeIcon: new (id: string, color?: unknown) => unknown;
 }
 
 /**
@@ -147,12 +177,25 @@ export class SpecTreeProvider {
       return this.specs.map((model) => ({ kind: 'spec', model }));
     }
     switch (element.kind) {
-      case 'spec':
-        return element.model.tasks.map((task) => ({
+      case 'spec': {
+        const taskNodes: Node[] = element.model.tasks.map((task) => ({
           kind: 'task',
           specModel: element.model,
           task,
         }));
+        if (element.model.clarifications.length > 0) {
+          taskNodes.push({ kind: 'clGroup', specModel: element.model });
+        }
+        return taskNodes;
+      }
+      case 'clGroup':
+        return element.specModel.clarifications.map((clarification) => ({
+          kind: 'cl',
+          specModel: element.specModel,
+          clarification,
+        }));
+      case 'cl':
+        return [];
       case 'task':
         return [];
       case 'empty':
@@ -170,6 +213,10 @@ export class SpecTreeProvider {
         return this.renderTask(element.task, element.specModel);
       case 'empty':
         return this.renderEmpty();
+      case 'clGroup':
+        return this.renderClarificationGroup(element.specModel);
+      case 'cl':
+        return this.renderClarification(element.clarification);
       default:
         return assertNever(element);
     }
@@ -231,7 +278,46 @@ export class SpecTreeProvider {
     }
     return item;
   }
+
+  private renderClarificationGroup(specModel: SpecModel): MutableTreeItem {
+    const count = specModel.clarifications.length;
+    const item = new this.ctors.TreeItem(
+      `Clarifications (${count})`,
+      this.ctors.TreeItemCollapsibleState.Expanded,
+    );
+    item.tooltip = `${count} unresolved clarification${count === 1 ? '' : 's'}`;
+    item.iconPath = new this.ctors.ThemeIcon('question');
+    item.contextValue = 'aiadev.clarificationGroup';
+    // description intentionally left undefined.
+    return item;
+  }
+
+  private renderClarification(clarification: Clarification): MutableTreeItem {
+    const item = new this.ctors.TreeItem(
+      clarification.id,
+      this.ctors.TreeItemCollapsibleState.None,
+    );
+    item.description = truncateQuestion(clarification.question);
+    item.tooltip = clarification.question;
+    item.contextValue = 'aiadev.clarification';
+    // command intentionally left undefined; T021 wires the navigation.
+    return item;
+  }
 }
+
+/**
+ * Truncate a clarification question to {@link CLARIFICATION_DESCRIPTION_LIMIT}
+ * characters, appending an ellipsis when the source string was longer. The
+ * full text is preserved on `item.tooltip` so users can still read it.
+ */
+function truncateQuestion(question: string): string {
+  if (question.length <= CLARIFICATION_DESCRIPTION_LIMIT) {
+    return question;
+  }
+  return question.slice(0, CLARIFICATION_DESCRIPTION_LIMIT) + '…';
+}
+
+const CLARIFICATION_DESCRIPTION_LIMIT = 80;
 
 /**
  * Build the badge text shown next to a spec label. Always carries the status;

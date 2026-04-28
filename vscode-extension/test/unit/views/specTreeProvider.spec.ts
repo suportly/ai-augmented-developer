@@ -2,6 +2,8 @@ import { expect } from 'chai';
 
 import {
   SpecTreeProvider,
+  type ClarificationGroupNode,
+  type ClarificationNode,
   type EmptyStateNode,
   type IconFactories,
   type Node,
@@ -9,10 +11,16 @@ import {
   type TaskNode,
   type TreeItemCtors,
 } from '../../../src/views/specTreeProvider';
-import type { SpecModel, Task, TaskStatus } from '../../../src/parser/types';
+import type {
+  Clarification,
+  SpecModel,
+  Task,
+  TaskStatus,
+} from '../../../src/parser/types';
 import {
   StubEventEmitter,
   StubRange,
+  StubThemeIcon,
   StubTreeItem,
   StubTreeItemCollapsibleState,
   StubUri,
@@ -79,6 +87,7 @@ function makeProvider(
     } as unknown as TreeItemCtors['EventEmitter'],
     Uri: StubUri as unknown as TreeItemCtors['Uri'],
     Range: StubRange as unknown as TreeItemCtors['Range'],
+    ThemeIcon: StubThemeIcon as unknown as TreeItemCtors['ThemeIcon'],
   };
   const iconFactories: IconFactories = iconFactoriesOverride ?? {
     statusIcon: (status: TaskStatus): IconStub => {
@@ -446,5 +455,171 @@ describe('SpecTreeProvider — TaskNode reveal command (T018)', () => {
     const item = provider.getTreeItem(taskNode);
 
     expect((item as unknown as StubTreeItem).command).to.be.undefined;
+  });
+});
+
+describe('SpecTreeProvider — ClarificationGroupNode rendering (T020)', () => {
+  function buildClarification(overrides: Partial<Clarification> = {}): Clarification {
+    return {
+      id: 'cl-1',
+      question: 'What is the retention policy?',
+      line: 5,
+      ...overrides,
+    };
+  }
+
+  it('does not include a clGroup under specNode when clarifications is empty', () => {
+    const model = buildModel({
+      tasks: [buildTask({ id: 'T001' })],
+      clarifications: [],
+    });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const children = provider.getChildren(specNode) as Node[];
+
+    expect(children.map((n) => n.kind)).to.deep.equal(['task']);
+    expect(children.some((n) => n.kind === 'clGroup')).to.be.false;
+  });
+
+  it('appends a single clGroup after the task nodes when clarifications exist', () => {
+    const tasks: Task[] = [
+      buildTask({ id: 'T001', line: 1 }),
+      buildTask({ id: 'T002', line: 2 }),
+      buildTask({ id: 'T003', line: 3 }),
+      buildTask({ id: 'T004', line: 4 }),
+    ];
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-1', question: 'Q1?', line: 10 }),
+      buildClarification({ id: 'cl-2', question: 'Q2?', line: 20 }),
+    ];
+    const model = buildModel({ tasks, clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const children = provider.getChildren(specNode) as Node[];
+
+    expect(children).to.have.lengthOf(5);
+    expect(children.slice(0, 4).map((n) => n.kind)).to.deep.equal([
+      'task',
+      'task',
+      'task',
+      'task',
+    ]);
+    expect(children[4].kind).to.equal('clGroup');
+    expect((children[4] as ClarificationGroupNode).specModel).to.equal(model);
+  });
+
+  it('renders the clGroup TreeItem with label, tooltip (plural), iconPath, contextValue and Expanded state', () => {
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-1' }),
+      buildClarification({ id: 'cl-2' }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+
+    const item = provider.getTreeItem(groupNode);
+
+    expect(item.label).to.equal('Clarifications (2)');
+    expect(item.description).to.be.undefined;
+    expect(item.tooltip).to.equal('2 unresolved clarifications');
+    expect(item.contextValue).to.equal('aiadev.clarificationGroup');
+    expect((item as unknown as StubTreeItem).collapsibleState).to.equal(
+      StubTreeItemCollapsibleState.Expanded,
+    );
+    expect(item.iconPath).to.be.instanceOf(StubThemeIcon);
+    expect((item.iconPath as StubThemeIcon).id).to.equal('question');
+  });
+
+  it('uses the singular form when there is exactly one clarification', () => {
+    const model = buildModel({
+      tasks: [],
+      clarifications: [buildClarification({ id: 'cl-1' })],
+    });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+
+    const item = provider.getTreeItem(groupNode);
+
+    expect(item.label).to.equal('Clarifications (1)');
+    expect(item.tooltip).to.equal('1 unresolved clarification');
+  });
+
+  it('getChildren(clGroupNode) returns one ClarificationNode per clarification, in source order', () => {
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-1', question: 'First?', line: 10 }),
+      buildClarification({ id: 'cl-2', question: 'Second?', line: 20 }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+
+    const children = provider.getChildren(groupNode) as ClarificationNode[];
+
+    expect(children).to.have.lengthOf(2);
+    expect(children.map((n) => n.kind)).to.deep.equal(['cl', 'cl']);
+    expect(children.map((n) => n.clarification.id)).to.deep.equal(['cl-1', 'cl-2']);
+    for (const child of children) {
+      expect(child.specModel).to.equal(model);
+    }
+  });
+
+  it('renders a clNode with id label, truncates a long question to 80 chars + …', () => {
+    const longQuestion =
+      'This is a very long clarification question that goes on and on and definitely exceeds eighty characters in length.';
+    expect(longQuestion.length).to.be.greaterThan(80);
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-7', question: longQuestion, line: 42 }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    const item = provider.getTreeItem(clNode);
+
+    expect(item.label).to.equal('cl-7');
+    expect(item.description).to.equal(longQuestion.slice(0, 80) + '…');
+    expect((item.description as string).length).to.equal(81);
+    expect(item.tooltip).to.equal(longQuestion);
+    expect(item.contextValue).to.equal('aiadev.clarification');
+    expect((item as unknown as StubTreeItem).collapsibleState).to.equal(
+      StubTreeItemCollapsibleState.None,
+    );
+    expect((item as unknown as StubTreeItem).command).to.be.undefined;
+  });
+
+  it('shows a short question untruncated with no trailing ellipsis', () => {
+    const shortQuestion = 'Short question?';
+    const clarifications: Clarification[] = [
+      buildClarification({ id: 'cl-3', question: shortQuestion }),
+    ];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    const item = provider.getTreeItem(clNode);
+
+    expect(item.description).to.equal(shortQuestion);
+    expect(item.description).to.not.contain('…');
+    expect(item.tooltip).to.equal(shortQuestion);
+  });
+
+  it('getChildren(clNode) returns []', () => {
+    const clarifications: Clarification[] = [buildClarification()];
+    const model = buildModel({ tasks: [], clarifications });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [groupNode] = provider.getChildren(specNode) as ClarificationGroupNode[];
+    const [clNode] = provider.getChildren(groupNode) as ClarificationNode[];
+
+    expect(provider.getChildren(clNode)).to.deep.equal([]);
   });
 });

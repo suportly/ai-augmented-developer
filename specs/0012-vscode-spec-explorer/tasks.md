@@ -306,7 +306,7 @@
 
 ### T020 — ClarificationGroupNode (count + truncated text)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015, T007
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`
