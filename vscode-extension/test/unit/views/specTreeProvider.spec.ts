@@ -3,11 +3,13 @@ import { expect } from 'chai';
 import {
   SpecTreeProvider,
   type EmptyStateNode,
+  type IconFactories,
   type Node,
   type SpecNode,
+  type TaskNode,
   type TreeItemCtors,
 } from '../../../src/views/specTreeProvider';
-import type { SpecModel } from '../../../src/parser/types';
+import type { SpecModel, Task, TaskStatus } from '../../../src/parser/types';
 import {
   StubEventEmitter,
   StubTreeItem,
@@ -51,9 +53,19 @@ function buildModel(overrides: Partial<SpecModel> = {}): SpecModel {
 }
 
 let lastEmitter: StubEventEmitter<unknown> | undefined;
+let lastStatusIconCalls: TaskStatus[] = [];
 
-function makeProvider(specs: readonly SpecModel[]): SpecTreeProvider {
+interface IconStub {
+  readonly tag: 'icon-stub';
+  readonly status: TaskStatus;
+}
+
+function makeProvider(
+  specs: readonly SpecModel[],
+  iconFactoriesOverride?: IconFactories,
+): SpecTreeProvider {
   lastEmitter = undefined;
+  lastStatusIconCalls = [];
   const ctors: TreeItemCtors = {
     TreeItem: StubTreeItem as unknown as TreeItemCtors['TreeItem'],
     TreeItemCollapsibleState: StubTreeItemCollapsibleState,
@@ -64,7 +76,23 @@ function makeProvider(specs: readonly SpecModel[]): SpecTreeProvider {
       }
     } as unknown as TreeItemCtors['EventEmitter'],
   };
-  return new SpecTreeProvider(ctors, specs);
+  const iconFactories: IconFactories = iconFactoriesOverride ?? {
+    statusIcon: (status: TaskStatus): IconStub => {
+      lastStatusIconCalls.push(status);
+      return { tag: 'icon-stub', status };
+    },
+  };
+  return new SpecTreeProvider(ctors, iconFactories, specs);
+}
+
+function buildTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 'T001',
+    title: 'Bootstrap',
+    status: 'pending',
+    line: 1,
+    ...overrides,
+  };
 }
 
 describe('SpecTreeProvider — SpecNode rendering (T015)', () => {
@@ -155,7 +183,7 @@ describe('SpecTreeProvider — SpecNode rendering (T015)', () => {
     expect(item.iconPath).to.be.undefined;
   });
 
-  it('getChildren(specNode) returns [] (TaskNode population deferred to T017)', () => {
+  it('getChildren(specNode) returns [] when the spec has zero tasks', () => {
     const provider = makeProvider([buildModel()]);
     const [node] = provider.getChildren() as SpecNode[];
     expect(provider.getChildren(node)).to.deep.equal([]);
@@ -238,5 +266,105 @@ describe('SpecTreeProvider — EmptyStateNode rendering (T016)', () => {
     const [node] = provider.getChildren() as EmptyStateNode[];
 
     expect(provider.getChildren(node)).to.deep.equal([]);
+  });
+});
+
+describe('SpecTreeProvider — TaskNode rendering (T017)', () => {
+  it('returns one TaskNode per task in source order', () => {
+    const tasks: Task[] = [
+      buildTask({ id: 'T001', title: 'Bootstrap', status: 'done', line: 10 }),
+      buildTask({ id: 'T002', title: 'Parser', status: 'in_progress', line: 20 }),
+      buildTask({ id: 'T003', title: 'View', status: 'pending', line: 30 }),
+      buildTask({ id: 'T004', title: 'Wire-up', status: 'blocked', line: 40 }),
+    ];
+    const model = buildModel({ tasks });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const children = provider.getChildren(specNode) as TaskNode[];
+
+    expect(children).to.have.lengthOf(4);
+    expect(children.map((n) => n.kind)).to.deep.equal([
+      'task',
+      'task',
+      'task',
+      'task',
+    ]);
+    expect(children.map((n) => n.task.id)).to.deep.equal([
+      'T001',
+      'T002',
+      'T003',
+      'T004',
+    ]);
+    for (const child of children) {
+      expect(child.specModel).to.equal(model);
+    }
+  });
+
+  it('renders a TaskNode TreeItem with label, tooltip, icon, contextValue, collapsible None', () => {
+    const task = buildTask({ id: 'T042', title: 'Wire it up', status: 'in_progress' });
+    const model = buildModel({ tasks: [task] });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [taskNode] = provider.getChildren(specNode) as TaskNode[];
+
+    const item = provider.getTreeItem(taskNode);
+
+    expect(item.label).to.equal('T042 — Wire it up');
+    expect(item.description).to.be.undefined;
+    expect(item.tooltip).to.equal('T042 · status: in_progress');
+    expect(item.contextValue).to.equal('aiadev.task');
+    expect((item as unknown as StubTreeItem).collapsibleState).to.equal(
+      StubTreeItemCollapsibleState.None,
+    );
+    expect(item.iconPath).to.deep.equal({
+      tag: 'icon-stub',
+      status: 'in_progress',
+    });
+  });
+
+  it("appends ' · D / N done' to SpecNode description when tasks exist", () => {
+    const tasks: Task[] = [
+      buildTask({ id: 'T001', status: 'done' }),
+      buildTask({ id: 'T002', status: 'pending' }),
+      buildTask({ id: 'T003', status: 'in_progress' }),
+      buildTask({ id: 'T004', status: 'blocked' }),
+    ];
+    const model = buildModel({ status: 'approved', tasks });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('Approved · 1 / 4 done');
+  });
+
+  it('omits the done-counter suffix when the spec has zero tasks', () => {
+    const provider = makeProvider([buildModel({ status: 'approved', tasks: [] })]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('Approved');
+  });
+
+  it('invokes the injected statusIcon factory once per task with that task status', () => {
+    const tasks: Task[] = [
+      buildTask({ id: 'T001', status: 'done' }),
+      buildTask({ id: 'T002', status: 'pending' }),
+      buildTask({ id: 'T003', status: 'blocked' }),
+    ];
+    const model = buildModel({ tasks });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const taskNodes = provider.getChildren(specNode) as TaskNode[];
+
+    lastStatusIconCalls = [];
+    for (const node of taskNodes) {
+      provider.getTreeItem(node);
+    }
+
+    expect(lastStatusIconCalls).to.deep.equal(['done', 'pending', 'blocked']);
   });
 });

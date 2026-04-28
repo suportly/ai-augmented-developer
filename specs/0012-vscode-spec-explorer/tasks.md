@@ -264,7 +264,7 @@
 
 ### T017 — TaskNode children with status icons + parent `D / N done`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`

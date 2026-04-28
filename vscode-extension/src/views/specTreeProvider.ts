@@ -1,13 +1,12 @@
 /**
  * Tree-data provider for the aiadev Spec Explorer activity-bar view.
  *
- * T015 narrow scope: only the SpecNode parent rows are rendered. Subsequent
- * tasks expand the union:
- *   - TaskNode children → T017
+ * Scope grows incrementally with the pipeline tasks:
+ *   - SpecNode parent rows → T015
  *   - EmptyStateNode → T016
+ *   - TaskNode children + done counter → T017 (this file)
  *   - ClarificationGroupNode → T020
- *   - Pipeline-state badge refinement → T022 (T015 just shows the SpecStatus
- *     text in the description)
+ *   - Pipeline-state badge refinement → T022
  *   - Folder prefix for multi-root → T023
  *   - Branch highlight → T024
  *
@@ -16,6 +15,10 @@
  * injected so this file can be exercised by Node-only unit tests with stub
  * doubles. The real `vscode` module is bound at the activation site.
  *
+ * The status-icon factory is also injected (rather than imported from
+ * `./icons`) so the provider has no compile-time dependency on the live VS
+ * Code module surface and tests can stub the icon production wholesale.
+ *
  * Plan deviation: plan.md Phase 4 originally called for `@vscode/test-electron`
  * integration tests for this module. We are deliberately pivoting to
  * stub-based unit tests (mirroring T014 / icons.ts). A follow-up task will
@@ -23,11 +26,28 @@
  * across T015–T024 is in place.
  */
 
-import { assertNever, type SpecModel, type SpecStatus } from '../parser/types';
+import {
+  assertNever,
+  type SpecModel,
+  type SpecStatus,
+  type Task,
+  type TaskStatus,
+} from '../parser/types';
 
 export interface SpecNode {
   readonly kind: 'spec';
   readonly model: SpecModel;
+}
+
+/**
+ * One row per task under its parent SpecNode. Carries a back-reference to the
+ * owning {@link SpecModel} so commands wired to the tree item can locate
+ * the source `tasks.md` without re-querying the aggregate.
+ */
+export interface TaskNode {
+  readonly kind: 'task';
+  readonly specModel: SpecModel;
+  readonly task: Task;
 }
 
 /**
@@ -39,10 +59,10 @@ export interface EmptyStateNode {
 }
 
 /**
- * Discriminated-union node type for the tree. Future tasks add `TaskNode`,
+ * Discriminated-union node type for the tree. Future tasks add
  * `ClarificationGroupNode` etc.
  */
-export type Node = SpecNode | EmptyStateNode;
+export type Node = SpecNode | TaskNode | EmptyStateNode;
 
 /**
  * Subset of `vscode.TreeItem` that this provider mutates. Kept structural so
@@ -67,6 +87,15 @@ export interface TreeItemCtors {
   };
 }
 
+/**
+ * Bundle of icon-producing factories. Currently a single `statusIcon`; future
+ * tasks (T022 pipeline-state badge) will add fields without breaking
+ * existing callers.
+ */
+export interface IconFactories {
+  statusIcon: (status: TaskStatus) => unknown;
+}
+
 export class SpecTreeProvider {
   private specs: readonly SpecModel[];
   private readonly emitter: {
@@ -77,7 +106,11 @@ export class SpecTreeProvider {
 
   public readonly onDidChangeTreeData: unknown;
 
-  constructor(private readonly ctors: TreeItemCtors, specs: readonly SpecModel[]) {
+  constructor(
+    private readonly ctors: TreeItemCtors,
+    private readonly iconFactories: IconFactories,
+    specs: readonly SpecModel[],
+  ) {
     this.specs = specs;
     this.emitter = new ctors.EventEmitter<undefined>();
     this.onDidChangeTreeData = this.emitter.event;
@@ -97,7 +130,12 @@ export class SpecTreeProvider {
     }
     switch (element.kind) {
       case 'spec':
-        // T017 will replace this with TaskNode children.
+        return element.model.tasks.map((task) => ({
+          kind: 'task',
+          specModel: element.model,
+          task,
+        }));
+      case 'task':
         return [];
       case 'empty':
         return [];
@@ -110,6 +148,8 @@ export class SpecTreeProvider {
     switch (element.kind) {
       case 'spec':
         return this.renderSpec(element.model);
+      case 'task':
+        return this.renderTask(element.task);
       case 'empty':
         return this.renderEmpty();
       default:
@@ -138,7 +178,7 @@ export class SpecTreeProvider {
       label,
       this.ctors.TreeItemCollapsibleState.Collapsed,
     );
-    item.description = formatStatus(model.status);
+    item.description = formatSpecDescription(model);
     item.tooltip = model.parseError
       ? model.parseError
       : `${model.specDirName} · ${model.specPath}`;
@@ -146,6 +186,32 @@ export class SpecTreeProvider {
     // iconPath intentionally left unset; T022 sets the pipeline-state icon.
     return item;
   }
+
+  private renderTask(task: Task): MutableTreeItem {
+    const item = new this.ctors.TreeItem(
+      `${task.id} — ${task.title}`,
+      this.ctors.TreeItemCollapsibleState.None,
+    );
+    // description left undefined; T022 may surface a per-task hint here.
+    item.tooltip = `${task.id} · status: ${task.status}`;
+    item.iconPath = this.iconFactories.statusIcon(task.status);
+    item.contextValue = 'aiadev.task';
+    return item;
+  }
+}
+
+/**
+ * Build the badge text shown next to a spec label. Always carries the status;
+ * appends `D / N done` when the spec has at least one task.
+ */
+function formatSpecDescription(model: SpecModel): string {
+  const status = formatStatus(model.status);
+  const total = model.tasks.length;
+  if (total === 0) {
+    return status;
+  }
+  const done = model.tasks.filter((t) => t.status === 'done').length;
+  return `${status} · ${done} / ${total} done`;
 }
 
 /**
