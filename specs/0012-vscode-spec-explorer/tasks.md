@@ -376,7 +376,7 @@
 
 ### T025 — `extension.ts` activate(): wire provider, watcher, refresh command, output channel
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015, T019, T024
 - **Files:**
   - modify: `vscode-extension/src/extension.ts`
