@@ -29,6 +29,7 @@
 import {
   assertNever,
   type Clarification,
+  type PipelineState,
   type SpecModel,
   type SpecStatus,
   type Task,
@@ -246,9 +247,11 @@ export class SpecTreeProvider {
     item.description = formatSpecDescription(model);
     item.tooltip = model.parseError
       ? model.parseError
-      : `${model.specDirName} · ${model.specPath}`;
+      : formatSpecTooltip(model);
     item.contextValue = 'aiadev.spec';
-    // iconPath intentionally left unset; T022 sets the pipeline-state icon.
+    item.iconPath = new this.ctors.ThemeIcon(
+      pipelineStateIconId(model.pipelineState),
+    );
     return item;
   }
 
@@ -336,17 +339,72 @@ function truncateQuestion(question: string): string {
 const CLARIFICATION_DESCRIPTION_LIMIT = 80;
 
 /**
- * Build the badge text shown next to a spec label. Always carries the status;
- * appends `D / N done` when the spec has at least one task.
+ * Build the badge text shown next to a spec label. The pipeline-state badge
+ * (T022) takes precedence over the SpecStatus, which is now surfaced via the
+ * tooltip. The done counter is appended only for the two states where a
+ * tasks.md exists with concrete work to track: `spec → plan → tasks` and
+ * `implementing`. `complete` deliberately omits the counter — every task is
+ * done by definition, so the bare `complete` badge is clearer.
  */
 function formatSpecDescription(model: SpecModel): string {
-  const status = formatStatus(model.status);
+  const badge = model.pipelineState;
   const total = model.tasks.length;
-  if (total === 0) {
-    return status;
+  const showCounter =
+    total > 0 &&
+    (model.pipelineState === 'spec → plan → tasks' ||
+      model.pipelineState === 'implementing');
+  if (!showCounter) {
+    return badge;
   }
   const done = model.tasks.filter((t) => t.status === 'done').length;
-  return `${status} · ${done} / ${total} done`;
+  return `${badge} · ${done} / ${total} done`;
+}
+
+/**
+ * Build the multi-line tooltip shown on hover. Surfaces the SpecStatus (no
+ * longer in the description), the next pipeline action, and the absolute
+ * spec path. Callers must skip this when `parseError` is set — the parse
+ * error message wins so users see the underlying problem first.
+ */
+function formatSpecTooltip(model: SpecModel): string {
+  return [
+    `${model.specDirName} · ${model.pipelineState}`,
+    `Status: ${formatStatus(model.status)}`,
+    `Next: ${nextActionHint(model.pipelineState)}`,
+    model.specPath,
+  ].join('\n');
+}
+
+function nextActionHint(state: PipelineState): string {
+  switch (state) {
+    case 'spec':
+      return 'run /aiadev:plan';
+    case 'spec → plan':
+      return 'run /aiadev:tasks';
+    case 'spec → plan → tasks':
+      return 'run /aiadev:implement';
+    case 'implementing':
+      return 'continue running /aiadev:implement';
+    case 'complete':
+      return 'run /aiadev:analyze then /aiadev:requesting-code-review';
+    default:
+      return assertNever(state);
+  }
+}
+
+function pipelineStateIconId(state: PipelineState): string {
+  switch (state) {
+    case 'spec':
+    case 'spec → plan':
+    case 'spec → plan → tasks':
+      return 'symbol-file';
+    case 'implementing':
+      return 'sync~spin';
+    case 'complete':
+      return 'check-all';
+    default:
+      return assertNever(state);
+  }
 }
 
 /**

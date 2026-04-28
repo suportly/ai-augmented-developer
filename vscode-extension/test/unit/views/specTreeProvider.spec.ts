@@ -13,6 +13,7 @@ import {
 } from '../../../src/views/specTreeProvider';
 import type {
   Clarification,
+  PipelineState,
   SpecModel,
   Task,
   TaskStatus,
@@ -149,7 +150,9 @@ describe('SpecTreeProvider — SpecNode rendering (T015)', () => {
     expect(item.label).to.equal('0099-mystery');
   });
 
-  it('uppercases first letter of status; maps "pr open" → "PR Open" and "unknown" → "Unknown"', () => {
+  it('SpecStatus is surfaced in tooltip (description carries pipelineState badge after T022)', () => {
+    // Pipeline-state badge replaces the SpecStatus in the description
+    // (T022). The status remains visible via the tooltip's "Status:" line.
     const cases: Array<[SpecModel['status'], string]> = [
       ['draft', 'Draft'],
       ['in review', 'In review'],
@@ -163,37 +166,8 @@ describe('SpecTreeProvider — SpecNode rendering (T015)', () => {
       const provider = makeProvider([buildModel({ status })]);
       const [node] = provider.getChildren() as SpecNode[];
       const item = provider.getTreeItem(node);
-      expect(item.description, `status=${status}`).to.equal(expected);
+      expect(item.tooltip, `status=${status}`).to.contain(`Status: ${expected}`);
     }
-  });
-
-  it('tooltip is parseError when set, otherwise "<specDirName> · <specPath>"', () => {
-    const happy = buildModel();
-    const sad = buildModel({
-      status: 'unknown',
-      parseError: 'Status header missing',
-    });
-    const happyProv = makeProvider([happy]);
-    const sadProv = makeProvider([sad]);
-
-    const happyItem = happyProv.getTreeItem(
-      (happyProv.getChildren() as SpecNode[])[0],
-    );
-    const sadItem = sadProv.getTreeItem(
-      (sadProv.getChildren() as SpecNode[])[0],
-    );
-
-    expect(happyItem.tooltip).to.equal(
-      `${happy.specDirName} · ${happy.specPath}`,
-    );
-    expect(sadItem.tooltip).to.equal('Status header missing');
-  });
-
-  it('iconPath is undefined for now (T022 will set it)', () => {
-    const provider = makeProvider([buildModel()]);
-    const [node] = provider.getChildren() as SpecNode[];
-    const item = provider.getTreeItem(node);
-    expect(item.iconPath).to.be.undefined;
   });
 
   it('getChildren(specNode) returns [] when the spec has zero tasks', () => {
@@ -337,29 +311,39 @@ describe('SpecTreeProvider — TaskNode rendering (T017)', () => {
     });
   });
 
-  it("appends ' · D / N done' to SpecNode description when tasks exist", () => {
+  it("appends ' · D / N done' to SpecNode description when tasks exist (implementing state)", () => {
     const tasks: Task[] = [
       buildTask({ id: 'T001', status: 'done' }),
       buildTask({ id: 'T002', status: 'pending' }),
       buildTask({ id: 'T003', status: 'in_progress' }),
       buildTask({ id: 'T004', status: 'blocked' }),
     ];
-    const model = buildModel({ status: 'approved', tasks });
+    const model = buildModel({
+      status: 'approved',
+      pipelineState: 'implementing',
+      tasks,
+    });
     const provider = makeProvider([model]);
     const [specNode] = provider.getChildren() as SpecNode[];
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('Approved · 1 / 4 done');
+    expect(item.description).to.equal('implementing · 1 / 4 done');
   });
 
-  it('omits the done-counter suffix when the spec has zero tasks', () => {
-    const provider = makeProvider([buildModel({ status: 'approved', tasks: [] })]);
+  it('omits the done-counter suffix when the spec has zero tasks (spec → plan state)', () => {
+    const provider = makeProvider([
+      buildModel({
+        status: 'approved',
+        pipelineState: 'spec → plan',
+        tasks: [],
+      }),
+    ]);
     const [specNode] = provider.getChildren() as SpecNode[];
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('Approved');
+    expect(item.description).to.equal('spec → plan');
   });
 
   it('invokes the injected statusIcon factory once per task with that task status', () => {
@@ -702,5 +686,115 @@ describe('SpecTreeProvider — ClarificationNode reveal command (T021)', () => {
     expect(range.startCharacter).to.equal(0);
     expect(range.endLine).to.equal(41);
     expect(range.endCharacter).to.equal(0);
+  });
+});
+
+describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
+  interface BadgeCase {
+    pipelineState: PipelineState;
+    tasks: Task[];
+    expectedDescription: string;
+    expectedIcon: string;
+    expectedNextHint: string;
+  }
+
+  const doneTask = buildTask({ id: 'T001', status: 'done' });
+  const pendingTask = buildTask({ id: 'T002', status: 'pending' });
+  const inProgressTask = buildTask({ id: 'T003', status: 'in_progress' });
+
+  const cases: BadgeCase[] = [
+    {
+      pipelineState: 'spec',
+      tasks: [],
+      expectedDescription: 'spec',
+      expectedIcon: 'symbol-file',
+      expectedNextHint: 'Next: run /aiadev:plan',
+    },
+    {
+      pipelineState: 'spec → plan',
+      tasks: [],
+      expectedDescription: 'spec → plan',
+      expectedIcon: 'symbol-file',
+      expectedNextHint: 'Next: run /aiadev:tasks',
+    },
+    {
+      pipelineState: 'spec → plan → tasks',
+      tasks: [
+        buildTask({ id: 'T001', status: 'pending' }),
+        buildTask({ id: 'T002', status: 'pending' }),
+        buildTask({ id: 'T003', status: 'pending' }),
+      ],
+      expectedDescription: 'spec → plan → tasks · 0 / 3 done',
+      expectedIcon: 'symbol-file',
+      expectedNextHint: 'Next: run /aiadev:implement',
+    },
+    {
+      pipelineState: 'implementing',
+      tasks: [doneTask, inProgressTask, pendingTask],
+      expectedDescription: 'implementing · 1 / 3 done',
+      expectedIcon: 'sync~spin',
+      expectedNextHint: 'Next: continue running /aiadev:implement',
+    },
+    {
+      pipelineState: 'complete',
+      tasks: [
+        buildTask({ id: 'T001', status: 'done' }),
+        buildTask({ id: 'T002', status: 'done' }),
+        buildTask({ id: 'T003', status: 'done' }),
+      ],
+      expectedDescription: 'complete',
+      expectedIcon: 'check-all',
+      expectedNextHint:
+        'Next: run /aiadev:analyze then /aiadev:requesting-code-review',
+    },
+  ];
+
+  for (const c of cases) {
+    it(`renders correct badge + icon for pipelineState='${c.pipelineState}'`, () => {
+      const model = buildModel({
+        pipelineState: c.pipelineState,
+        tasks: c.tasks,
+      });
+      const provider = makeProvider([model]);
+      const [specNode] = provider.getChildren() as SpecNode[];
+
+      const item = provider.getTreeItem(specNode);
+
+      expect(item.description).to.equal(c.expectedDescription);
+      expect(item.iconPath).to.be.instanceOf(StubThemeIcon);
+      expect((item.iconPath as StubThemeIcon).id).to.equal(c.expectedIcon);
+    });
+
+    it(`tooltip contains the Next-action hint for pipelineState='${c.pipelineState}'`, () => {
+      const model = buildModel({
+        pipelineState: c.pipelineState,
+        tasks: c.tasks,
+        status: 'approved',
+      });
+      const provider = makeProvider([model]);
+      const [specNode] = provider.getChildren() as SpecNode[];
+
+      const item = provider.getTreeItem(specNode);
+
+      expect(item.tooltip).to.contain(c.expectedNextHint);
+      expect(item.tooltip).to.contain(model.specDirName);
+      expect(item.tooltip).to.contain(c.pipelineState);
+      expect(item.tooltip).to.contain('Status: Approved');
+      expect(item.tooltip).to.contain(model.specPath);
+    });
+  }
+
+  it('tooltip is parseError verbatim when set, ignoring multi-line construction', () => {
+    const model = buildModel({
+      status: 'unknown',
+      pipelineState: 'spec',
+      parseError: 'Status header missing',
+    });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.tooltip).to.equal('Status header missing');
   });
 });

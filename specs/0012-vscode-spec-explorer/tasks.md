@@ -334,7 +334,7 @@
 
 ### T022 — Pipeline-state badge on SpecNode (all five states)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T010, T015, T017
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`
