@@ -186,7 +186,7 @@
 
 ### T012 — `model/aggregate.ts` walks workspace folders, builds `SpecModel[]`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004, T005, T007, T008, T011
 - **Files:**
   - create: `vscode-extension/src/model/aggregate.ts` (`buildSpecModels(fs, folders, specsRoot): Promise<SpecModel[]>`)
