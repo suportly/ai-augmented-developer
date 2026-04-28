@@ -162,6 +162,18 @@ export interface SpecTreeProviderOptions {
 export class SpecTreeProvider {
   private specs: readonly SpecModel[];
   private multiRoot: boolean;
+  /**
+   * Per-workspace-folder current branch, keyed by `SpecModel.workspaceFolderUri`.
+   * Populated by the activation site (T025) from a GitHeadProvider; keys absent
+   * from the map silently degrade to "no highlight" so the view also works on
+   * non-git workspaces. See T024.
+   *
+   * Bold-label styling is intentionally deferred: VS Code's `TreeItem.label`
+   * does not accept arbitrary markdown in the stable API surface, so v1
+   * surfaces "current branch" via the `● current` description fragment alone.
+   */
+  private readonly currentBranchByFolder: Map<string, string | undefined> =
+    new Map();
   private readonly emitter: {
     event: unknown;
     fire(value: undefined): void;
@@ -198,6 +210,30 @@ export class SpecTreeProvider {
       return;
     }
     this.multiRoot = value;
+    this.emitter.fire(undefined);
+  }
+
+  /**
+   * Update the cached current-branch for a workspace folder. Fires the change
+   * event only when the value actually changes so the tree re-renders the
+   * `● current` description fragment. Passing `undefined` clears the entry
+   * (and is a no-op when no value was previously cached). See T024.
+   */
+  setCurrentBranch(workspaceFolderUri: string, branch: string | undefined): void {
+    const had = this.currentBranchByFolder.has(workspaceFolderUri);
+    const previous = this.currentBranchByFolder.get(workspaceFolderUri);
+    if (branch === undefined) {
+      if (!had) {
+        return;
+      }
+      this.currentBranchByFolder.delete(workspaceFolderUri);
+      this.emitter.fire(undefined);
+      return;
+    }
+    if (had && previous === branch) {
+      return;
+    }
+    this.currentBranchByFolder.set(workspaceFolderUri, branch);
     this.emitter.fire(undefined);
   }
 
@@ -278,7 +314,15 @@ export class SpecTreeProvider {
       label,
       this.ctors.TreeItemCollapsibleState.Collapsed,
     );
-    item.description = formatSpecDescription(model);
+    const baseDescription = formatSpecDescription(model);
+    // T024: append " · ● current" when this spec's branch matches the cached
+    // current branch for its workspace folder. The pipeline-state iconPath
+    // (T022) is preserved — bold-label styling is deferred (see field doc).
+    const currentBranch = this.currentBranchByFolder.get(model.workspaceFolderUri);
+    item.description =
+      currentBranch !== undefined && currentBranch === model.branch
+        ? `${baseDescription} · ● current`
+        : baseDescription;
     item.tooltip = model.parseError
       ? model.parseError
       : formatSpecTooltip(model);

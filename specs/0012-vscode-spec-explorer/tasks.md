@@ -362,7 +362,7 @@
 
 ### T024 — Branch-highlight (bold + ● current badge) from GitHeadProvider
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T013, T015
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`

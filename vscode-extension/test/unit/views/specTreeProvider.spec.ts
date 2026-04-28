@@ -874,3 +874,164 @@ describe('SpecTreeProvider — Multi-root folder prefix on SpecNode (T023)', () 
     expect(captured.fired).to.have.lengthOf(0);
   });
 });
+
+describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
+  it('renders no "● current" suffix when no current branch is set for the folder', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'spec',
+      tasks: [],
+    });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('spec');
+    expect(item.description).to.not.contain('● current');
+  });
+
+  it('appends " · ● current" to description when current branch matches model.branch', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'spec',
+      tasks: [],
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/root', 'feature/vscode-spec-explorer');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('spec · ● current');
+  });
+
+  it('appends " · ● current" after the done counter when in implementing state', () => {
+    const tasks: Task[] = [
+      buildTask({ id: 'T001', status: 'done' }),
+      buildTask({ id: 'T002', status: 'pending' }),
+      buildTask({ id: 'T003', status: 'pending' }),
+    ];
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'implementing',
+      tasks,
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/root', 'feature/vscode-spec-explorer');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('implementing · 1 / 3 done · ● current');
+  });
+
+  it('does not append "● current" when current branch does not match model.branch', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'spec',
+      tasks: [],
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/root', 'main');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('spec');
+    expect(item.description).to.not.contain('● current');
+  });
+
+  it('does not append "● current" when the current branch is set for a different folder uri', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'spec',
+      tasks: [],
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/other', 'feature/vscode-spec-explorer');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.description).to.equal('spec');
+  });
+
+  it('preserves the pipeline-state iconPath even when the spec is the current branch', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'implementing',
+      tasks: [buildTask({ id: 'T001', status: 'done' })],
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/root', 'feature/vscode-spec-explorer');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.iconPath).to.be.instanceOf(StubThemeIcon);
+    expect((item.iconPath as StubThemeIcon).id).to.equal('sync~spin');
+  });
+
+  it('setCurrentBranch fires the change event when the value changes', () => {
+    const provider = makeProvider([buildModel({ workspaceFolderUri: '/work/root' })]);
+    const captured = lastEmitter!;
+
+    expect(captured.fired).to.have.lengthOf(0);
+
+    provider.setCurrentBranch('/work/root', 'main');
+
+    expect(captured.fired).to.have.lengthOf(1);
+    expect(captured.fired[0]).to.be.undefined;
+  });
+
+  it('setCurrentBranch does not fire when the value is unchanged', () => {
+    const provider = makeProvider([buildModel({ workspaceFolderUri: '/work/root' })]);
+    const captured = lastEmitter!;
+
+    provider.setCurrentBranch('/work/root', 'main');
+    expect(captured.fired).to.have.lengthOf(1);
+
+    provider.setCurrentBranch('/work/root', 'main');
+    expect(captured.fired).to.have.lengthOf(1);
+  });
+
+  it('setCurrentBranch(uri, undefined) clears a previously set value and removes the highlight', () => {
+    const model = buildModel({
+      workspaceFolderUri: '/work/root',
+      branch: 'feature/vscode-spec-explorer',
+      pipelineState: 'spec',
+      tasks: [],
+    });
+    const provider = makeProvider([model]);
+    provider.setCurrentBranch('/work/root', 'feature/vscode-spec-explorer');
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const before = provider.getTreeItem(specNode);
+    expect(before.description).to.equal('spec · ● current');
+
+    const captured = lastEmitter!;
+    const firesBefore = captured.fired.length;
+
+    provider.setCurrentBranch('/work/root', undefined);
+
+    const after = provider.getTreeItem(specNode);
+    expect(after.description).to.equal('spec');
+    expect(captured.fired.length).to.equal(firesBefore + 1);
+  });
+
+  it('setCurrentBranch(uri, undefined) is a no-op (no fire) when no value was set', () => {
+    const provider = makeProvider([buildModel({ workspaceFolderUri: '/work/root' })]);
+    const captured = lastEmitter!;
+
+    provider.setCurrentBranch('/work/root', undefined);
+
+    expect(captured.fired).to.have.lengthOf(0);
+  });
+});
