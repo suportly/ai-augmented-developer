@@ -127,7 +127,7 @@
 
 ### T008 — `parser/tasks.ts` parses `T###` headings + `**Status:**` bullet
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/parser/tasks.ts` (pure `parseTasks(source: string): Task[]`)
