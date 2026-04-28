@@ -82,7 +82,7 @@
 
 ### T005 — `parser/spec.ts` returns `{ status: 'unknown', parseError }` on missing Status
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - modify: `vscode-extension/src/parser/spec.ts`

@@ -70,10 +70,9 @@ export function parseSpec(source: string): SpecHeaderFields {
   let specId: string | undefined;
   let status: SpecStatus = 'unknown';
   let parseError: string | undefined;
+  let sawStatusKey = false;
 
-  for (const rawLine of lines) {
-    const line = rawLine;
-
+  for (const line of lines) {
     if (title === undefined && line.startsWith(TITLE_PREFIX)) {
       title = line.slice(TITLE_PREFIX.length).trim() || undefined;
       continue;
@@ -102,6 +101,7 @@ export function parseSpec(source: string): SpecHeaderFields {
         specId = value;
         break;
       case 'status': {
+        sawStatusKey = true;
         const result = normaliseStatus(value);
         status = result.status;
         if (result.parseError !== undefined) {
@@ -112,6 +112,11 @@ export function parseSpec(source: string): SpecHeaderFields {
       default:
         break;
     }
+  }
+
+  if (!sawStatusKey) {
+    status = 'unknown';
+    parseError = 'Missing **Status:** header';
   }
 
   const result: SpecHeaderFields = {

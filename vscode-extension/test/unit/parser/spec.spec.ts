@@ -59,6 +59,30 @@ describe('parseSpec', () => {
     expect(result.parseError).to.match(/Bogus/);
   });
 
+  it('returns status: unknown with a Missing **Status:** header parseError when no Status line is present', () => {
+    const result = parseSpec(readFixture('missing-status'));
+
+    expect(result.status).to.equal('unknown');
+    expect(result.parseError).to.equal('Missing **Status:** header');
+  });
+
+  it('distinguishes a missing Status header from an unrecognised Status value', () => {
+    const missing = parseSpec(readFixture('missing-status'));
+    const bogus = parseSpec(
+      [
+        '# Feature specification: Bogus status',
+        '',
+        '**Status:** Bogus',
+        '',
+        '---',
+      ].join('\n'),
+    );
+
+    expect(missing.parseError).to.not.equal(bogus.parseError);
+    expect(missing.parseError).to.match(/Missing/);
+    expect(bogus.parseError).to.match(/Unrecognised/);
+  });
+
   it('normalises multi-word status values to lowercase canonical form', () => {
     const inReview = parseSpec(
       [
