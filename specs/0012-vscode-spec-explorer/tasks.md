@@ -232,7 +232,9 @@
 
 ### T015 — `views/specTreeProvider.ts` renders SpecNode rows (label, badge, tooltip)
 
-- **Status:** pending
+- **Status:** done
+
+> **Plan deviation:** view tests use stub-based unit tests (factory injection of `TreeItem`/`EventEmitter`) instead of `@vscode/test-electron` integration tests. Real Extension Host integration tests are deferred to T029 (added below).
 - **Depends on:** T010, T012, T014
 - **Files:**
   - create: `vscode-extension/src/views/specTreeProvider.ts` (`SpecTreeProvider implements TreeDataProvider<Node>`; `SpecNode`/`TaskNode`/`ClarificationGroupNode` shapes)
