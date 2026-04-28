@@ -53,7 +53,7 @@
 
 ### T003 — Define core types in `parser/types.ts`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `vscode-extension/src/parser/types.ts` (`TaskStatus`, `Task`, `Clarification`, `SpecModel`, `PipelineState` — `SpecModel` includes `workspaceFolderName: string`, `parseError?: string`, `status: 'draft'|'in review'|'approved'|'implemented'|'pr open'|'unknown'`)
