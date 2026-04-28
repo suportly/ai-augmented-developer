@@ -250,7 +250,7 @@
 
 ### T016 — Empty-state node when no specs found
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`

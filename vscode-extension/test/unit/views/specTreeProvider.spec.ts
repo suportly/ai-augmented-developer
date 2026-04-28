@@ -2,6 +2,8 @@ import { expect } from 'chai';
 
 import {
   SpecTreeProvider,
+  type EmptyStateNode,
+  type Node,
   type SpecNode,
   type TreeItemCtors,
 } from '../../../src/views/specTreeProvider';
@@ -179,5 +181,62 @@ describe('SpecTreeProvider — SpecNode rendering (T015)', () => {
     const provider = makeProvider([buildModel()]);
     const captured = lastEmitter!;
     expect(provider.onDidChangeTreeData).to.equal(captured.event);
+  });
+});
+
+describe('SpecTreeProvider — EmptyStateNode rendering (T016)', () => {
+  it('returns one EmptyStateNode when specs array is empty', () => {
+    const provider = makeProvider([]);
+
+    const children = provider.getChildren() as Node[];
+
+    expect(children).to.have.lengthOf(1);
+    expect(children[0].kind).to.equal('empty');
+  });
+
+  it('renders the empty-state node with the verbatim label', () => {
+    const provider = makeProvider([]);
+    const [node] = provider.getChildren() as EmptyStateNode[];
+
+    const item = provider.getTreeItem(node);
+
+    expect(item.label).to.equal('No aiadev specs found in this workspace');
+    expect(item.description).to.be.undefined;
+    expect(item.iconPath).to.be.undefined;
+    expect(item.contextValue).to.equal('aiadev.empty');
+    expect((item as unknown as StubTreeItem).collapsibleState).to.equal(
+      StubTreeItemCollapsibleState.None,
+    );
+  });
+
+  it('tooltip matches the verbatim hint about /aiadev:specify', () => {
+    const provider = makeProvider([]);
+    const [node] = provider.getChildren() as EmptyStateNode[];
+
+    const item = provider.getTreeItem(node);
+
+    expect(item.tooltip).to.equal(
+      'Create a spec with /aiadev:specify in the integrated terminal.',
+    );
+  });
+
+  it('switches to a single empty-state node after setSpecs([]) from non-empty', () => {
+    const provider = makeProvider([buildModel({ specId: '0001' })]);
+
+    expect(provider.getChildren()).to.have.lengthOf(1);
+    expect((provider.getChildren() as Node[])[0].kind).to.equal('spec');
+
+    provider.setSpecs([]);
+
+    const children = provider.getChildren() as Node[];
+    expect(children).to.have.lengthOf(1);
+    expect(children[0].kind).to.equal('empty');
+  });
+
+  it('getChildren(emptyNode) returns []', () => {
+    const provider = makeProvider([]);
+    const [node] = provider.getChildren() as EmptyStateNode[];
+
+    expect(provider.getChildren(node)).to.deep.equal([]);
   });
 });

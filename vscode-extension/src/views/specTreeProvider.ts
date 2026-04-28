@@ -31,11 +31,18 @@ export interface SpecNode {
 }
 
 /**
- * Discriminated-union node type for the tree. Currently only `SpecNode` is
- * implemented; future tasks add `TaskNode`, `ClarificationGroupNode`,
- * `EmptyStateNode` etc.
+ * Placeholder row shown when the workspace contains zero parseable specs.
+ * Spec Story 1 scenario 2 / task T016.
  */
-export type Node = SpecNode;
+export interface EmptyStateNode {
+  readonly kind: 'empty';
+}
+
+/**
+ * Discriminated-union node type for the tree. Future tasks add `TaskNode`,
+ * `ClarificationGroupNode` etc.
+ */
+export type Node = SpecNode | EmptyStateNode;
 
 /**
  * Subset of `vscode.TreeItem` that this provider mutates. Kept structural so
@@ -83,14 +90,19 @@ export class SpecTreeProvider {
 
   getChildren(element?: Node): Node[] {
     if (!element) {
+      if (this.specs.length === 0) {
+        return [{ kind: 'empty' }];
+      }
       return this.specs.map((model) => ({ kind: 'spec', model }));
     }
     switch (element.kind) {
       case 'spec':
         // T017 will replace this with TaskNode children.
         return [];
+      case 'empty':
+        return [];
       default:
-        return assertNever(element.kind);
+        return assertNever(element);
     }
   }
 
@@ -98,9 +110,23 @@ export class SpecTreeProvider {
     switch (element.kind) {
       case 'spec':
         return this.renderSpec(element.model);
+      case 'empty':
+        return this.renderEmpty();
       default:
-        return assertNever(element.kind);
+        return assertNever(element);
     }
+  }
+
+  private renderEmpty(): MutableTreeItem {
+    const item = new this.ctors.TreeItem(
+      'No aiadev specs found in this workspace',
+      this.ctors.TreeItemCollapsibleState.None,
+    );
+    item.tooltip =
+      'Create a spec with /aiadev:specify in the integrated terminal.';
+    item.contextValue = 'aiadev.empty';
+    // description and iconPath intentionally left undefined.
+    return item;
   }
 
   private renderSpec(model: SpecModel): MutableTreeItem {
