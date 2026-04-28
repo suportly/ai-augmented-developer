@@ -127,4 +127,27 @@ describe('parseTasks', () => {
     const [task] = parseTasks(source);
     expect(task.status).to.equal('unknown');
   });
+
+  // T009 regression guard: a malformed `**Status:** Bogus` line in one
+  // task must not throw and must not contaminate the statuses of the
+  // surrounding well-formed tasks. T008 already mapped any unrecognised
+  // value to `unknown`, so this fixture-backed test pins the contract
+  // for future refactors of the parser.
+  it('isolates an unknown status to the offending task without throwing (malformed-task-status fixture)', () => {
+    const source = readFixture('malformed-task-status');
+
+    const result = (() => {
+      try {
+        return parseTasks(source);
+      } catch (err) {
+        expect.fail(`parseTasks threw on malformed Status: ${(err as Error).message}`);
+      }
+    })();
+
+    expect(result).to.have.lengthOf(3);
+    expect(result!.map((t) => t.id)).to.deep.equal(['T001', 'T002', 'T003']);
+    expect(result![0].status).to.equal('done');
+    expect(result![1].status).to.equal('unknown');
+    expect(result![2].status).to.equal('pending');
+  });
 });

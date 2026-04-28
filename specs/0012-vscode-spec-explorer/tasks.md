@@ -142,7 +142,7 @@
 
 ### T009 — `parser/tasks.ts` falls back to `unknown` on malformed Status
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - modify: `vscode-extension/src/parser/tasks.ts`
