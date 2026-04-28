@@ -25,6 +25,7 @@ export class StubTreeItem {
   public tooltip?: string;
   public iconPath?: unknown;
   public contextValue?: string;
+  public command?: unknown;
   constructor(public label: string, public collapsibleState: number) {}
 }
 
@@ -68,4 +69,17 @@ export class StubUri {
   static file(path: string): StubUri {
     return new StubUri(path);
   }
+}
+
+/**
+ * Stub for `vscode.Range`. Captures the four constructor arguments so tests
+ * can assert the selection range produced by reveal commands.
+ */
+export class StubRange {
+  constructor(
+    public startLine: number,
+    public startCharacter: number,
+    public endLine: number,
+    public endCharacter: number,
+  ) {}
 }

@@ -75,6 +75,17 @@ export interface MutableTreeItem {
   iconPath?: unknown;
   contextValue?: string;
   collapsibleState?: number;
+  command?: TreeItemCommand;
+}
+
+/**
+ * Subset of `vscode.Command` we set on tree items. The `arguments` array is
+ * intentionally `unknown[]` — the structural shape varies per command id.
+ */
+export interface TreeItemCommand {
+  command: string;
+  title: string;
+  arguments?: unknown[];
 }
 
 export interface TreeItemCtors {
@@ -85,6 +96,13 @@ export interface TreeItemCtors {
     fire(value: T): void;
     dispose(): void;
   };
+  Uri: { file(path: string): unknown };
+  Range: new (
+    startLine: number,
+    startChar: number,
+    endLine: number,
+    endChar: number,
+  ) => unknown;
 }
 
 /**
@@ -149,7 +167,7 @@ export class SpecTreeProvider {
       case 'spec':
         return this.renderSpec(element.model);
       case 'task':
-        return this.renderTask(element.task);
+        return this.renderTask(element.task, element.specModel);
       case 'empty':
         return this.renderEmpty();
       default:
@@ -187,7 +205,7 @@ export class SpecTreeProvider {
     return item;
   }
 
-  private renderTask(task: Task): MutableTreeItem {
+  private renderTask(task: Task, specModel: SpecModel): MutableTreeItem {
     const item = new this.ctors.TreeItem(
       `${task.id} — ${task.title}`,
       this.ctors.TreeItemCollapsibleState.None,
@@ -196,6 +214,21 @@ export class SpecTreeProvider {
     item.tooltip = `${task.id} · status: ${task.status}`;
     item.iconPath = this.iconFactories.statusIcon(task.status);
     item.contextValue = 'aiadev.task';
+    // T018: clicking the row opens tasks.md and reveals the heading line.
+    // VS Code Position is 0-based; task.line is 1-based.
+    if (specModel.tasksPath !== undefined) {
+      const headingLine = task.line - 1;
+      item.command = {
+        command: 'vscode.open',
+        title: 'Open task',
+        arguments: [
+          this.ctors.Uri.file(specModel.tasksPath),
+          {
+            selection: new this.ctors.Range(headingLine, 0, headingLine, 0),
+          },
+        ],
+      };
+    }
     return item;
   }
 }

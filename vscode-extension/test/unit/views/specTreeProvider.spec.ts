@@ -12,8 +12,10 @@ import {
 import type { SpecModel, Task, TaskStatus } from '../../../src/parser/types';
 import {
   StubEventEmitter,
+  StubRange,
   StubTreeItem,
   StubTreeItemCollapsibleState,
+  StubUri,
 } from '../../support/vscodeStub';
 
 /**
@@ -75,6 +77,8 @@ function makeProvider(
         lastEmitter = this as unknown as StubEventEmitter<unknown>;
       }
     } as unknown as TreeItemCtors['EventEmitter'],
+    Uri: StubUri as unknown as TreeItemCtors['Uri'],
+    Range: StubRange as unknown as TreeItemCtors['Range'],
   };
   const iconFactories: IconFactories = iconFactoriesOverride ?? {
     statusIcon: (status: TaskStatus): IconStub => {
@@ -366,5 +370,81 @@ describe('SpecTreeProvider — TaskNode rendering (T017)', () => {
     }
 
     expect(lastStatusIconCalls).to.deep.equal(['done', 'pending', 'blocked']);
+  });
+});
+
+describe('SpecTreeProvider — TaskNode reveal command (T018)', () => {
+  it('sets a vscode.open command with title "Open task" on the TaskNode TreeItem', () => {
+    const task = buildTask({ id: 'T042', title: 'Wire it up', line: 17 });
+    const model = buildModel({ tasks: [task] });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [taskNode] = provider.getChildren(specNode) as TaskNode[];
+
+    const item = provider.getTreeItem(taskNode);
+    const command = (item as unknown as StubTreeItem).command as
+      | { command: string; title: string; arguments: unknown[] }
+      | undefined;
+
+    expect(command).to.exist;
+    expect(command!.command).to.equal('vscode.open');
+    expect(command!.title).to.equal('Open task');
+  });
+
+  it('passes a Uri pointing at specModel.tasksPath as the first argument', () => {
+    const task = buildTask({ id: 'T001', line: 5 });
+    const model = buildModel({
+      tasks: [task],
+      tasksPath: '/work/root/specs/0012-vscode-spec-explorer/tasks.md',
+    });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [taskNode] = provider.getChildren(specNode) as TaskNode[];
+
+    const item = provider.getTreeItem(taskNode);
+    const command = (item as unknown as StubTreeItem).command as {
+      arguments: [StubUri, { selection: StubRange }];
+    };
+
+    expect(command.arguments[0]).to.be.instanceOf(StubUri);
+    expect(command.arguments[0].fsPath).to.equal(
+      '/work/root/specs/0012-vscode-spec-explorer/tasks.md',
+    );
+  });
+
+  it('passes a Range covering the heading line (task.line - 1, 0) as the selection', () => {
+    const task = buildTask({ id: 'T007', line: 42 });
+    const model = buildModel({ tasks: [task] });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [taskNode] = provider.getChildren(specNode) as TaskNode[];
+
+    const item = provider.getTreeItem(taskNode);
+    const command = (item as unknown as StubTreeItem).command as {
+      arguments: [StubUri, { selection: StubRange }];
+    };
+
+    const range = command.arguments[1].selection;
+    expect(range).to.be.instanceOf(StubRange);
+    expect(range.startLine).to.equal(41);
+    expect(range.startCharacter).to.equal(0);
+    expect(range.endLine).to.equal(41);
+    expect(range.endCharacter).to.equal(0);
+  });
+
+  it('leaves command undefined when tasksPath is missing', () => {
+    const task = buildTask({ id: 'T001', line: 1 });
+    const model = buildModel({ tasks: [task], tasksPath: undefined });
+    const provider = makeProvider([model]);
+
+    const [specNode] = provider.getChildren() as SpecNode[];
+    const [taskNode] = provider.getChildren(specNode) as TaskNode[];
+
+    const item = provider.getTreeItem(taskNode);
+
+    expect((item as unknown as StubTreeItem).command).to.be.undefined;
   });
 });

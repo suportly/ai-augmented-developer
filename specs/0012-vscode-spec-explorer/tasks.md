@@ -278,7 +278,7 @@
 
 ### T018 — Click TaskNode reveals heading in `tasks.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T017
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts` (set `command: 'vscode.open'` with selection range derived from parsed line number)
