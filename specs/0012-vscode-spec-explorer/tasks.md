@@ -112,7 +112,7 @@
 
 ### T007 — `parser/clarifications.ts` extracts cl-N markers with line numbers
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/parser/clarifications.ts` (pure `extractClarifications(source: string): Clarification[]` returning `{ id: 'cl-N', question, line }`)
