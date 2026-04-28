@@ -8,6 +8,61 @@
     "vscode": "^1.85.0"
   },
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:aiadev.specExplorer"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiadev",
+          "title": "aiadev",
+          "icon": "media/aiadev.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiadev": [
+        {
+          "id": "aiadev.specExplorer",
+          "name": "Spec Explorer"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "aiadev Spec Explorer",
+      "properties": {
+        "aiadev.specExplorer.specsRoot": {
+          "type": "string",
+          "default": "specs",
+          "scope": "resource",
+          "description": "Root directory under each workspace folder where aiadev specs live."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "aiadev.specExplorer.refresh",
+        "title": "Refresh",
+        "category": "aiadev",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aiadev.specExplorer.refresh",
+          "when": "view == aiadev.specExplorer",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",

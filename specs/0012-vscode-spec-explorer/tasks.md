@@ -39,7 +39,7 @@
 
 ### T002 — Manifest declares activity-bar view, untrusted-workspace, configuration
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `vscode-extension/package.json` (`contributes.viewsContainers.activitybar`, `contributes.views`, `activationEvents: ["onView:aiadev.specExplorer"]`, `capabilities.untrustedWorkspaces.supported: true`, `contributes.configuration` with `aiadev.specExplorer.specsRoot` default `"specs"`, `contributes.commands` with `aiadev.specExplorer.refresh`)
