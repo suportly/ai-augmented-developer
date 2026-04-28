@@ -203,7 +203,7 @@
 
 ### T013 — `io/git.ts` `GitHeadProvider` interface + fake
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - create: `vscode-extension/src/io/git.ts` (`GitHeadProvider` interface; `VsCodeGitHeadProvider` impl with try/catch on `getExtension('vscode.git')?.exports.getAPI(1)`)
