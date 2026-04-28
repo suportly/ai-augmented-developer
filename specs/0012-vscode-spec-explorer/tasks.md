@@ -292,7 +292,7 @@
 
 ### T019 — `watcher.ts` debounced rebuild (≤ 500 ms)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T012, T015
 - **Files:**
   - create: `vscode-extension/src/watcher.ts` (`createWatcher(fs, onChange)` — single `FileSystemWatcher` for `**/specs/*/{spec,plan,tasks}.md`, 100 ms debounce, path-keyed rebuild)
