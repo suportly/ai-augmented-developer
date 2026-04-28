@@ -218,7 +218,7 @@
 
 ### T014 — `views/icons.ts` status → `ThemeIcon` mapping
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/views/icons.ts` (`statusIcon(status: TaskStatus | 'unknown'): ThemeIcon`)
