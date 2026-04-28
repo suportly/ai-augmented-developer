@@ -157,7 +157,7 @@
 
 ### T010 — `model/pipelineState.ts` pure 5-state function
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `vscode-extension/src/model/pipelineState.ts` (`computePipelineState({hasSpec, hasPlan, hasTasks, anyTaskInProgress, allTasksDone}) -> PipelineState`)
