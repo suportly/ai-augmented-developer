@@ -145,8 +145,23 @@ export interface IconFactories {
   statusIcon: (status: TaskStatus) => unknown;
 }
 
+/**
+ * Optional constructor settings for the provider. Currently only carries the
+ * multi-root flag (T023); future tasks may extend this without breaking
+ * existing call sites.
+ */
+export interface SpecTreeProviderOptions {
+  /**
+   * When true, SpecNode labels are prefixed with `[<workspaceFolderName>] `.
+   * Set from `vscode.workspace.workspaceFolders.length > 1` at the activation
+   * site (T025). Defaults to false.
+   */
+  multiRoot?: boolean;
+}
+
 export class SpecTreeProvider {
   private specs: readonly SpecModel[];
+  private multiRoot: boolean;
   private readonly emitter: {
     event: unknown;
     fire(value: undefined): void;
@@ -159,14 +174,30 @@ export class SpecTreeProvider {
     private readonly ctors: TreeItemCtors,
     private readonly iconFactories: IconFactories,
     specs: readonly SpecModel[],
+    options?: SpecTreeProviderOptions,
   ) {
     this.specs = specs;
+    this.multiRoot = options?.multiRoot ?? false;
     this.emitter = new ctors.EventEmitter<undefined>();
     this.onDidChangeTreeData = this.emitter.event;
   }
 
   setSpecs(next: readonly SpecModel[]): void {
     this.specs = next;
+    this.emitter.fire(undefined);
+  }
+
+  /**
+   * Update the multi-root flag mid-session (e.g. after a folder is added or
+   * removed via `vscode.workspace.onDidChangeWorkspaceFolders`). Fires the
+   * change event only when the value actually changes so the tree re-renders
+   * with or without the `[<folderName>] ` prefix on SpecNode labels.
+   */
+  setMultiRoot(value: boolean): void {
+    if (this.multiRoot === value) {
+      return;
+    }
+    this.multiRoot = value;
     this.emitter.fire(undefined);
   }
 
@@ -236,9 +267,12 @@ export class SpecTreeProvider {
   }
 
   private renderSpec(model: SpecModel): MutableTreeItem {
-    const label = model.title
+    const baseLabel = model.title
       ? `${model.specId} — ${model.title}`
       : model.specDirName;
+    const label = this.multiRoot
+      ? `[${model.workspaceFolderName}] ${baseLabel}`
+      : baseLabel;
 
     const item = new this.ctors.TreeItem(
       label,

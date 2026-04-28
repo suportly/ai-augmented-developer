@@ -348,7 +348,7 @@
 
 ### T023 — Multi-root folder prefix on SpecNode label
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015, T012
 - **Files:**
   - modify: `vscode-extension/src/views/specTreeProvider.ts`

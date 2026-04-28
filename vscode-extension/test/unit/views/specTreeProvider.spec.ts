@@ -74,6 +74,7 @@ interface IconStub {
 function makeProvider(
   specs: readonly SpecModel[],
   iconFactoriesOverride?: IconFactories,
+  options?: { multiRoot?: boolean },
 ): SpecTreeProvider {
   lastEmitter = undefined;
   lastStatusIconCalls = [];
@@ -96,7 +97,7 @@ function makeProvider(
       return { tag: 'icon-stub', status };
     },
   };
-  return new SpecTreeProvider(ctors, iconFactories, specs);
+  return new SpecTreeProvider(ctors, iconFactories, specs, options);
 }
 
 function buildTask(overrides: Partial<Task> = {}): Task {
@@ -796,5 +797,80 @@ describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
     const item = provider.getTreeItem(specNode);
 
     expect(item.tooltip).to.equal('Status header missing');
+  });
+});
+
+describe('SpecTreeProvider — Multi-root folder prefix on SpecNode (T023)', () => {
+  it('renders label without folder prefix when multiRoot is false (default)', () => {
+    const model = buildModel({
+      workspaceFolderName: 'frontend',
+      specId: '0001',
+      title: 'Title',
+    });
+    const provider = makeProvider([model]);
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.label).to.equal('0001 — Title');
+  });
+
+  it('renders label with [<workspaceFolderName>] prefix when multiRoot is true', () => {
+    const model = buildModel({
+      workspaceFolderName: 'frontend',
+      specId: '0001',
+      title: 'Title',
+    });
+    const provider = makeProvider([model], undefined, { multiRoot: true });
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.label).to.equal('[frontend] 0001 — Title');
+  });
+
+  it('also prefixes the specDirName fallback (when title is empty) under multiRoot', () => {
+    const model = buildModel({
+      workspaceFolderName: 'backend',
+      specDirName: '0099-mystery',
+      title: '',
+    });
+    const provider = makeProvider([model], undefined, { multiRoot: true });
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const item = provider.getTreeItem(specNode);
+
+    expect(item.label).to.equal('[backend] 0099-mystery');
+  });
+
+  it('setMultiRoot(true) flips the label and fires the change event', () => {
+    const model = buildModel({
+      workspaceFolderName: 'frontend',
+      specId: '0001',
+      title: 'Title',
+    });
+    const provider = makeProvider([model]);
+    const captured = lastEmitter!;
+    const [specNode] = provider.getChildren() as SpecNode[];
+
+    const before = provider.getTreeItem(specNode);
+    expect(before.label).to.equal('0001 — Title');
+    expect(captured.fired).to.have.lengthOf(0);
+
+    provider.setMultiRoot(true);
+
+    const after = provider.getTreeItem(specNode);
+    expect(after.label).to.equal('[frontend] 0001 — Title');
+    expect(captured.fired).to.have.lengthOf(1);
+    expect(captured.fired[0]).to.be.undefined;
+  });
+
+  it('setMultiRoot(value) does not fire when value is unchanged', () => {
+    const provider = makeProvider([buildModel()]);
+    const captured = lastEmitter!;
+
+    provider.setMultiRoot(false);
+
+    expect(captured.fired).to.have.lengthOf(0);
   });
 });
