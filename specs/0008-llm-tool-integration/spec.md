@@ -4,7 +4,7 @@
 
 **Branch:** `feature/llm-tool-integration`
 **Created:** 2026-04-16
-**Status:** Approved
+**Status:** Implemented
 **Approved on:** 2026-04-16 (pós-`clarify`; reviewer: spec-document-reviewer)
 **Spec ID:** 0008
 **Language:** pt-BR <!-- BCP-47; toda artefato downstream desta feature usa este idioma. -->

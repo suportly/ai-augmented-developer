@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-04-29
+
+Spec **0012 — vscode-spec-explorer**. Native VS Code tree view that
+surfaces pipeline artifacts (`spec.md`, `plan.md`, `tasks.md`, research,
+contracts) under each `specs/<NNNN-slug>/` directory, with one-click
+open and live refresh on file changes.
+
+### Added
+
+- **aiadev Spec Explorer** VS Code extension (#29). Tree view in the
+  Explorer sidebar lists every numbered spec directory and its
+  artifacts; clicking a node opens the file in the editor. Auto-refresh
+  on workspace file events.
+- **Extension Host integration tests** (#30, T029) covering tree
+  population, refresh on file changes, and click-to-open behavior.
+
+### Changed
+
+- Specs **0008**, **0009**, **0010**, **0011** marked as `Implemented`
+  (status was stale — code already merged via PRs #11, #25, #28, #27).
+
 ## [0.16.0] - 2026-04-27
 
 Spec **0010 — pipeline-preflight-checks**. Read-only `aiadev preflight`
