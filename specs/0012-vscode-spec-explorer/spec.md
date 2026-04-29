@@ -4,7 +4,7 @@
 
 **Branch:** `feature/vscode-spec-explorer`
 **Created:** 2026-04-28
-**Status:** Draft
+**Status:** PR Open
 **Spec ID:** 0012
 **Language:** en
 
