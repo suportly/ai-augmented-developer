@@ -159,6 +159,7 @@ jobs:
             --exclude-path .venv
             --exclude-path .claude
             --exclude-path templates
+            --exclude-path vscode-extension/test/fixtures
             --exclude "^https://github.com/alairjt/ai-augmented-developer"
             --exclude "^https://github.com/suportly/ai-augmented-developer"
             --exclude "^https://pypi.org/manage/"

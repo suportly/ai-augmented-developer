@@ -1,0 +1,100 @@
+{
+  "name": "aiadev-spec-explorer",
+  "displayName": "aiadev Spec Explorer",
+  "description": "Browse aiadev specs (spec.md / plan.md / tasks.md) from the VS Code activity bar.",
+  "publisher": "aiadev",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suportly/ai-augmented-developer.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://github.com/suportly/ai-augmented-developer/tree/main/vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/suportly/ai-augmented-developer/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:aiadev.specExplorer"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiadev",
+          "title": "aiadev",
+          "icon": "media/aiadev.svg"
+        }
+      ]
+    },
+    "views": {
+      "aiadev": [
+        {
+          "id": "aiadev.specExplorer",
+          "name": "Spec Explorer"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "aiadev Spec Explorer",
+      "properties": {
+        "aiadev.specExplorer.specsRoot": {
+          "type": "string",
+          "default": "specs",
+          "scope": "resource",
+          "description": "Root directory under each workspace folder where aiadev specs live."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "aiadev.specExplorer.refresh",
+        "title": "Refresh",
+        "category": "aiadev",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "aiadev.specExplorer.refresh",
+          "when": "view == aiadev.specExplorer",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.mjs",
+    "lint": "eslint 'src/**/*.ts'",
+    "pretest:unit": "npm run build",
+    "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/vsce": "^2.24.0",
+    "chai": "^4.4.1",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.57.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
