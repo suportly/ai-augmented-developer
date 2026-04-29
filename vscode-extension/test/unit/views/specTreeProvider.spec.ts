@@ -329,7 +329,7 @@ describe('SpecTreeProvider — TaskNode rendering (T017)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('implementing · 1 / 4 done');
+    expect(item.description).to.equal('implementing · 1 / 4 done · Approved');
   });
 
   it('omits the done-counter suffix when the spec has zero tasks (spec → plan state)', () => {
@@ -344,7 +344,7 @@ describe('SpecTreeProvider — TaskNode rendering (T017)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('spec → plan');
+    expect(item.description).to.equal('spec → plan · Approved');
   });
 
   it('invokes the injected statusIcon factory once per task with that task status', () => {
@@ -707,14 +707,14 @@ describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
     {
       pipelineState: 'spec',
       tasks: [],
-      expectedDescription: 'spec',
+      expectedDescription: 'spec · Approved',
       expectedIcon: 'symbol-file',
       expectedNextHint: 'Next: run /aiadev:plan',
     },
     {
       pipelineState: 'spec → plan',
       tasks: [],
-      expectedDescription: 'spec → plan',
+      expectedDescription: 'spec → plan · Approved',
       expectedIcon: 'symbol-file',
       expectedNextHint: 'Next: run /aiadev:tasks',
     },
@@ -725,14 +725,14 @@ describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
         buildTask({ id: 'T002', status: 'pending' }),
         buildTask({ id: 'T003', status: 'pending' }),
       ],
-      expectedDescription: 'spec → plan → tasks · 0 / 3 done',
+      expectedDescription: 'spec → plan → tasks · 0 / 3 done · Approved',
       expectedIcon: 'symbol-file',
       expectedNextHint: 'Next: run /aiadev:implement',
     },
     {
       pipelineState: 'implementing',
       tasks: [doneTask, inProgressTask, pendingTask],
-      expectedDescription: 'implementing · 1 / 3 done',
+      expectedDescription: 'implementing · 1 / 3 done · Approved',
       expectedIcon: 'sync~spin',
       expectedNextHint: 'Next: continue running /aiadev:implement',
     },
@@ -743,7 +743,7 @@ describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
         buildTask({ id: 'T002', status: 'done' }),
         buildTask({ id: 'T003', status: 'done' }),
       ],
-      expectedDescription: 'complete',
+      expectedDescription: 'complete · Approved',
       expectedIcon: 'check-all',
       expectedNextHint:
         'Next: run /aiadev:analyze then /aiadev:requesting-code-review',
@@ -784,6 +784,30 @@ describe('SpecTreeProvider — Pipeline-state badge on SpecNode (T022)', () => {
       expect(item.tooltip).to.contain(model.specPath);
     });
   }
+
+  it('description always carries the SpecStatus suffix (spec Story 1 scenario 1 regression-guard)', () => {
+    // Spec Story 1 scenario 1 requires the SpecStatus to appear in the
+    // SpecNode row alongside the pipeline-state badge so users can read
+    // the lifecycle phase without hovering for the tooltip. Each formatted
+    // status — including the "unknown" sentinel — must be present.
+    const cases: Array<[SpecModel['status'], string]> = [
+      ['draft', 'Draft'],
+      ['in review', 'In review'],
+      ['approved', 'Approved'],
+      ['implemented', 'Implemented'],
+      ['pr open', 'PR Open'],
+      ['unknown', 'Unknown'],
+    ];
+
+    for (const [status, expected] of cases) {
+      const provider = makeProvider([
+        buildModel({ status, pipelineState: 'spec', tasks: [] }),
+      ]);
+      const [specNode] = provider.getChildren() as SpecNode[];
+      const item = provider.getTreeItem(specNode);
+      expect(item.description, `status=${status}`).to.equal(`spec · ${expected}`);
+    }
+  });
 
   it('tooltip is parseError verbatim when set, ignoring multi-line construction', () => {
     const model = buildModel({
@@ -888,7 +912,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('spec');
+    expect(item.description).to.equal('spec · Approved');
     expect(item.description).to.not.contain('● current');
   });
 
@@ -905,7 +929,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('spec · ● current');
+    expect(item.description).to.equal('spec · Approved · ● current');
   });
 
   it('appends " · ● current" after the done counter when in implementing state', () => {
@@ -926,7 +950,9 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('implementing · 1 / 3 done · ● current');
+    expect(item.description).to.equal(
+      'implementing · 1 / 3 done · Approved · ● current',
+    );
   });
 
   it('does not append "● current" when current branch does not match model.branch', () => {
@@ -942,7 +968,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('spec');
+    expect(item.description).to.equal('spec · Approved');
     expect(item.description).to.not.contain('● current');
   });
 
@@ -959,7 +985,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
 
     const item = provider.getTreeItem(specNode);
 
-    expect(item.description).to.equal('spec');
+    expect(item.description).to.equal('spec · Approved');
   });
 
   it('preserves the pipeline-state iconPath even when the spec is the current branch', () => {
@@ -1014,7 +1040,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
     const [specNode] = provider.getChildren() as SpecNode[];
 
     const before = provider.getTreeItem(specNode);
-    expect(before.description).to.equal('spec · ● current');
+    expect(before.description).to.equal('spec · Approved · ● current');
 
     const captured = lastEmitter!;
     const firesBefore = captured.fired.length;
@@ -1022,7 +1048,7 @@ describe('SpecTreeProvider — Branch highlight on SpecNode (T024)', () => {
     provider.setCurrentBranch('/work/root', undefined);
 
     const after = provider.getTreeItem(specNode);
-    expect(after.description).to.equal('spec');
+    expect(after.description).to.equal('spec · Approved');
     expect(captured.fired.length).to.equal(firesBefore + 1);
   });
 

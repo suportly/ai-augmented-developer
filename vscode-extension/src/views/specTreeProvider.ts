@@ -417,12 +417,17 @@ function truncateQuestion(question: string): string {
 const CLARIFICATION_DESCRIPTION_LIMIT = 80;
 
 /**
- * Build the badge text shown next to a spec label. The pipeline-state badge
- * (T022) takes precedence over the SpecStatus, which is now surfaced via the
- * tooltip. The done counter is appended only for the two states where a
- * tasks.md exists with concrete work to track: `spec → plan → tasks` and
- * `implementing`. `complete` deliberately omits the counter — every task is
- * done by definition, so the bare `complete` badge is clearer.
+ * Build the badge text shown next to a spec label. The shape is:
+ *
+ *   `<pipelineState>[ · D / N done] · <SpecStatus>`
+ *
+ * The done counter is appended only for the two states where a tasks.md
+ * exists with concrete work to track: `spec → plan → tasks` and
+ * `implementing`. `complete` deliberately omits the counter — every task
+ * is done by definition, so the bare `complete` badge is clearer. The
+ * SpecStatus suffix is always present (spec Story 1 scenario 1) so users
+ * can read the lifecycle phase at a glance without hovering for the
+ * tooltip; `unknown` is surfaced verbatim so missing headers are obvious.
  */
 function formatSpecDescription(model: SpecModel): string {
   const badge = model.pipelineState;
@@ -431,11 +436,12 @@ function formatSpecDescription(model: SpecModel): string {
     total > 0 &&
     (model.pipelineState === 'spec → plan → tasks' ||
       model.pipelineState === 'implementing');
+  const status = formatStatus(model.status);
   if (!showCounter) {
-    return badge;
+    return `${badge} · ${status}`;
   }
   const done = model.tasks.filter((t) => t.status === 'done').length;
-  return `${badge} · ${done} / ${total} done`;
+  return `${badge} · ${done} / ${total} done · ${status}`;
 }
 
 /**

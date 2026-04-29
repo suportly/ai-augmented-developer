@@ -22,6 +22,14 @@ describe('ci/release-workflow', () => {
     expect(content).to.match(/^\s{2}release:/m);
   });
 
+  it('release job declares needs: build to chain after the build job', () => {
+    // Guards against decoupling the jobs — release must consume the VSIX
+    // produced by build, so the structural dependency is required.
+    const releaseSection = content.split(/^\s{2}release:/m)[1] ?? '';
+    const firstTenLines = releaseSection.split('\n').slice(0, 10).join('\n');
+    expect(firstTenLines).to.match(/needs:\s*build/);
+  });
+
   it('gates the release job on a tag ref', () => {
     expect(content).to.include("startsWith(github.ref, 'refs/tags/vscode-extension-v')");
   });

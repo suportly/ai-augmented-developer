@@ -95,7 +95,7 @@ export function wireExtension(host: ExtensionHost): WiredExtension {
             }
           } catch (err) {
             channel.appendLine(
-              `git head error for ${folder.fsPath}: ${(err as Error).message}`,
+              `git head error for folder "${folder.name}": ${(err as Error).message}`,
             );
           }
         }),
