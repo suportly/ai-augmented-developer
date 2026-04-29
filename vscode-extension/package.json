@@ -67,6 +67,7 @@
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "lint": "eslint 'src/**/*.ts'",
+    "pretest:unit": "npm run build",
     "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"

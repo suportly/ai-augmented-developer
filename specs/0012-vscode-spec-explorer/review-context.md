@@ -41,7 +41,7 @@ vscode-extension/                                (new top-level surface)
     parser/types.ts             TaskStatus, SpecStatus, PipelineState, Task, Clarification, SpecModel
     parser/spec.ts              parses bold-key headers; missing-Status sentinel; BOM/CRLF/case tolerance
     parser/tasks.ts             parses ### T### + - **Status:** bullets; unknown fallback
-    parser/clarifications.ts    extracts [NEEDS CLARIFICATION:cl-N …] markers with line numbers
+    parser/clarifications.ts    extracts cl-N clarification markers with line numbers
     model/aggregate.ts          buildSpecModels() across workspace folders; rejects abs/.. specsRoot
     model/pipelineState.ts      pure 5-state function
     io/filesystem.ts            FileSystem interface + VsCodeFileSystem
