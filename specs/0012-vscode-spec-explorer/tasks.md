@@ -419,7 +419,7 @@
 
 ### T028 — Extension README, CHANGELOG, root index entry
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T025
 - **Files:**
   - create: `vscode-extension/README.md` (Marketplace listing copy)

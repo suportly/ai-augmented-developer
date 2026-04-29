@@ -254,6 +254,10 @@ Skills are invoked directly by name — there are no thin command wrappers in v0
 - **plan-document-reviewer** — Validates plans for TDD compliance, exact file paths, and step granularity
 - **code-reviewer** — Reviews code for security, spec alignment, and quality
 
+### VS Code extension
+
+The repo also ships **aiadev Spec Explorer**, a VS Code extension that renders the `specs/` tree (with pipeline state, task rollups, clarification markers, and current-branch highlight) directly in the activity bar. See [`vscode-extension/README.md`](./vscode-extension/README.md) for install instructions and configuration.
+
 ## Philosophy
 
 - **Test-Driven Development** — Write tests first, always
