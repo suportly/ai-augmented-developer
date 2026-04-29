@@ -473,6 +473,6 @@ After every task:
 
 After all tasks:
 
-- [ ] Full test suite passes (`cd vscode-extension && npm run test:unit && npm run package`; once T029 lands, also `xvfb-run -a npm run test:integration`).
-- [ ] `analyze` skill runs and reports no drift vs spec / plan.
-- [ ] Hand off to `requesting-code-review` to open the PR.
+- [x] Full test suite passes (`cd vscode-extension && npm run test:unit && xvfb-run -a npm run test:integration && npm run package`).
+- [x] `analyze` skill runs and reports no drift vs spec / plan.
+- [x] Hand off to `requesting-code-review` to open the PR.
