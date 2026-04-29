@@ -66,7 +66,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
+    "lint": "eslint 'src/**/*.ts'",
     "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
+    "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
@@ -74,8 +76,12 @@
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/vsce": "^2.24.0",
     "chai": "^4.4.1",
     "esbuild": "^0.20.0",
+    "eslint": "^8.57.0",
     "mocha": "^10.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

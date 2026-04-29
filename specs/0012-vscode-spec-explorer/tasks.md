@@ -390,7 +390,7 @@
 
 ### T026 — CI workflow: lint, typecheck, unit + integration tests, package vsix
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T025
 - **Files:**
   - create: `.github/workflows/vscode-extension.yml` (Node 20, `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test:unit`, `xvfb-run -a npm run test:integration`, `npm run package`)
