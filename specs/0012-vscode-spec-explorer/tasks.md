@@ -435,7 +435,7 @@
 
 ### T029 — Real Extension Host integration tests via `@vscode/test-electron`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T025, T026
 - **Files:**
   - create: `vscode-extension/test/integration/runTest.ts` (entry point that downloads VS Code and runs Mocha inside the Extension Host)

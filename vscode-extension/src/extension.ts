@@ -145,6 +145,11 @@ export function wireExtension(host: ExtensionHost): WiredExtension {
 
 let wired: WiredExtension | undefined;
 
+/** Test-only escape hatch: returns the wired extension after activation. */
+export function getWiredExtension(): WiredExtension | undefined {
+  return wired;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   wired = wireExtension(buildRealHost());
   context.subscriptions.push({ dispose: () => wired?.dispose() });
