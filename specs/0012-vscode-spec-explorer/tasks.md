@@ -433,12 +433,36 @@
   - [ ] No other existing test regresses.
   - [ ] Commit message: `docs(vscode-extension): T028 README + CHANGELOG + root index`.
 
+### T029 — Real Extension Host integration tests via `@vscode/test-electron`
+
+- **Status:** pending
+- **Depends on:** T025, T026
+- **Files:**
+  - create: `vscode-extension/test/integration/runTest.ts` (entry point that downloads VS Code and runs Mocha inside the Extension Host)
+  - create: `vscode-extension/test/integration/suite/index.ts` (Mocha suite loader)
+  - create: `vscode-extension/test/integration/suite/activation.spec.ts` (asserts the view is registered, the refresh command resolves, and `wireExtension`'s real-host path activates without errors)
+  - create: `vscode-extension/test/integration/suite/treeProvider.spec.ts` (loads a fixture workspace under `test/fixtures/workspaces/`, asserts SpecNode/TaskNode/ClarificationGroup rendering matches the unit-test contracts under a real `TreeItem`)
+  - create: `vscode-extension/test/integration/suite/watcher.spec.ts` (writes `tasks.md` on disk, asserts the tree reflects the new state within 500 ms)
+  - create: `vscode-extension/test/fixtures/workspaces/single-root/specs/0001-alpha/{spec,tasks}.md` (and a multi-root sibling)
+  - modify: `vscode-extension/package.json` — add `test:integration` script and `@vscode/test-electron` devDep
+  - modify: `.github/workflows/vscode-extension.yml` — add an `xvfb-run -a npm run test:integration` step (Linux job only) before `npm run package`
+- **Spec scenarios:** re-validates Story 1.1, 1.2, 2.1, 2.2 (the latency budget specifically) under a real Extension Host; complements the existing stub-based unit coverage.
+- **Acceptance:**
+  - [ ] Failing test written for at least one acceptance assertion (e.g. tree provider not yet registered) and observed red against an empty harness.
+  - [ ] Local run on Linux (`xvfb-run -a npm run test:integration`) passes; transcript pasted in the commit body or PR.
+  - [ ] CI workflow runs the new step on Ubuntu and the artifact upload still succeeds.
+  - [ ] No existing unit test regresses.
+  - [ ] Commit message: `test(vscode-extension): T029 Extension Host integration tests`.
+- **Notes:**
+  - This task closes the plan-v2 deviation recorded in T015 (view-layer tests use stubs only). The unit suite stays in place; T029 adds a thin layer on top.
+  - Budget the integration suite to ≤ 60 s wall time; the goal is smoke-level coverage, not duplicating the stub unit tests' behaviours.
+
 ## Parallelization hints
 
 - **Parallel group A — pure parsers and types after T003:** T004, T007, T008 may be attempted in parallel once T003 lands (disjoint files).
 - **Parallel group B — IO interfaces:** T011 and T013 (after T003) touch disjoint files.
 - **Parallel group C — view enhancements after T015:** T020, T022, T023, T024 each touch `specTreeProvider.ts` and therefore must be **serial** with respect to each other; do not parallelise. T016, T017 also touch `specTreeProvider.ts` — serial.
-- Serial: T001 → T002 → T003 → (group A) → T005 → T006 → T009 → T010 → (group B) → T012 → T014 → T015 → T016 → T017 → T018 → T019 → T020 → T021 → T022 → T023 → T024 → T025 → T026 → T027 → T028.
+- Serial: T001 → T002 → T003 → (group A) → T005 → T006 → T009 → T010 → (group B) → T012 → T014 → T015 → T016 → T017 → T018 → T019 → T020 → T021 → T022 → T023 → T024 → T025 → T026 → T027 → T028 → T029.
 
 ## Post-task checklist
 
@@ -449,6 +473,6 @@ After every task:
 
 After all tasks:
 
-- [ ] Full test suite passes (`cd vscode-extension && npm run test:unit && xvfb-run -a npm run test:integration && npm run package`).
+- [ ] Full test suite passes (`cd vscode-extension && npm run test:unit && npm run package`; once T029 lands, also `xvfb-run -a npm run test:integration`).
 - [ ] `analyze` skill runs and reports no drift vs spec / plan.
 - [ ] Hand off to `requesting-code-review` to open the PR.

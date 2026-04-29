@@ -5,7 +5,7 @@
 **Branch:** `feature/vscode-spec-explorer`
 **Date:** 2026-04-28
 **Spec:** [spec.md](./spec.md)
-**Plan version:** 1
+**Plan version:** 2 — amended 2026-04-28 to record the view-layer test-strategy deviation (stub-based unit tests in T015–T025; real Extension Host integration tests deferred to T029).
 **Language:** en
 
 ---
@@ -20,9 +20,9 @@ We will ship a single TypeScript VS Code extension under a new top-level `vscode
 |---|---|
 | Active preset | None (root framework repo; new top-level surface) |
 | Language / runtime | TypeScript 5.x targeting Node 20, compiled to CommonJS for VS Code host |
-| Primary dependencies | `@types/vscode ^1.85`, `esbuild` (bundle), `@vscode/test-electron` (integration), `mocha` + `chai` (unit), `vsce` (package & publish) |
+| Primary dependencies | `@types/vscode ^1.85`, `esbuild` (bundle), `mocha` + `chai` + `ts-node` (unit), `eslint` + `@typescript-eslint/*` (lint), `@vscode/vsce` (package & publish). `@vscode/test-electron` is **deferred** to T029 (see Architecture decisions). |
 | Storage | None. In-memory parsed model rebuilt on file events. |
-| Testing framework | Mocha for pure parser unit tests; `@vscode/test-electron` for activation + tree-provider integration tests in a real Extension Host |
+| Testing framework | Mocha + Chai for **all** v1 tests, including the view layer. View tests use stub injection (`test/support/vscodeStub.ts`) of `TreeItem` / `ThemeIcon` / `EventEmitter` / `Uri` / `Range` constructors so the Node-only test runner never loads `vscode`. Real Extension Host tests via `@vscode/test-electron` are scheduled as T029. |
 | Target platform(s) | VS Code stable `^1.85` on Linux, macOS, Windows. Cursor/Windsurf best-effort, no CI. |
 | Performance budget | Initial render ≤ 1 s for ≤ 50 specs; file-watcher → re-render ≤ 500 ms; parser ≤ 50 ms per spec on a 200-task `tasks.md` |
 | Security considerations | `capabilities.untrustedWorkspaces.supported: true` (read-only Markdown only; no `eval`, no child processes, no `fs.write*`). Parser is fuzzed against malformed `tasks.md` to ensure no exception leaks beyond the channel logger. |
@@ -32,7 +32,7 @@ We will ship a single TypeScript VS Code extension under a new top-level `vscode
 | Article | Applies? | Status | Evidence |
 |---|---|---|---|
 | I. Spec-first | Yes | PASS | `specs/0012-vscode-spec-explorer/spec.md` contains zero `[NEEDS CLARIFICATION]` markers (verified 2026-04-28); every acceptance scenario will map to at least one task in `tasks.md` (enforced in Phase 2 onward). |
-| II. Test-first | Yes | PASS | Each task in `tasks.md` will lead with a failing test; parser has Mocha unit tests, tree provider has `@vscode/test-electron` integration tests. No production code lands without an earlier red test commit. |
+| II. Test-first | Yes | PASS | Each task in `tasks.md` leads with a failing test. Parser/model/IO/watcher tests are pure Mocha; view-layer tests use stub injection (see Testing framework above). Real Extension Host integration tests are scheduled as T029, not deferred indefinitely. No production code lands without an earlier red test commit. |
 | III. Simplicity | Yes | PASS | One internal `FileSystem` adapter (sole second caller: the Mocha test fakes); no plug-in architecture, no settings beyond a single `aiadev.specExplorer.specsRoot` override; pipeline-state computation is one pure function over four booleans. |
 | IV. Evidence over claims | Yes | PASS | PR test plan will list `npm run test:unit`, `npm run test:integration`, `npm run package`; integration test transcript pasted; UI screenshots of the tree view in three states (empty, populated, mid-task) attached. |
 | V. Provider pattern for external systems | Yes | PASS | The only external boundary is VS Code's built-in `vscode.git` extension API (best-effort, optional). It is wrapped in a `GitHeadProvider` interface with a fake used by tests; the vendor API is imported only inside the implementation. No network, LLM, DB, or vendor SDK otherwise. |
@@ -64,6 +64,14 @@ We will ship a single TypeScript VS Code extension under a new top-level `vscode
 - **Decision:** Pipeline-state badge is computed as a pure function `({hasSpec, hasPlan, hasTasks, anyTaskInProgress, allTasksDone}) → 'spec' | 'spec → plan' | 'spec → plan → tasks' | 'implementing' | 'complete'`.
   **Rationale:** All five states from spec Story 4 collapse to one switch statement; no need for a class hierarchy.
   **Trade-offs:** None.
+
+- **Decision (amendment, plan v2):** View-layer tests use stub injection rather than `@vscode/test-electron` for v1.
+  **Rationale:** Real Extension Host tests need an `xvfb` display + a per-run VS Code binary download, both of which were unstable in the implementer's subagent environment. The factory-injection pattern lets every view assertion run in plain Node ≤ 50 ms while still exercising the real tree shape, label/description/tooltip wiring, and command bindings.
+  **Trade-offs:** Stubs cannot exercise activation under a real Extension Host, real `FileSystemWatcher` event timing on the user's filesystem, or real `vscode.git` API drift. T029 is scheduled to add an integration suite that covers exactly those gaps.
+
+- **Decision (amendment, plan v2):** Branch-highlight in T024 surfaces ` · ● current` as a description suffix; the spec/plan language "bold + ● current badge" is satisfied only on the badge half.
+  **Rationale:** VS Code's `TreeItem.label` is a plain string in the stable API; bold styling would require switching to the `TreeItemLabel`-with-`highlights` shape (which only highlights, not bolds) or a `MarkdownString` description (which renders markdown but inside `description`, not `label`). Neither produces the desired bold-on-label result without compromising another field.
+  **Trade-offs:** Visual cue is the badge alone, not bold + badge. Documented as a UI polish item; not a Story-4 acceptance failure.
 
 ## Project structure changes
 
@@ -131,22 +139,25 @@ Within this phase, parser and model tasks share no files and may proceed in para
 
 ### Phase 4 — Tree view + icons (P1 stories 1 + 2)
 
-- `views/icons.ts` maps `pending|in_progress|blocked|done|unknown` to `ThemeIcon` ids (`circle-outline`, `sync~spin`, `error`, `check`, `question`).
-- `views/specTreeProvider.ts` implements `TreeDataProvider<Node>` with three node kinds: `SpecNode`, `TaskNode`, `ClarificationGroupNode`. `SpecNode` carries the pipeline-state badge in its `description` field and the `D / N done` count.
+- `views/icons.ts` maps `pending|in_progress|blocked|done|unknown` to `ThemeIcon` ids (`circle-outline`, `sync~spin`, `error`, `check`, `question`). Exposes a `makeStatusIcon(ctors)` factory for test injection plus a lazy-binding `statusIcon(status)` wrapper for production code (lazy `require('vscode')`).
+- `views/specTreeProvider.ts` implements `TreeDataProvider<Node>` with the node kinds `SpecNode | TaskNode | ClarificationGroupNode | ClarificationNode | EmptyStateNode`. The provider takes `TreeItemCtors` and `IconFactories` via constructor injection so unit tests never load `vscode`.
 - `SpecNode.label` prepends `[<workspaceFolderName>] ` when `vscode.workspace.workspaceFolders.length > 1`; with a single root no prefix is rendered (resolves spec clarification "Workspace scope").
-- `SpecNode.tooltip` is populated from `SpecModel.parseError` when set, surfacing missing-`Status:` and other parse failures in-place (covers spec Story 1 scenario 3).
+- `SpecNode.description` carries the pipeline-state badge with optional ` · D / N done` suffix and ` · ● current` when the spec's branch matches HEAD.
+- `SpecNode.tooltip` is populated from `SpecModel.parseError` when set; otherwise a 4-line block (`<dirName> · <pipelineState>` / `Status: ...` / `Next: /aiadev:...` / `<specPath>`).
 - `extension.ts` registers the provider and the "aiadev Spec Explorer" Output channel.
+
+**View-layer tests (plan-v2 amendment):** Mocha unit tests with stub injection of `TreeItem` / `ThemeIcon` / `EventEmitter` / `Uri` / `Range` constructors via `test/support/vscodeStub.ts`. No `@vscode/test-electron`, no Extension Host. Real Extension Host tests live in T029.
 
 ### Phase 5 — File-watcher + live updates (P1 story 2 scenario 2 + P2 story 3)
 
-- `watcher.ts` creates a single `FileSystemWatcher` for `**/specs/*/{spec,plan,tasks}.md`, debounces events at 100 ms, and on fire rebuilds only the affected `SpecModel` (path-keyed) and emits `_onDidChangeTreeData`.
-- Integration test asserts < 500 ms latency from `writeFile` to the next `getChildren()` reflecting the new state.
+- `watcher.ts` creates a single `FileSystemWatcher` for `**/specs/*/{spec,plan,tasks}.md`, debounces events at 100 ms (configurable), and emits a single coalesced callback per quiescent window.
+- Per the plan-v2 amendment, debounce + dispose semantics are covered by Mocha unit tests using an injected fake clock and fake watcher (`test/unit/watcher.spec.ts`). Real `writeFile`-to-`getChildren` latency is exercised in T029.
 
 ### Phase 6 — P2 polish: clarifications group, branch highlight, pipeline badge
 
 - Surface `cl-N` rows with truncated question text (Story 3).
-- `git.ts` HEAD lookup feeds a `currentBranch` field on each `SpecModel`; the tree provider bolds the matching row and adds the `● current` badge (Story 4 / cl-6).
-- Empty-state and `Unknown` status fall-throughs covered by integration test.
+- `git.ts` HEAD lookup feeds `provider.setCurrentBranch(workspaceFolderUri, branch)`; the tree provider appends a ` · ● current` badge to the matching row's description. Bold-on-label was attempted and dropped (see Architecture decision amendment, plan v2).
+- Empty-state and `Unknown` status fall-throughs covered by stub-based unit tests; T029 will re-cover them inside a real Extension Host.
 
 ### Phase 7 — Distribution
 
