@@ -2,6 +2,10 @@ name: vscode-extension
 
 on:
   push:
+    branches:
+      - main
+    tags:
+      - 'vscode-extension-v*'
     paths:
       - 'vscode-extension/**'
       - '.github/workflows/vscode-extension.yml'
@@ -33,3 +37,31 @@ jobs:
           name: vsix
           path: vscode-extension/*.vsix
           if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/vscode-extension-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+      - run: npm ci
+      - run: npm run package
+      - name: Publish to Marketplace
+        if: env.VSCE_PAT != ''
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --no-install vsce publish --no-dependencies --pat "$VSCE_PAT"
+      - name: Attach VSIX to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vscode-extension/*.vsix

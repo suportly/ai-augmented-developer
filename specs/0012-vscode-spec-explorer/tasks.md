@@ -405,7 +405,7 @@
 
 ### T027 — Marketplace publish workflow on tag `vscode-extension-v*`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T026
 - **Files:**
   - modify: `.github/workflows/vscode-extension.yml` (add `release:` job gated on tag pattern; uses `VSCE_PAT` secret)
