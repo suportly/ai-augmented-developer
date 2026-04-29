@@ -79,6 +79,8 @@
     "lint": "eslint 'src/**/*.ts'",
     "pretest:unit": "npm run build",
     "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
+    "pretest:integration": "npm run build && tsc -p tsconfig.integration.json",
+    "test:integration": "node out/test/integration/runTest.js",
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"
   },
@@ -89,6 +91,7 @@
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^2.24.0",
     "chai": "^4.4.1",
     "esbuild": "^0.20.0",

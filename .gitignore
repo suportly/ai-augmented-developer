@@ -25,4 +25,5 @@ src/aiadev/_assets/
 # VS Code extension build artefacts (see vscode-extension/)
 vscode-extension/node_modules/
 vscode-extension/out/
+vscode-extension/.vscode-test/
 *.vsix
