@@ -3,8 +3,9 @@
   "displayName": "aiadev Spec Explorer",
   "description": "Browse aiadev specs (spec.md / plan.md / tasks.md) from the VS Code activity bar.",
   "publisher": "aiadev",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/suportly/ai-augmented-developer.git",
