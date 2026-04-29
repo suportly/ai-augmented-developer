@@ -150,9 +150,12 @@ export function getWiredExtension(): WiredExtension | undefined {
   return wired;
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+// activate() must return its exports; VS Code sets ext.exports to this return value,
+// not to the CommonJS module.exports object.
+export function activate(context: vscode.ExtensionContext): { getWiredExtension: typeof getWiredExtension } {
   wired = wireExtension(buildRealHost());
   context.subscriptions.push({ dispose: () => wired?.dispose() });
+  return { getWiredExtension };
 }
 
 export function deactivate(): void {
