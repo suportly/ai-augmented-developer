@@ -4,6 +4,16 @@
   "description": "Browse aiadev specs (spec.md / plan.md / tasks.md) from the VS Code activity bar.",
   "publisher": "aiadev",
   "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suportly/ai-augmented-developer.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://github.com/suportly/ai-augmented-developer/tree/main/vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/suportly/ai-augmented-developer/issues"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
