@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-05-02
+
+VS Code Marketplace publication of `aiadev-spec-explorer` v0.0.4 under
+publisher `alairjoaotavares` (also published to Open VSX).
+
+### Changed
+
+- **vscode-extension publisher:** `aiadev` → `alairjoaotavares` (MS
+  Marketplace publisher of record). Open VSX namespace
+  `alairjoaotavares` also created; legacy `ai-augmented-developer`
+  namespace on Open VSX remains for back-compat.
+- **vscode-extension manifest:** added required `categories`
+  (`Other`, `AI`, `Visualization`) and `keywords` — without
+  `categories`, MS Marketplace was accepting the publish but hiding
+  the listing page (404).
+- **vscode-extension icon:** replaced placeholder with the final
+  256×256 PNG (document + circuit-tree motif).
+
+### Fixed
+
+- VS Code Marketplace listing now resolves at
+  `marketplace.visualstudio.com/items?itemName=alairjoaotavares.aiadev-spec-explorer`
+  (previous 0.0.1–0.0.3 attempts under publishers `aiadev` /
+  `ai-augmented-developer` were silently hidden by MS).
+
 ## [0.17.0] - 2026-04-29
 
 Spec **0012 — vscode-spec-explorer**. Native VS Code tree view that
