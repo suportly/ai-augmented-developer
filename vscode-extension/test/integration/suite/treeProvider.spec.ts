@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type { WiredExtension } from '../../../src/extension';
+import { EXTENSION_ID } from './extensionId';
 
 suite('Tree provider', () => {
   test('spec.md present → refresh produces at least one spec entry (Story 1.1)', async function() {
@@ -10,7 +11,7 @@ suite('Tree provider', () => {
     await vscode.commands.executeCommand('aiadev.specExplorer.refresh');
     await new Promise(r => setTimeout(r, 2000));
 
-    const ext = vscode.extensions.getExtension('aiadev.aiadev-spec-explorer');
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(ext, 'Extension not found — check publisher.name in package.json');
     const exports = ext.exports as { getWiredExtension(): WiredExtension | undefined };
     const w = exports.getWiredExtension();
@@ -28,7 +29,7 @@ suite('Tree provider', () => {
   test('SpecNode children include TaskNodes from tasks.md (Story 2.1 smoke)', async function() {
     this.timeout(10000);
     // The fixture has 2 tasks (T001 pending, T002 done).
-    const ext = vscode.extensions.getExtension('aiadev.aiadev-spec-explorer');
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(ext);
     const w = (ext.exports as { getWiredExtension(): WiredExtension | undefined }).getWiredExtension();
     assert.ok(w, 'wireExtension should have been called');

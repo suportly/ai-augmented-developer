@@ -1,9 +1,10 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { EXTENSION_ID } from './extensionId';
 
 suite('Activation', () => {
   test('extension activates without errors', async () => {
-    const ext = vscode.extensions.getExtension('aiadev.aiadev-spec-explorer');
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(ext, 'Extension not found — check publisher.name in package.json');
     await ext!.activate();
     assert.ok(ext!.isActive);
@@ -20,7 +21,7 @@ suite('Activation', () => {
     // We verify by checking the view is focusable via the workbench.view command.
     // If the focus command is unavailable (view containers don't always synthesise one),
     // fall back to asserting the refresh command is present and the extension stays active.
-    const ext = vscode.extensions.getExtension('aiadev.aiadev-spec-explorer');
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
     assert.ok(ext?.isActive, 'Extension should still be active');
     const commands = await vscode.commands.getCommands(true);
     assert.ok(
