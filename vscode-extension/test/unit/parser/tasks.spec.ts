@@ -133,6 +133,65 @@ describe('parseTasks', () => {
   // surrounding well-formed tasks. T008 already mapped any unrecognised
   // value to `unknown`, so this fixture-backed test pins the contract
   // for future refactors of the parser.
+  it('parses heading without separator: "### T001 Title" with status unknown', () => {
+    const source = [
+      '### T001 Criar branch BKO-126',
+      '### T002 [P] Outra task',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result).to.have.lengthOf(2);
+    expect(result[0]).to.deep.include({ id: 'T001', title: 'Criar branch BKO-126', status: 'unknown' });
+    expect(result[1]).to.deep.include({ id: 'T002', title: 'Outra task', status: 'unknown' });
+  });
+
+  it('parses GitHub task-list checkbox: [x] -> done, [ ] -> pending', () => {
+    const source = [
+      '- [x] T001 Done task',
+      '- [ ] T002 [P] Pending task',
+      '- [x] **T003** Bold id',
+      '- [x] ~~**T004**~~ Strikethrough id',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result).to.have.lengthOf(4);
+    expect(result.map((t) => t.status)).to.deep.equal(['done', 'pending', 'done', 'done']);
+    expect(result[1].title).to.equal('Pending task');
+    expect(result[2].title).to.equal('Bold id');
+  });
+
+  it('updates a heading-declared task with a table-row status (emoji + word)', () => {
+    const source = [
+      '### T001 First',
+      '### T002 Second',
+      '',
+      '| Task | Commit | Status |',
+      '|---|---|---|',
+      '| T001 | abc123 | ✅ |',
+      '| T002 | def456 | done |',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result).to.have.lengthOf(2);
+    expect(result[0].status).to.equal('done');
+    expect(result[1].status).to.equal('done');
+  });
+
+  it('does not duplicate a task already declared by a heading when its id appears in a checkbox later', () => {
+    const source = [
+      '### T001 From heading',
+      '- [x] T001 From checkbox (should be ignored as duplicate)',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result).to.have.lengthOf(1);
+    expect(result[0].title).to.equal('From heading');
+  });
+
   it('isolates an unknown status to the offending task without throwing (malformed-task-status fixture)', () => {
     const source = readFixture('malformed-task-status');
 
