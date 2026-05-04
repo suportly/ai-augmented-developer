@@ -4,6 +4,14 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.6] - 2026-05-04
+
+Test-only re-cut of 0.0.5 — the `vscode-extension-v0.0.5` tag never produced a Marketplace artefact because the integration-test suite had been failing on `main` since 2026-04-30 (`needs: build` blocked the `release` job).
+
+### Fixed
+
+- Integration tests no longer hardcode the extension id `aiadev.aiadev-spec-explorer`. Both `activation.spec.ts` and `treeProvider.spec.ts` now derive `EXTENSION_ID` from `package.json` (new `test/integration/suite/extensionId.ts` helper), so `publisher` renames stay self-consistent without a test edit.
+
 ## [0.0.5] - 2026-05-04
 
 ### Fixed
