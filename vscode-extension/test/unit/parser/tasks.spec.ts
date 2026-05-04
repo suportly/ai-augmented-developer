@@ -180,6 +180,24 @@ describe('parseTasks', () => {
     expect(result[1].status).to.equal('done');
   });
 
+  it('tolerates markdown wrapping (**done**, ~~done~~) inside a status table cell', () => {
+    const source = [
+      '### T001 First',
+      '### T002 Second',
+      '### T003 Third',
+      '',
+      '| Task | Commit | Status |',
+      '|---|---|---|',
+      '| T001 | abc | **done** |',
+      '| T002 | def | ~~pending~~ |',
+      '| T003 | ghi | `in_progress` |',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.status)).to.deep.equal(['done', 'pending', 'in_progress']);
+  });
+
   it('does not duplicate a task already declared by a heading when its id appears in a checkbox later', () => {
     const source = [
       '### T001 From heading',

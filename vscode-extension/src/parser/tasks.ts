@@ -35,6 +35,8 @@ const CHECKBOX_RE =
   /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
 const TABLE_STATUS_RE =
   /^\|\s*(?:\*\*)?(T\d+)(?:\*\*)?\s*\|.*?\|\s*([^|]*?)\s*\|?\s*$/;
+// Strips `[P]`, `[US1]` and other leading bracket tags from task titles.
+// See `templates/tasks-template.md` for the canonical tag conventions.
 const LEADING_TAG_RE = /^(?:\[[^\]]+\]\s*)+/;
 const SURROUND_BOLD_RE = /^\*\*(.+)\*\*$/;
 const UTF8_BOM = '﻿';
@@ -63,9 +65,9 @@ function normaliseStatus(raw: string): TaskStatus {
 }
 
 function statusFromCell(cell: string): TaskStatus | undefined {
-  const trimmed = cell.trim().toLowerCase();
-  if (STATUS_MAP[trimmed]) {
-    return STATUS_MAP[trimmed];
+  const stripped = cell.replace(/[*~`]/g, '').trim().toLowerCase();
+  if (STATUS_MAP[stripped]) {
+    return STATUS_MAP[stripped];
   }
   for (const ch of cell) {
     if (EMOJI_STATUS_MAP[ch]) {
