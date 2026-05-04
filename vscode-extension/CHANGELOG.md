@@ -4,6 +4,15 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.5] - 2026-05-04
+
+### Fixed
+
+- `parser/tasks.ts` now recognises three real-world task formats that previously rendered specs with zero tasks:
+  - Loose heading without separator: `### T001 Title` (status defaults to `unknown`).
+  - GitHub task-list checkboxes: `- [x] T001 …` → `done`, `- [ ] T001 …` → `pending`. Tolerates `**T001**` and `~~**T001**~~` markup, and strips leading `[P]` / `[US1]` tags from titles.
+  - Status table rows: `| T001 | commit | <status> |` accepts the four word values plus emoji shorthand (✅ ✔ ☑ → done; 🚧 🔄 → in_progress; ⛔ 🚫 → blocked; ⏳ ⬜ → pending). Word values may also be wrapped in `**bold**`, `~~strike~~`, or `` `code` `` backticks. Rows that appear before the matching heading are deferred and applied at end-of-parse.
+
 ## [0.0.1] - 2026-04-28
 
 Initial public release covering tasks T001–T027 of `specs/0012-vscode-spec-explorer`.
