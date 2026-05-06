@@ -54,7 +54,7 @@
 
 ### T003 — Red drift-validator import test
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `tests/test_implement_skill_drift.py`
