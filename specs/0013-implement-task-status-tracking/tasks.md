@@ -38,7 +38,7 @@
 
 ### T002 — Red unit tests for tasks_status parse/validate/mark_done
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `tests/test_tasks_status.py`
