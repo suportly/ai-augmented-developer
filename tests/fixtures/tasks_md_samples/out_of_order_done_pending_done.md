@@ -1,7 +1,7 @@
 # Tasks: fixture out-of-order (T001 done, T002 pending, T003 done)
 
 **Branch:** `feature/fixture`
-**Plan:** [plan.md](./plan.md)
+**Plan:** plan.md
 **Generated:** 2026-05-06
 **Language:** en
 

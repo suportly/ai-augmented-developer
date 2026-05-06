@@ -1,7 +1,7 @@
 # Tasks: fixture in_progress (T001 done, T002 in_progress, T003 pending)
 
 **Branch:** `feature/fixture`
-**Plan:** [plan.md](./plan.md)
+**Plan:** plan.md
 **Generated:** 2026-05-06
 **Language:** en
 

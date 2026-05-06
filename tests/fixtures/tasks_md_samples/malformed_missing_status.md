@@ -1,7 +1,7 @@
 # Tasks: fixture malformed (missing status line on T002)
 
 **Branch:** `feature/fixture`
-**Plan:** [plan.md](./plan.md)
+**Plan:** plan.md
 **Generated:** 2026-05-06
 **Language:** en
 
