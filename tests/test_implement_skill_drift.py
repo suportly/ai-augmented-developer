@@ -35,9 +35,20 @@ _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 sys.modules["validate_skills_drift"] = _mod
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
-# This attribute lookup raises ``AttributeError`` until T005 adds the
-# function; the AttributeError aborts collection of every test below.
-check_implement_mirror = _mod.check_implement_mirror
+
+def _check_implement_mirror():
+    """Resolve ``check_implement_mirror`` lazily so the module-level
+    ``AttributeError`` raised before T005 lands turns into an
+    ordinary test failure rather than a collection abort that takes
+    the whole suite down."""
+    try:
+        return _mod.check_implement_mirror
+    except AttributeError as exc:
+        raise AssertionError(
+            "scripts/validate_skills.py is missing check_implement_mirror "
+            "(adds in T005)"
+        ) from exc
+
 
 BARE_SKILL = ROOT / "skills" / "implement" / "SKILL.md"
 MIRROR_SKILL = ROOT / ".claude" / "skills" / "implement" / "SKILL.md"
@@ -57,7 +68,7 @@ def test_check_implement_mirror_runs_clean_on_current_tree() -> None:
     """The two SKILL.md files start identical (loop section); the
     drift validator must therefore exit cleanly. Becomes green at T005
     and must stay green through T007."""
-    check_implement_mirror()  # must not raise
+    _check_implement_mirror()()  # must not raise
 
 
 @pytest.mark.parametrize("skill_path", [BARE_SKILL, MIRROR_SKILL])

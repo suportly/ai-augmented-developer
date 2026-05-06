@@ -68,7 +68,7 @@
 
 ### T004 — Implement aiadev.tasks_status (parse, validate, mark_done)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - create: `src/aiadev/tasks_status.py`
