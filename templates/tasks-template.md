@@ -14,7 +14,7 @@
 - Tasks are ordered. `implement` runs them top-to-bottom.
 - One task = one commit. The commit message starts with the task id.
 - Each task links back to the spec acceptance scenarios it exercises.
-- `Status` is one of: `pending`, `in_progress`, `blocked`, `done`. Only `implement` mutates it.
+- `Status` is one of: `pending`, `in_progress`, `blocked`, `done`. Owned by the `implement` skill — it flips `pending` → `done` inside each task's commit. Do not edit by hand; manual edits are overwritten on the next `implement` run.
 
 ## Task list
 

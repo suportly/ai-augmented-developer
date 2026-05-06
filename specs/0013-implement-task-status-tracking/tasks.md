@@ -65,7 +65,7 @@
 
 ### T006 — Annotate tasks-template.md with Status ownership note
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `templates/tasks-template.md`
