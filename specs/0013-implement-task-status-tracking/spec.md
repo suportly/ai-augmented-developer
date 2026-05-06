@@ -4,7 +4,7 @@
 
 **Branch:** `feature/implement-task-status-tracking`
 **Created:** 2026-05-06
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** PR Open — #34
 **Spec ID:** 0013 <!-- auto-incrementing integer -->
 **Language:** en <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
