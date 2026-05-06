@@ -81,7 +81,9 @@ def test_validate_in_progress_passes() -> None:
 
 
 def test_validate_malformed_raises_with_file_and_task_id() -> None:
-    """Story 2 sc2 (cl-2): malformed Status lines must abort, not auto-repair."""
+    """cl-2 (resolved in spec): malformed Status lines must abort, not
+    auto-repair, and the error must name both the task id and the
+    1-based line number for the spec author to find the defect."""
     rows = parse(FIXTURES / "malformed_missing_status.md")
 
     with pytest.raises(TasksMdError) as excinfo:
@@ -90,6 +92,9 @@ def test_validate_malformed_raises_with_file_and_task_id() -> None:
     msg = str(excinfo.value)
     assert "T002" in msg
     assert "Status" in msg
+    # Spec cl-2 mandates ``(line <N>)`` in the malformed error.
+    malformed_row = next(r for r in rows if r.id == "T002")
+    assert f"(line {malformed_row.line})" in msg
 
 
 def test_validate_out_of_order_raises_exact_error_string() -> None:

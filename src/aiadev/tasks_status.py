@@ -49,6 +49,7 @@ class TaskRow:
     id: str
     title: str
     status: Optional[str]
+    line: int  # 1-based line number of the ``### TNNN`` header
 
 
 def parse(path: Path | str) -> list[TaskRow]:
@@ -65,6 +66,7 @@ def parse(path: Path | str) -> list[TaskRow]:
                 id=header.group(1),
                 title=header.group(2).strip(),
                 status=status_match.group(1) if status_match else None,
+                line=text.count("\n", 0, header.start()) + 1,
             )
         )
     return rows
@@ -74,13 +76,14 @@ def validate(rows: list[TaskRow]) -> None:
     for row in rows:
         if row.status is None:
             raise TasksMdError(
-                f"ERROR: tasks.md malformed at {row.id}: missing or "
-                f"unparseable **Status:** line. Fix manually before resuming."
+                f"ERROR: tasks.md malformed at {row.id} (line {row.line}): "
+                f"missing or unparseable **Status:** line. "
+                f"Fix manually before resuming."
             )
         if row.status not in VALID_STATUSES:
             raise TasksMdError(
-                f"ERROR: tasks.md malformed at {row.id}: status "
-                f"{row.status!r} is not in the allowed taxonomy "
+                f"ERROR: tasks.md malformed at {row.id} (line {row.line}): "
+                f"status {row.status!r} is not in the allowed taxonomy "
                 f"{VALID_STATUSES}. Fix manually before resuming."
             )
 
