@@ -44,15 +44,25 @@ If any of those are missing, stop and invoke the appropriate upstream skill inst
 For each task in `tasks.md`, in declared order:
 
 ```
-dispatch implementer  →  spec reviewer  →  code quality reviewer  →  commit  →  mark complete
+read row  →  skip-if-done  →  dispatch implementer  →  spec reviewer  →
+code quality reviewer  →  flip status & commit
 ```
 
-1. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward full conversation history.
-2. **Wait for the return status** (see the taxonomy below) and act on it.
-3. **Dispatch spec reviewer** only after the implementer reports `DONE`.
-4. **Dispatch code quality reviewer** only after the spec reviewer returns `APPROVED`.
-5. **Commit** the task. One task = one commit. Mark the task complete in `tasks.md`.
-6. If any step returns `ISSUES` or `BLOCKED`, fix and re-dispatch. Never advance with unresolved issues.
+The **orchestrator** (the agent following this skill) — not the implementer subagent — owns every step that reads or mutates `tasks.md`. The subagent's "Files to create or modify" list never includes `tasks.md`.
+
+1. **Read the row.** Apply the parse/validate rules implemented in `aiadev.tasks_status` (the helper module that owns the `**Status:**` line grammar) to `specs/<branch>/tasks.md` at iteration start — the orchestrator may invoke it via `python -c` or replicate the rules inline using `Read`/`Bash` tools. On any malformed status line, value outside `pending|in_progress|blocked|done`, or `done`-prefix violation, halt the loop with a non-zero exit and surface the error verbatim — do not auto-repair. Examples: `ERROR: tasks.md malformed at T003 (line 47): missing or unparseable **Status:** line. Fix manually before resuming.` or `ERROR: tasks.md inconsistency — T003 is done but T002 is pending. Fix tasks.md manually before resuming.`
+2. **Skip if already done.** If the current row's `**Status:**` is `done`, advance to the next task with no subagent dispatch — this is the resume guard.
+3. **Treat `in_progress` as `pending`.** A row found in `**Status:** in_progress` at iteration start means a previous run crashed mid-iteration before its commit landed; there is nothing on disk worth preserving. Re-dispatch from scratch.
+4. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward full conversation history.
+5. **Wait for the return status** (see the taxonomy below) and act on it.
+6. **Dispatch spec reviewer** only after the implementer reports `DONE`.
+7. **Dispatch code quality reviewer** only after the spec reviewer returns `APPROVED`.
+8. **Flip status and commit, atomically.** This is one git commit per task — the marker rides inside it:
+   - (a) Rewrite the active row's `**Status:** pending` line to `**Status:** done` — invoke `aiadev.tasks_status.mark_done(tasks_md_path, task_id)` (e.g. via `python -c`) or apply the equivalent `Edit` directly. Only the targeted `### TNNN` block changes; surrounding bytes stay untouched.
+   - (b) `git add` the task's code/test files **and** `tasks.md` together.
+   - (c) `git commit -m "<task id> <subject>"`.
+   - (d) On commit failure (hook rejection, signing error, etc.): roll back the marker before re-raising — `git restore --staged tasks.md && git checkout -- tasks.md` — then surface the underlying hook output to the user. Never use `--no-verify` to bypass.
+9. If any step returns `ISSUES` or `BLOCKED`, fix and re-dispatch. The row stays `**Status:** pending` until step 8 lands a green commit; never premature-mark on retry.
 
 After the last task:
 
