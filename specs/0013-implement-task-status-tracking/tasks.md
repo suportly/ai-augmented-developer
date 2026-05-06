@@ -102,7 +102,7 @@
 
 ### T006 — Update skills/implement/SKILL.md loop step 5
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004, T005
 - **Files:**
   - modify: `skills/implement/SKILL.md`
