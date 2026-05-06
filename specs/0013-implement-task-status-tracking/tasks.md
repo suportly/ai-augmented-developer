@@ -86,7 +86,7 @@
 
 ### T005 — Add check_implement_mirror to scripts/validate_skills.py
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `scripts/validate_skills.py`
