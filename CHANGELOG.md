@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-06
+
+Spec **0013 — implement-task-status-tracking**. Closes issue #33: the
+`implement` skill now flips `**Status:** pending` → `**Status:** done`
+on each task's `### TNNN` block atomically, inside the same commit as
+the task's code change. Resume after a crash is now safe — the
+orchestrator skips tasks already marked `done`, treats `in_progress`
+as a re-dispatch target, and halts on out-of-order or malformed state
+with the verbatim error string from the spec.
+
+### Added
+
+- **`aiadev.tasks_status`** new helper module: `parse(path) ->
+  list[TaskRow]`, `validate(rows)` (raises `TasksMdError` on
+  malformed rows or `done`-prefix violations), `mark_done(path,
+  task_id)` (idempotent single-line rewrite). 12 unit tests cover
+  Story 1 sc2 + Story 2 sc1–sc4 against five `tasks_md_samples`
+  fixtures (clean / malformed / out-of-order / in-progress /
+  all-done).
+- **`tests/test_implement_skill_drift.py`** content assertion that
+  pins the loop section against accidental regression — required
+  phrases include the literal `**Status:**` strings, the
+  `git restore --staged tasks.md && git checkout -- tasks.md`
+  rollback commands, and the word `orchestrator`.
+
+### Changed
+
+- **`skills/implement/SKILL.md`** loop step 5 rewritten into a
+  9-step procedure with explicit orchestrator ownership of every
+  `tasks.md` read/mutate, idempotency guard for `done` rows, the
+  `in_progress`-as-pending re-dispatch rule, the prefix-invariant
+  abort, and the `git restore --staged tasks.md` rollback on
+  commit failure.
+- **`templates/tasks-template.md`** `Status` ownership note
+  strengthened: `Status` is owned by the `implement` skill, which
+  flips `pending → done` inside each task's commit; manual edits
+  are overwritten on the next run.
+- **`vscode-extension/media/aiadev.svg`** activity-bar icon
+  redrawn from the existing `icon.png` (document + circuit-tree
+  motif, monochrome with `currentColor`). The previous SVG was a
+  generic 18×18 rectangle.
+
+### Fixed
+
+- Issue #33 — `tasks.md` no longer remains `Status: pending` after
+  shipped commits. Existing consumer projects with pre-issue-#33
+  inconsistencies will surface as halts on the new prefix
+  invariant; the `sed` workaround in issue #33's body remains the
+  one-shot fix.
+
 ## [0.17.1] - 2026-05-02
 
 VS Code Marketplace publication of `aiadev-spec-explorer` v0.0.4 under
