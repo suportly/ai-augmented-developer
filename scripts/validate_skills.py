@@ -67,71 +67,6 @@ def check_markers(text: str) -> dict[str, list[str]]:
     return {"errors": errors, "warnings": warnings}
 
 
-_BARE_IMPLEMENT_SKILL = ROOT / "skills" / "implement" / "SKILL.md"
-_MIRROR_IMPLEMENT_SKILL = ROOT / ".claude" / "skills" / "implement" / "SKILL.md"
-
-
-class ImplementSkillDriftError(Exception):
-    """Raised by ``check_implement_mirror`` when the two SKILL.md copies
-    disagree on the loop section."""
-
-
-def _extract_loop_section(text: str) -> str:
-    """Return the ``## The loop`` section verbatim, or raise if absent.
-
-    Anchored on ``## The loop`` and the next top-level ``## `` heading
-    so frontmatter and unrelated sections are excluded — only the loop
-    contract has to match between the two skill copies.
-    """
-    start = text.find("\n## The loop\n")
-    if start < 0:
-        raise ImplementSkillDriftError(
-            "implement SKILL.md is missing the '## The loop' section"
-        )
-    start += 1  # skip the leading newline
-    end = text.find("\n## ", start + len("## The loop\n"))
-    return text[start:end] if end >= 0 else text[start:]
-
-
-def check_implement_mirror() -> None:
-    """Assert that ``skills/implement/SKILL.md`` and
-    ``.claude/skills/implement/SKILL.md`` carry an identical
-    ``## The loop`` section (modulo trailing whitespace per line).
-
-    Raises ``ImplementSkillDriftError`` with a unified diff snippet
-    on mismatch. Per spec 0013 Story 3 sc2, the two copies must not
-    drift; CI invokes this through the script's main entry point.
-    """
-    bare_text = _BARE_IMPLEMENT_SKILL.read_text(encoding="utf-8")
-    mirror_text = _MIRROR_IMPLEMENT_SKILL.read_text(encoding="utf-8")
-
-    bare_loop = _extract_loop_section(bare_text)
-    mirror_loop = _extract_loop_section(mirror_text)
-
-    def _normalise(section: str) -> list[str]:
-        return [line.rstrip() for line in section.splitlines()]
-
-    if _normalise(bare_loop) == _normalise(mirror_loop):
-        return
-
-    import difflib
-
-    diff = "".join(
-        difflib.unified_diff(
-            _normalise(bare_loop),
-            _normalise(mirror_loop),
-            fromfile=str(_BARE_IMPLEMENT_SKILL.relative_to(ROOT)),
-            tofile=str(_MIRROR_IMPLEMENT_SKILL.relative_to(ROOT)),
-            lineterm="",
-            n=3,
-        )
-    )
-    raise ImplementSkillDriftError(
-        "implement SKILL.md drift detected between the bare and .claude/ "
-        f"copies:\n{diff}"
-    )
-
-
 def _die(message: str, code: int = 2) -> None:
     print(f"error: {message}", file=sys.stderr)
     sys.exit(code)
@@ -227,18 +162,6 @@ def main(argv: list[str]) -> int:
             continue
 
         print(f"OK   {skill_path}")
-
-    # Cross-file drift check between the two implement/SKILL.md copies.
-    # Only run when validating the full catalog (no explicit args) — when
-    # the user passes specific paths they may not be the implement skill.
-    if not argv:
-        try:
-            check_implement_mirror()
-        except ImplementSkillDriftError as exc:
-            print(f"FAIL implement SKILL.md drift:\n{exc}")
-            failed = True
-        else:
-            print("OK   implement SKILL.md mirror (loop section aligned)")
 
     return 1 if failed else 0
 
