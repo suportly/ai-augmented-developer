@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.8] - 2026-05-06
+
+### Fixed
+
+- `parser/tasks.ts` now accepts status synonyms — `completed`/`complete`/`finished` map to `done`, `todo` to `pending`, `wip`/`in-progress` to `in_progress` — and matches them case-insensitively. Real trigger: maycrm spec 0014 used `Status: completed`, which fell through to `unknown` and rendered tasks as "?" instead of green checks. Canonical vocabulary in `tasks.md` is still `pending | in_progress | blocked | done`; synonyms are a tolerance layer for agent-generated drift.
+
 ## [0.0.7] - 2026-05-06
 
 ### Fixed

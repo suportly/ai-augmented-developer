@@ -146,6 +146,37 @@ describe('parseTasks', () => {
     expect(result[1]).to.deep.include({ id: 'T002', title: 'Outra task', status: 'unknown' });
   });
 
+  it('accepts status synonyms: completed/complete/finished -> done, todo -> pending, wip/in-progress -> in_progress (case-insensitive)', () => {
+    const source = [
+      '### T001 — One',
+      '- **Status:** completed',
+      '### T002 — Two',
+      '- **Status:** Complete',
+      '### T003 — Three',
+      '- **Status:** FINISHED',
+      '### T004 — Four',
+      '- **Status:** todo',
+      '### T005 — Five',
+      '- **Status:** wip',
+      '### T006 — Six',
+      '- **Status:** in-progress',
+      '### T007 — Seven',
+      '- **Status:** Done',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.status)).to.deep.equal([
+      'done',
+      'done',
+      'done',
+      'pending',
+      'in_progress',
+      'in_progress',
+      'done',
+    ]);
+  });
+
   it('parses tasks declared as H4-H6 headings, including under an H3 phase group', () => {
     const source = [
       '## Task list',

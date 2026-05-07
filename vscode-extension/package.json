@@ -3,7 +3,7 @@
   "displayName": "aiadev Spec Explorer",
   "description": "Browse aiadev specs (spec.md / plan.md / tasks.md) from the VS Code activity bar.",
   "publisher": "alairjoaotavares",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "MIT",
   "icon": "media/icon.png",
   "categories": ["Other", "AI", "Visualization"],

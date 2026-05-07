@@ -52,6 +52,7 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 - Task dependencies form a DAG; `implement` will refuse a cycle.
 - Never put time estimates in the task. Estimates drift; the acceptance checklist is what matters.
 - **Heading shape is part of the contract.** Tasks are `### T<NNN> — Title` (H3). If you want to group tasks visually by phase, use a bold paragraph or a bullet list — never a heading that demotes the task to `####`. Downstream consumers (the VSCode extension parser, `implement`) tolerate H3-H6 today, but H3 stays the canonical form.
+- **Status vocabulary is fixed.** Use exactly one of `pending`, `in_progress`, `blocked`, `done`. Synonyms like `completed`, `todo`, `wip` are tolerated by the VSCode parser as fallback, but `implement` writes `done` and downstream automation may rely on it. Don't invent new values.
 
 ## Hand-off
 

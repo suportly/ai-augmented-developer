@@ -47,9 +47,15 @@ const UTF8_BOM = '﻿';
 
 const STATUS_MAP: Record<string, TaskStatus> = {
   pending: 'pending',
+  todo: 'pending',
   in_progress: 'in_progress',
+  'in-progress': 'in_progress',
+  wip: 'in_progress',
   blocked: 'blocked',
   done: 'done',
+  completed: 'done',
+  complete: 'done',
+  finished: 'done',
 };
 
 const EMOJI_STATUS_MAP: Record<string, TaskStatus> = {
@@ -65,7 +71,7 @@ const EMOJI_STATUS_MAP: Record<string, TaskStatus> = {
 };
 
 function normaliseStatus(raw: string): TaskStatus {
-  return STATUS_MAP[raw] ?? 'unknown';
+  return STATUS_MAP[raw.toLowerCase()] ?? 'unknown';
 }
 
 function statusFromCell(cell: string): TaskStatus | undefined {
