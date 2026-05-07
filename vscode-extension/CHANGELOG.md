@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.9] - 2026-05-06
+
+### Changed
+
+- Spec list in the Spec Explorer tree is now sorted by `specId` **descending** (most recent first) instead of ascending. Specs without a numeric id still sink to the end, alpha by workspace folder. Rationale: active work usually lives on the highest-numbered spec; scrolling to the bottom of the list every time was friction.
+
 ## [0.0.8] - 2026-05-06
 
 ### Fixed

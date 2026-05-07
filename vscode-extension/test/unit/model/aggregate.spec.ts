@@ -73,11 +73,12 @@ describe('buildSpecModels', () => {
     expect(byId.get('0002')!.workspaceFolderUri).to.equal('/repo/consumer');
   });
 
-  it('sorts results by specId ascending', async () => {
+  it('sorts results by specId descending (most recent first); non-numeric ids sink to the end', async () => {
     const fs = new FakeFileSystem({
       '/ws/specs/0050-fifty/spec.md': specWithHeader({ title: 'Fifty', specId: '0050', status: 'Draft' }),
       '/ws/specs/0002-two/spec.md': specWithHeader({ title: 'Two', specId: '0002', status: 'Draft' }),
       '/ws/specs/0010-ten/spec.md': specWithHeader({ title: 'Ten', specId: '0010', status: 'Draft' }),
+      '/ws/specs/draft-misc/spec.md': specWithHeader({ title: 'Misc', specId: 'draft-misc', status: 'Draft' }),
     });
 
     const models = await buildSpecModels(
@@ -86,7 +87,7 @@ describe('buildSpecModels', () => {
       'specs',
     );
 
-    expect(models.map((m) => m.specId)).to.deep.equal(['0002', '0010', '0050']);
+    expect(models.map((m) => m.specId)).to.deep.equal(['0050', '0010', '0002', 'draft-misc']);
   });
 
   it('honours a non-default specsRoot setting', async () => {

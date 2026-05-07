@@ -135,8 +135,14 @@ export async function buildSpecModels(
   models.sort((a, b) => {
     const ka = specIdSortKey(a.specId);
     const kb = specIdSortKey(b.specId);
-    if (ka !== kb) {
-      return ka - kb;
+    const aNumeric = Number.isFinite(ka);
+    const bNumeric = Number.isFinite(kb);
+    if (aNumeric && bNumeric) {
+      if (ka !== kb) {
+        return kb - ka;
+      }
+    } else if (aNumeric !== bNumeric) {
+      return aNumeric ? -1 : 1;
     }
     return a.workspaceFolderName.localeCompare(b.workspaceFolderName);
   });
