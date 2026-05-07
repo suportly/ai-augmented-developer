@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.7] - 2026-05-06
+
+### Fixed
+
+- `parser/tasks.ts` now recognises tasks declared at any heading level from H3 to H6. Previously, `tasks.md` files that grouped tasks under a `### Phase N` header and demoted task headings to `#### T001 — Title` rendered as zero-task specs (real-world example: maycrm spec 0014 with 44 tasks across 6 phases). The matcher relaxes from `^###` to `^#{3,6}`; canonical `### T001` form is unchanged.
+
 ## [0.0.6] - 2026-05-04
 
 Test-only re-cut of 0.0.5 — the `vscode-extension-v0.0.5` tag never produced a Marketplace artefact because the integration-test suite had been failing on `main` since 2026-04-30 (`needs: build` blocked the `release` job).

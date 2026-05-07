@@ -146,6 +146,35 @@ describe('parseTasks', () => {
     expect(result[1]).to.deep.include({ id: 'T002', title: 'Outra task', status: 'unknown' });
   });
 
+  it('parses tasks declared as H4-H6 headings, including under an H3 phase group', () => {
+    const source = [
+      '## Task list',
+      '',
+      '### Phase 1 — Modelo',
+      '',
+      '#### T001 — Schema',
+      '',
+      '- **Status:** pending',
+      '',
+      '#### T002 — Indexes',
+      '',
+      '- **Status:** done',
+      '',
+      '### Phase 2 — API',
+      '',
+      '##### T003 — Endpoint',
+      '',
+      '- **Status:** in_progress',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.id)).to.deep.equal(['T001', 'T002', 'T003']);
+    expect(result.map((t) => t.status)).to.deep.equal(['pending', 'done', 'in_progress']);
+    expect(result[0].title).to.equal('Schema');
+    expect(result[2].title).to.equal('Endpoint');
+  });
+
   it('parses GitHub task-list checkbox: [x] -> done, [ ] -> pending', () => {
     const source = [
       '- [x] T001 Done task',

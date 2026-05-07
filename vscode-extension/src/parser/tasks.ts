@@ -3,15 +3,19 @@
  *
  * Recognises three task declarations:
  *
- *   1. Canonical heading with status bullet (templates/tasks-template.md):
+ *   1. Canonical heading with status bullet (templates/tasks-template.md).
+ *      Any heading level from H3 to H6 is accepted, so authors may group
+ *      tasks under a `### Phase N` header and demote tasks to `####`:
  *
  *        ### T001 — Title
+ *        #### T001 — Title           (under a `### Phase` group)
  *        - **Status:** pending
  *
  *   2. Loose heading (no separator); status defaults to `unknown` and may
  *      be updated by a status bullet or a table row (#4):
  *
  *        ### T001 Title
+ *        ##### T001 Title
  *
  *   3. GitHub task-list checkbox:
  *
@@ -29,7 +33,7 @@
 
 import type { Task, TaskStatus } from './types';
 
-const HEADING_RE = /^###\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
+const HEADING_RE = /^#{3,6}\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
 const STATUS_BULLET_RE = /^- \*\*Status:\*\*\s*(\S+)\s*$/;
 const CHECKBOX_RE =
   /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
