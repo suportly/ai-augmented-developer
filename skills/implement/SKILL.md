@@ -95,9 +95,12 @@ Files to create or modify:
 
 Workflow: test-first. Write a failing test, confirm it fails for the
 right reason, implement the minimum code to pass, confirm it passes.
+Run only the tests that exercise the changed code (the new test plus
+any module-level or related-file tests). The full suite is the
+`finishing-a-branch` gate, not a per-task gate.
 
 Return exactly one status as the first line of your response:
-- DONE — implementation complete, all tests passing
+- DONE — implementation complete, task-scoped tests passing
 - DONE_WITH_CONCERNS — complete, but with issues worth raising [list]
 - NEEDS_CONTEXT — cannot proceed without [list]
 - BLOCKED — cannot proceed because [specific cause]
