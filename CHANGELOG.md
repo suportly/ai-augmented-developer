@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-05-06
+
+Docs/prompt clarification in the `implement` skill. The implementer
+subagent contract now states explicitly that per-task test runs are
+scoped to the changed code (the new test plus module-level or
+related-file tests), and the full suite is the `finishing-a-branch`
+gate, not a per-task gate. Removes ambiguity that could push large
+codebases into running the entire suite after every task.
+
+### Changed
+
+- **`skills/implement/SKILL.md`** implementer prompt: workflow line
+  now specifies "Run only the tests that exercise the changed code"
+  and points to `finishing-a-branch` as the full-suite gate. `DONE`
+  status reworded from `all tests passing` to
+  `task-scoped tests passing`.
+
 ## [0.18.0] - 2026-05-06
 
 Spec **0013 — implement-task-status-tracking**. Closes issue #33: the
