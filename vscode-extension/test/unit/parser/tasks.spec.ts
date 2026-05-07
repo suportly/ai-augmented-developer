@@ -146,6 +146,31 @@ describe('parseTasks', () => {
     expect(result[1]).to.deep.include({ id: 'T002', title: 'Outra task', status: 'unknown' });
   });
 
+  it('tolerates flexible Status bullet formatting: unbolded label, bolded value, and trailing prose', () => {
+    const source = [
+      '### T001 — Plain colon, bold value with trailing commit',
+      '- Status: **done** (commit 7ffb07e9)',
+      '### T002 — Plain colon, plain value',
+      '- Status: pending',
+      '### T003 — Bold label outside the colon',
+      '- **Status**: in_progress',
+      '### T004 — Bold value, no trailing prose',
+      '- Status: **blocked**',
+      '### T005 — Canonical form still works',
+      '- **Status:** done',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.status)).to.deep.equal([
+      'done',
+      'pending',
+      'in_progress',
+      'blocked',
+      'done',
+    ]);
+  });
+
   it('accepts status synonyms: completed/complete/finished -> done, todo -> pending, wip/in-progress -> in_progress (case-insensitive)', () => {
     const source = [
       '### T001 — One',

@@ -34,7 +34,11 @@
 import type { Task, TaskStatus } from './types';
 
 const HEADING_RE = /^#{3,6}\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
-const STATUS_BULLET_RE = /^- \*\*Status:\*\*\s*(\S+)\s*$/;
+// Tolerant of bold around the label and/or value, and of trailing prose
+// after the status word (e.g. `- Status: **done** (commit abc1234)`).
+// Accepts `- **Status:** done`, `- Status: done`, `- **Status**: done`,
+// `- Status: **done** (commit X)`, etc.
+const STATUS_BULLET_RE = /^-\s+\*{0,2}Status:?\*{0,2}:?\s*\*{0,2}([A-Za-z_-]+)\*{0,2}/i;
 const CHECKBOX_RE =
   /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
 const TABLE_STATUS_RE =

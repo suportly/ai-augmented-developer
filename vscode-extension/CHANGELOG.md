@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.10] - 2026-05-07
+
+### Fixed
+
+- `parser/tasks.ts` now accepts the Status bullet with optional bold around the label and/or value, and tolerates trailing prose after the status word. Real trigger: strivex spec 108 wrote each completed task as `- Status: **done** (commit 7ffb07e9)` (label not bolded, value bolded, trailing commit hash). The previous regex `^- \*\*Status:\*\*\s*(\S+)\s*$` required the canonical `- **Status:** done` shape exactly, so all 108 tasks rendered as `unknown` instead of `done`. Canonical form keeps working unchanged.
+
 ## [0.0.9] - 2026-05-06
 
 ### Changed
