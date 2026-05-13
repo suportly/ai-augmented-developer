@@ -145,7 +145,7 @@
 
 ### T009 — Editar `skills/implement/SKILL.md` e `skills/requesting-code-review/SKILL.md` com gate de re-dispatch
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004, T008
 - **Files:**
   - modify: `skills/implement/SKILL.md`
