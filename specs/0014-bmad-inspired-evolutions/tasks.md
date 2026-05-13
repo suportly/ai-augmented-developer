@@ -89,7 +89,7 @@
 
 ### T005 — Estender `schemas/terse-output.schema.json` com variante `🟢 verification`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `schemas/terse-output.schema.json`
