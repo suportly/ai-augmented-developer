@@ -130,7 +130,7 @@
 
 ### T008 — Estender `aiadev preflight` com validador `requesting-code-review`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `src/aiadev/commands/preflight.py`

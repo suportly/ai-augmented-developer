@@ -97,13 +97,15 @@ def append_review_entry(workspace_path: Path, entry: dict) -> None:
         handle.write(line)
 
 
-def last_review_entry(workspace_path: Path) -> dict | None:
-    """Return the last valid JSON entry from the review log, or None."""
-    try:
-        branch_dir = _branch_dir(workspace_path)
-    except FileNotFoundError:
-        return None
-    log_path = branch_dir / ".review-log.jsonl"
+def last_entry_from_log(log_path: Path) -> dict | None:
+    """Return the last valid JSON entry from ``log_path``, or None.
+
+    Tolerates blank and malformed lines. Returns None when the file
+    does not exist or contains no parseable entry. Reusable across
+    callers that already know the exact `.review-log.jsonl` path,
+    which avoids forcing them through `_branch_dir`'s single-child
+    assumption.
+    """
     if not log_path.is_file():
         return None
     last_valid: dict | None = None
@@ -117,3 +119,12 @@ def last_review_entry(workspace_path: Path) -> dict | None:
             except json.JSONDecodeError:
                 continue
     return last_valid
+
+
+def last_review_entry(workspace_path: Path) -> dict | None:
+    """Return the last valid JSON entry from the review log, or None."""
+    try:
+        branch_dir = _branch_dir(workspace_path)
+    except FileNotFoundError:
+        return None
+    return last_entry_from_log(branch_dir / ".review-log.jsonl")
