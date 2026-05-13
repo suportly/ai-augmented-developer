@@ -117,7 +117,7 @@
 
 ### T007 — GREEN: implementar `src/aiadev/review_log.py`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - create: `src/aiadev/review_log.py`
