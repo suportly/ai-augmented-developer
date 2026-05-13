@@ -103,7 +103,7 @@
 
 ### T006 — RED: detector de "non-trivial change" + leitor/escritor de `.review-log.jsonl`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `tests/test_review_log.py`
