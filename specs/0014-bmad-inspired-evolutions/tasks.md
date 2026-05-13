@@ -73,7 +73,7 @@
 
 ### T004 — Adicionar regra "Output for APPROVED on non-trivial change" nos 3 reviewer agents
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `agents/code-reviewer.md`

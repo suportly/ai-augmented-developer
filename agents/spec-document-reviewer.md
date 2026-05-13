@@ -71,6 +71,54 @@ Minor (should address):
 2. ...
 ```
 
+## Output rule for APPROVED on non-trivial change
+
+A non-trivial change is one where `git diff --shortstat --ignore-blank-lines`
+reports more than 10 changed lines, excluding files with extensions `.md`,
+`.json`, `.lock`, `.toml`, and any path under `docs/`. **Spec creation is
+always non-trivial.** When this reviewer APPROVES a newly created
+`spec.md` (regardless of size), the `### Why no issues` block is REQUIRED
+— the trivial-change exception does not apply to governance-critical
+artifacts.
+
+When emitting `APPROVED` on a non-trivial change (or on any spec
+creation/structural edit), you MUST append a `### Why no issues` block
+listing **at least 3** specific verifications you actually performed,
+each in the form `<file:line> — <verification>`. Examples:
+
+- `spec.md:42 — confirmed Story 2 acceptance scenarios are independently
+  testable (Given/When/Then complete)`
+- `spec.md:88 — verified success criteria are measurable (latency budget
+  stated as "< 500ms p95", not "fast")`
+- `spec.md:115 — confirmed no [NEEDS CLARIFICATION] markers remain and
+  scope fits one branch`
+
+Verbose-mode shape:
+
+```
+APPROVED
+
+### Why no issues
+
+- file:line — verification 1
+- file:line — verification 2
+- file:line — verification 3
+```
+
+Terse-mode shape (per `.claude/rules/terse-mode.md` and
+`schemas/terse-output.schema.json`): one line per verification, prefixed
+with the green glyph and a single-line message ≤ 140 chars.
+
+```
+🟢 file:line — verification text
+```
+
+If you cannot list at least 3 verifications, the spec is either trivial
+(≤ 10 LOC after exclusions and not a creation/structural edit, in which
+case this rule does not apply) or you have not actually reviewed deeply
+enough — re-read the document or honestly report the review as
+`ISSUES_FOUND`.
+
 ## What NOT to Do
 - Do not approve a spec that has undefined acceptance criteria
 - Do not request changes for style preferences only

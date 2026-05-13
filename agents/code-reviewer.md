@@ -93,6 +93,46 @@ Non-blocking (should address):
 2. ...
 ```
 
+## Output rule for APPROVED on non-trivial change
+
+A non-trivial change is one where `git diff --shortstat --ignore-blank-lines`
+reports more than 10 changed lines, excluding files with extensions `.md`,
+`.json`, `.lock`, `.toml`, and any path under `docs/`.
+
+When emitting `APPROVED` on a non-trivial change, you MUST append a
+`### Why no issues` block listing **at least 3** specific verifications
+you actually performed, each in the form `<file:line> — <verification>`.
+Examples:
+
+- ``tests/test_orders.py:42 — confirmed assertion exercises AC-2 (cancellation refund path)``
+- ``src/orders/views.py:18 — verified `get_queryset` is scoped to the requesting user (no IDOR)``
+- ``src/orders/tasks.py:55 — verified retry uses exponential backoff and `bind=True`/`max_retries`/`time_limit` are set``
+
+Verbose-mode shape:
+
+```
+APPROVED
+
+### Why no issues
+
+- file:line — verification 1
+- file:line — verification 2
+- file:line — verification 3
+```
+
+Terse-mode shape (per `.claude/rules/terse-mode.md` and
+`schemas/terse-output.schema.json`): one line per verification, prefixed
+with the green glyph and a single-line message ≤ 140 chars.
+
+```
+🟢 file:line — verification text
+```
+
+If you cannot list at least 3 verifications, the change is either trivial
+(≤ 10 LOC after exclusions, in which case this rule does not apply) or
+you have not actually reviewed deeply enough — re-read the diff or
+honestly report that the review was superficial via `CHANGES_REQUESTED`.
+
 ## What NOT to Do
 - Do not request stylistic changes (formatting, naming conventions) unless they indicate a bug
 - Do not request architectural refactors beyond the scope of this PR
