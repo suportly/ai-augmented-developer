@@ -159,7 +159,7 @@
 
 ### T010 — Editar `skills/help/SKILL.md`: state-aware via `pipeline_state` + flag `--plain`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `skills/help/SKILL.md`
