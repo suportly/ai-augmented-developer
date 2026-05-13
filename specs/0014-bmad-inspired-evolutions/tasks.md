@@ -22,7 +22,7 @@
 
 ### T001 — Criar 10 fixtures de estado de pipeline + fixture sintética de 50 specs
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `tests/fixtures/pipeline_state/empty/.gitkeep`
