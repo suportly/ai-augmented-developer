@@ -57,7 +57,7 @@
 
 ### T003 — GREEN: implementar `src/aiadev/pipeline_state.py`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - create: `src/aiadev/pipeline_state.py`
