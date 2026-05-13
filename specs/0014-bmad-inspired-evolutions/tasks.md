@@ -44,7 +44,7 @@
 
 ### T002 — RED: `tests/test_pipeline_state.py` cobrindo Story 4 AC-1 a AC-8 + budget
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `tests/test_pipeline_state.py`
