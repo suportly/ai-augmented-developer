@@ -1,0 +1,3 @@
+# user.toml — gitignored at _aiadev/user.toml
+[skill.config]
+timeout = 60

@@ -1,0 +1,22 @@
+{
+  "skill": {
+    "menu": [
+      {
+        "code": "A",
+        "description": "first"
+      },
+      {
+        "code": "B",
+        "description": "second-overridden-by-team"
+      },
+      {
+        "code": "C",
+        "description": "appended-by-team"
+      },
+      {
+        "code": "D",
+        "description": "appended-by-user"
+      }
+    ]
+  }
+}

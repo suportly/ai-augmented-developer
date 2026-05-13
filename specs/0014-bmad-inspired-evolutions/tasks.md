@@ -175,7 +175,7 @@
 
 ### T011 — Criar fixtures TOML em `tests/fixtures/customization/`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `tests/fixtures/customization/scalar_override/{base,team,user}.toml`

@@ -1,0 +1,8 @@
+# team.toml — committed at _aiadev/team.toml
+[[skill.menu]]
+code = "B"
+description = "second-overridden-by-team"
+
+[[skill.menu]]
+code = "C"
+description = "appended-by-team"

@@ -1,0 +1,4 @@
+# base.toml — shipped by skill
+[skill.config]
+timeout = 30
+retries = 3

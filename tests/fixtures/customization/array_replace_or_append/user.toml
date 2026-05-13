@@ -1,0 +1,4 @@
+# user.toml — gitignored at _aiadev/user.toml
+[[skill.menu]]
+code = "D"
+description = "appended-by-user"
