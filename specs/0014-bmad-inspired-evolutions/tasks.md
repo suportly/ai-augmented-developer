@@ -274,7 +274,7 @@
 
 ### T018 — Criar `skills/task-context/SKILL.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T017
 - **Files:**
   - create: `skills/task-context/SKILL.md`
