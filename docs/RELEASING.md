@@ -147,3 +147,46 @@ ls .aiadev/installed.yaml CLAUDE.md
 ```
 
 If all four commands succeed, the release is healthy.
+
+## Releasing the VS Code extension
+
+The `aiadev Spec Explorer` extension (`vscode-extension/`) auto-releases
+whenever a new version lands on `main`. There is no manual tag step.
+
+### Routine release
+
+1. On a feature branch, edit `vscode-extension/package.json` to bump
+   `version`, and add a matching `## [X.Y.Z] - YYYY-MM-DD` block to
+   `vscode-extension/CHANGELOG.md`.
+2. Open a PR, get review, merge to `main`.
+
+That's it. The `vscode-extension` workflow on `main` push reads
+`vscode-extension/package.json`, checks whether the tag
+`vscode-extension-v<version>` already exists on origin, and if not:
+
+- Builds and packages the VSIX.
+- Creates and pushes the `vscode-extension-v<version>` tag.
+- Publishes to the VS Code Marketplace (when `VSCE_PAT` is configured).
+- Creates a GitHub release with the VSIX attached.
+
+If the tag already exists, the workflow skips silently — every main
+push is idempotent.
+
+### Manual re-cut
+
+Pushing a `vscode-extension-v*` tag directly still works, e.g. to
+re-publish an existing version after a Marketplace outage:
+
+```bash
+git tag -a vscode-extension-v0.0.11 -m "re-cut 0.0.11"
+git push origin vscode-extension-v0.0.11
+```
+
+### Why this matters
+
+Until 2026-05-14 the workflow only fired on tag push. When PR #35
+bumped to 0.0.11 without a matching tag (the bump was bundled inside
+a feature PR), the Marketplace stayed on 0.0.10 and the gap was only
+caught by a user report. The auto-release flow above eliminates that
+failure mode.
+

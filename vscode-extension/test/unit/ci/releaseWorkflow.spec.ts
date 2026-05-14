@@ -34,6 +34,23 @@ describe('ci/release-workflow', () => {
     expect(content).to.include("startsWith(github.ref, 'refs/tags/vscode-extension-v')");
   });
 
+  it('also gates the release job on a main push (auto-release path)', () => {
+    expect(content).to.include("github.ref == 'refs/heads/main'");
+  });
+
+  it('resolves release context from package.json on the main-push path', () => {
+    expect(content).to.match(/jq\s+-r\s+\.version\s+vscode-extension\/package\.json/);
+  });
+
+  it('creates and pushes the tag inline when releasing from main', () => {
+    expect(content).to.match(/git tag -a "\$TAG"/);
+    expect(content).to.match(/git push origin "\$TAG"/);
+  });
+
+  it('skips the tag-creation step on the tag-push path (create_tag == false)', () => {
+    expect(content).to.match(/steps\.ctx\.outputs\.create_tag\s*==\s*'true'/);
+  });
+
   it('grants contents: write to the release job', () => {
     const releaseSection = content.split(/^\s{2}release:/m)[1] ?? '';
     expect(releaseSection).to.match(/permissions:\s*\n\s*contents:\s*write/);
@@ -48,6 +65,10 @@ describe('ci/release-workflow', () => {
   });
 
   it('skips Marketplace publish when VSCE_PAT is not set', () => {
-    expect(content).to.match(/if:\s*env\.VSCE_PAT\s*!=\s*''/);
+    // Tolerant of additional conjuncts on the same `if:` line (e.g. the
+    // should_release gate added when release-on-main was introduced).
+    // The contract is: the publish step's `if:` expression includes a
+    // `env.VSCE_PAT != ''` clause.
+    expect(content).to.match(/if:[^\n]*env\.VSCE_PAT\s*!=\s*''/);
   });
 });
