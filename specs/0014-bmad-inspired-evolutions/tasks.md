@@ -261,7 +261,7 @@
 
 ### T017 — RED: `tests/test_task_context.py` cobrindo Story 1 AC-1 a AC-4
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T016
 - **Files:**
   - create: `tests/test_task_context.py`
