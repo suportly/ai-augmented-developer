@@ -218,7 +218,7 @@
 
 ### T014 — Editar `install.py` + `sync_assets.py`: emitir `_aiadev/` stubs
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T013
 - **Files:**
   - modify: `src/aiadev/commands/install.py`
