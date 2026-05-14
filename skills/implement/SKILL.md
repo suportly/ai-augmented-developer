@@ -69,6 +69,78 @@ After the last task:
 - Dispatch a final full-branch review.
 - Hand off to `finishing-a-branch` to open the PR.
 
+## Task-context integration (opt-in)
+
+Story 1 of `specs/0014-bmad-inspired-evolutions/spec.md` adds the
+`task-context` skill (see `skills/task-context/SKILL.md`), which
+composes a per-task context file at
+`specs/<branch>/task-context/<TID>-<slug>.md` ahead of the implementer
+dispatch. This integration is **opt-in**.
+
+### When the integration is active
+
+Either:
+
+1. The active preset's `preset.yaml` declares `task_context: true`, OR
+2. The orchestrator was invoked with `aiadev preflight implement
+   --task-context`.
+
+When neither flag is set, the implementer prompt below — the inline
+"Spec context / Plan context / Files to create or modify" form — runs
+**byte-for-byte unchanged**. The task-context wiring is purely additive.
+
+### When active, the loop changes
+
+Insert two extra steps between step 3 (Treat `in_progress` as `pending`)
+and step 4 (Dispatch implementer):
+
+3.5. **Compose the task-context file.** Invoke the `task-context` skill
+     for the current `<TID>`. Mechanically that runs the helper:
+
+   ```bash
+   python -c "from pathlib import Path; from aiadev.task_context import compose; print(compose(Path.cwd(), '<TID>'))"
+   ```
+
+   The call returns the path to the rendered file under
+   `specs/<branch>/task-context/`. If a previous task-context file
+   already exists for this `<TID>`, check `aiadev.task_context.is_stale`
+   first and skip the recompose when it returns `False` — the same
+   artifact is reused across retries within a session.
+
+   ```bash
+   python -c "from pathlib import Path; from aiadev.task_context import is_stale; print(is_stale(Path('specs/<branch>/task-context/<TID>-<slug>.md')))"
+   ```
+
+3.6. **Replace the implementer prompt.** Instead of the inline
+     `Spec context` / `Plan context` / `Files to create or modify`
+     blocks documented in the implementer-prompt section below,
+     dispatch the implementer with this shorter prompt that loads the
+     per-task context by path:
+
+   ```markdown
+   You are implementing Task <TID> of an approved plan.
+
+   Your full per-task context file lives at:
+   specs/<branch>/task-context/<TID>-<slug>.md
+
+   Read it first. It contains the spec slice, plan slice,
+   files-to-modify with excerpts, the TDD checklist, and a pointer to
+   the previous task-context (if any).
+
+   Workflow: test-first. Write a failing test, confirm it fails for
+   the right reason, implement the minimum code to pass, confirm it
+   passes. Run only the tests that exercise the changed code.
+
+   Return exactly one status as the first line of your response:
+   - DONE
+   - DONE_WITH_CONCERNS
+   - NEEDS_CONTEXT
+   - BLOCKED
+   ```
+
+The remaining loop steps (5 onwards: status handling, spec reviewer,
+code quality reviewer, status flip and commit) are unchanged.
+
 ## Model selection
 
 | Task type | Model |

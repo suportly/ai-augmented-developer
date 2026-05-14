@@ -287,7 +287,7 @@
 
 ### T019 — Editar `skills/implement/SKILL.md`: invocação opt-in de `task-context`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T018
 - **Files:**
   - modify: `skills/implement/SKILL.md`
