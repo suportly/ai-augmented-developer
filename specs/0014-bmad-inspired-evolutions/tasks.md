@@ -192,7 +192,7 @@
 
 ### T012 — RED: `tests/test_customization.py` cobrindo Story 2 AC-1 a AC-5
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - create: `tests/test_customization.py`
