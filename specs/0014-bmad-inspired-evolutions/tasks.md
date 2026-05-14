@@ -300,7 +300,7 @@
 
 ### T020 — Ativar `task_context: true` em `presets/django-drf-react/preset.yaml` (dogfood)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T019
 - **Files:**
   - modify: `presets/django-drf-react/preset.yaml`
