@@ -4,7 +4,7 @@
 
 **Branch:** `feature/bmad-inspired-evolutions`
 **Created:** 2026-05-13
-**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
+**Status:** PR Open — #35 <!-- Draft | In review | Approved | Implemented | PR Open | Merged -->
 **Spec ID:** 0014 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
