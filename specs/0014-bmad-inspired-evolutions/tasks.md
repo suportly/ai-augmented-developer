@@ -248,7 +248,7 @@
 
 ### T016 — Criar `templates/task-context-template.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `templates/task-context-template.md`
