@@ -315,7 +315,7 @@
 
 ### T021 — Adicionar flag `--task-context` ao CLI `aiadev preflight implement`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T019
 - **Files:**
   - modify: `src/aiadev/cli.py`
