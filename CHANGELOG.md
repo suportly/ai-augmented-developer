@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-13
+
 Spec **0014 — bmad-inspired-evolutions**. Comparative analysis with
 `bmad-code-org/BMAD-METHOD` v6.6.0 inspired four additive evolutions:
 opt-in per-task context composition, a 3-tier TOML customization
@@ -67,6 +69,21 @@ compatible — existing pipelines run byte-for-byte unchanged.
   an agent's `principles[]` array, and of a scalar `default_model`).
 - Comparative analysis with `bmad-code-org/BMAD-METHOD` v6.6.0
   inspired this feature — see [CREDITS.md](./CREDITS.md).
+
+### Fixed
+
+- **VS Code extension parser** (released as `aiadev-spec-explorer`
+  0.0.11): `parser/tasks.ts` now accepts paragraph-style task
+  fields without the leading `- ` list bullet. Real trigger:
+  nzr-kdp specs `032-shop-print-order-lifecycle` (17 tasks) and
+  `034-shop-public-checkout-overhaul` (41 tasks) wrote each task
+  block as `**Status**: done` (paragraph form, every field on its
+  own line). The previous regex required the leading `- `, so all
+  58 tasks rendered as `?` instead of green checks. Canonical
+  `- **Status:** done` keeps working unchanged. The Python parser
+  in `src/aiadev/tasks_status.py` is intentionally left strict —
+  the `implement` orchestrator round-trips that file and requires
+  the canonical shape.
 
 ## [0.18.1] - 2026-05-06
 
