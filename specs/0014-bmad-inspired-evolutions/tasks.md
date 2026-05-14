@@ -233,7 +233,7 @@
 
 ### T015 — Escrever `docs/customization.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T013
 - **Files:**
   - create: `docs/customization.md`
