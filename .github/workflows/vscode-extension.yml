@@ -42,29 +42,86 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/vscode-extension-v')
+    # Fires on:
+    #   - vscode-extension-v* tag push (manual re-cut path)
+    #   - main push, only when package.json carries a version
+    #     that doesn't yet have a matching tag on origin
+    if: >
+      github.event_name == 'push' &&
+      (startsWith(github.ref, 'refs/tags/vscode-extension-v') ||
+       github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: vscode-extension
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve release context
+        id: ctx
+        env:
+          GITHUB_REF_NAME: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME#refs/tags/}"
+            VERSION="${TAG#vscode-extension-v}"
+            SHOULD_RELEASE=true
+            CREATE_TAG=false
+          else
+            VERSION=$(jq -r .version vscode-extension/package.json)
+            TAG="vscode-extension-v${VERSION}"
+            if git ls-remote --tags --exit-code origin "${TAG}" >/dev/null 2>&1; then
+              echo "Tag ${TAG} already exists on origin; nothing to release."
+              SHOULD_RELEASE=false
+              CREATE_TAG=false
+            else
+              echo "Version ${VERSION} has no matching tag; auto-releasing."
+              SHOULD_RELEASE=true
+              CREATE_TAG=true
+            fi
+          fi
+          {
+            echo "tag=${TAG}"
+            echo "version=${VERSION}"
+            echo "should_release=${SHOULD_RELEASE}"
+            echo "create_tag=${CREATE_TAG}"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
+        if: steps.ctx.outputs.should_release == 'true'
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: vscode-extension/package-lock.json
-      - run: npm ci
-      - run: npm run package
+      - name: Install
+        if: steps.ctx.outputs.should_release == 'true'
+        working-directory: vscode-extension
+        run: npm ci
+      - name: Package
+        if: steps.ctx.outputs.should_release == 'true'
+        working-directory: vscode-extension
+        run: npm run package
+      - name: Create and push tag (main-push path)
+        if: steps.ctx.outputs.create_tag == 'true'
+        env:
+          TAG: ${{ steps.ctx.outputs.tag }}
+          VERSION: ${{ steps.ctx.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "vscode-extension ${VERSION} (auto-tagged from main)"
+          git push origin "$TAG"
       - name: Publish to Marketplace
-        if: env.VSCE_PAT != ''
+        if: steps.ctx.outputs.should_release == 'true' && env.VSCE_PAT != ''
+        working-directory: vscode-extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx --no-install vsce publish --no-dependencies --pat "$VSCE_PAT"
       - name: Attach VSIX to GitHub release
+        if: steps.ctx.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.ctx.outputs.tag }}
           files: vscode-extension/*.vsix
