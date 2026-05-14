@@ -33,10 +33,22 @@ from ..preflight import PIPELINE_SKILLS, check
     is_flag=True,
     help="Iterate every specs/*/ directory; mutually exclusive with --feature.",
 )
+@click.option(
+    "--task-context/--no-task-context",
+    "task_context",
+    default=False,
+    help=(
+        "Opt-in (default off): only meaningful with the 'implement' skill. "
+        "Tells the orchestrator to compose specs/<branch>/task-context/<TID>.md "
+        "before each task; alternative trigger to preset.yaml 'task_context: true'. "
+        "Silently ignored for non-implement skills."
+    ),
+)
 def preflight_command(
     skill: str | None,
     feature: str | None,
     all_features: bool,
+    task_context: bool,
 ) -> None:
     if all_features and feature:
         raise click.UsageError("--all is mutually exclusive with --feature")
@@ -63,6 +75,11 @@ def preflight_command(
     exit_code = 0
     for feature_dir in targets:
         skill_for_dir = skill or _highest_stage(feature_dir)
+        if task_context and skill_for_dir == "implement":
+            click.echo(
+                "pre-flight: task-context enabled (will compose "
+                "specs/<branch>/task-context/<TID>.md before each task)"
+            )
         issues = check(skill_for_dir, feature_dir, repo_root=repo_root)
         for issue in issues:
             click.echo(issue.message, err=True)

@@ -53,3 +53,10 @@ adds_articles:
 # Inherited articles this preset tightens (not removes).
 tightens:
   - II — Test-first (integration test required for endpoints and Celery tasks)
+
+# Dogfood: Story 1 of specs/0014-bmad-inspired-evolutions/ activates the
+# task-context skill in CI of the framework itself, satisfying Article III's
+# named-user requirement (cl-8). Adopters of this preset opt into the
+# per-task context bundle by default; flip to `false` to revert to the
+# byte-for-byte unchanged implement loop.
+task_context: true

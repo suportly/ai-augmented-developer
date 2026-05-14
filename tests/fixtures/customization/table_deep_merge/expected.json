@@ -1,0 +1,8 @@
+{
+  "skill": {
+    "config": {
+      "timeout": 60,
+      "retries": 5
+    }
+  }
+}

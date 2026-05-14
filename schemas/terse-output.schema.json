@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/terse-output.schema.json",
   "title": "Terse reviewer output",
-  "description": "When aiadev.terseMode is on, reviewer subagents (spec-document-reviewer, plan-document-reviewer, code-reviewer) must emit findings in this shape. One finding = one line. Multi-paragraph messages are rejected so the 30% token-reduction target (spec 0009) remains measurable.",
+  "description": "When aiadev.terseMode is on, reviewer subagents (spec-document-reviewer, plan-document-reviewer, code-reviewer) must emit findings in this shape. One finding = one line. Multi-paragraph messages are rejected so the 30% token-reduction target (spec 0009) remains measurable. As of spec 0014 Story 3 sc5, an APPROVED verdict's `### Why no issues` block is encoded as 🟢 findings with `kind: \"verification\"` — one per audit check, rendered as `🟢 file:line — verificação realizada`.",
   "type": "object",
   "additionalProperties": false,
   "required": ["verdict", "findings"],
@@ -27,7 +27,7 @@
         "severity": {
           "type": "string",
           "enum": ["🔴", "🟡", "🟢"],
-          "description": "Glyph prefix. Red = blocking, yellow = should-fix, green = nit/FYI."
+          "description": "Glyph prefix. Red = blocking, yellow = should-fix, green = nit/FYI or verification (see `kind`)."
         },
         "location": {
           "type": "string",
@@ -40,8 +40,25 @@
           "maxLength": 140,
           "pattern": "^[^\\r\\n]+$",
           "description": "Single-line finding. No newlines. 140-char ceiling keeps lines terminal-friendly and keeps the token-reduction target honest."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["nit", "verification"],
+          "description": "Optional discriminator for 🟢 findings. `nit` (default when omitted) is an FYI; `verification` is an explicit audit check listed under APPROVED's `### Why no issues` block — Story 3 sc5 of spec 0014. Reviewer subagents emit one such finding per check (e.g. `🟢 file:line — verificação realizada`)."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "verification" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "severity": { "const": "🟢" } },
+            "$comment": "verification findings are intrinsically green: they record a passing audit, not a defect."
+          }
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,9 @@
+# _aiadev/team.toml — committed, project-level customization
+
+# This file overrides the base configuration shipped by skills.
+# Precedence: user.toml > team.toml > base (skill's customize.toml).
+# Tables deep-merge; arrays of tables match by `code` or `id`
+# (replace-or-append). Scalars: the rightmost layer wins.
+#
+# Place personal/local overrides in `_aiadev/user.toml` (gitignored).
+# See docs/customization.md for the full merge rules and examples.

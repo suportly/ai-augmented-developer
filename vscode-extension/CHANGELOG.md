@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.11] - 2026-05-13
+
+### Fixed
+
+- `parser/tasks.ts` now accepts paragraph-style task fields where the `Status`, `Depends on`, `Files`, etc. lines are NOT prefixed by a `- ` list bullet. Real trigger: nzr-kdp specs `032-shop-print-order-lifecycle` (17 tasks) and `034-shop-public-checkout-overhaul` (41 tasks) wrote each task block as `**Status**: done` + `**Depends on**: —` + `**Files**:` (paragraph form, every field on its own line, only the `Files` sub-list using bullets). The previous regex required the leading `- `, so all 58 tasks fell through to `unknown` and rendered as "?" instead of green checks. Canonical `- **Status:** done` keeps working unchanged.
+
 ## [0.0.10] - 2026-05-07
 
 ### Fixed

@@ -69,6 +69,78 @@ After the last task:
 - Dispatch a final full-branch review.
 - Hand off to `finishing-a-branch` to open the PR.
 
+## Task-context integration (opt-in)
+
+Story 1 of `specs/0014-bmad-inspired-evolutions/spec.md` adds the
+`task-context` skill (see `skills/task-context/SKILL.md`), which
+composes a per-task context file at
+`specs/<branch>/task-context/<TID>-<slug>.md` ahead of the implementer
+dispatch. This integration is **opt-in**.
+
+### When the integration is active
+
+Either:
+
+1. The active preset's `preset.yaml` declares `task_context: true`, OR
+2. The orchestrator was invoked with `aiadev preflight implement
+   --task-context`.
+
+When neither flag is set, the implementer prompt below — the inline
+"Spec context / Plan context / Files to create or modify" form — runs
+**byte-for-byte unchanged**. The task-context wiring is purely additive.
+
+### When active, the loop changes
+
+Insert two extra steps between step 3 (Treat `in_progress` as `pending`)
+and step 4 (Dispatch implementer):
+
+3.5. **Compose the task-context file.** Invoke the `task-context` skill
+     for the current `<TID>`. Mechanically that runs the helper:
+
+   ```bash
+   python -c "from pathlib import Path; from aiadev.task_context import compose; print(compose(Path.cwd(), '<TID>'))"
+   ```
+
+   The call returns the path to the rendered file under
+   `specs/<branch>/task-context/`. If a previous task-context file
+   already exists for this `<TID>`, check `aiadev.task_context.is_stale`
+   first and skip the recompose when it returns `False` — the same
+   artifact is reused across retries within a session.
+
+   ```bash
+   python -c "from pathlib import Path; from aiadev.task_context import is_stale; print(is_stale(Path('specs/<branch>/task-context/<TID>-<slug>.md')))"
+   ```
+
+3.6. **Replace the implementer prompt.** Instead of the inline
+     `Spec context` / `Plan context` / `Files to create or modify`
+     blocks documented in the implementer-prompt section below,
+     dispatch the implementer with this shorter prompt that loads the
+     per-task context by path:
+
+   ```markdown
+   You are implementing Task <TID> of an approved plan.
+
+   Your full per-task context file lives at:
+   specs/<branch>/task-context/<TID>-<slug>.md
+
+   Read it first. It contains the spec slice, plan slice,
+   files-to-modify with excerpts, the TDD checklist, and a pointer to
+   the previous task-context (if any).
+
+   Workflow: test-first. Write a failing test, confirm it fails for
+   the right reason, implement the minimum code to pass, confirm it
+   passes. Run only the tests that exercise the changed code.
+
+   Return exactly one status as the first line of your response:
+   - DONE
+   - DONE_WITH_CONCERNS
+   - NEEDS_CONTEXT
+   - BLOCKED
+   ```
+
+The remaining loop steps (5 onwards: status handling, spec reviewer,
+code quality reviewer, status flip and commit) are unchanged.
+
 ## Model selection
 
 | Task type | Model |
@@ -155,6 +227,57 @@ Return exactly one status as the first line:
 - APPROVED
 - ISSUES — followed by a list with specific fixes suggested
 ```
+
+## Reviewer re-dispatch gate
+
+Story 3 of `specs/0014-bmad-inspired-evolutions/spec.md` adds the
+zero-findings-halt rule for reviewer subagents (`code-reviewer`,
+`spec-document-reviewer`, `plan-document-reviewer`). The agent-side
+contract lives in `agents/<reviewer>.md` under the
+"Output rule for APPROVED on non-trivial change" section. The
+orchestrator-side counterpart — detecting violations and re-dispatching
+— lives HERE.
+
+For every reviewer dispatched in steps 6 and 7 of the loop:
+
+1. **Read the verdict line.** If the first line is `APPROVED`, parse
+   the rest of the response.
+2. **Detect the `### Why no issues` block.** A valid response has
+   either a `### Why no issues` H3 with ≥ 3 bullet items each in the
+   shape `<file:line> — <verification>`, OR (in terse-mode, see
+   `.claude/rules/terse-mode.md`) ≥ 3 lines starting with the green
+   glyph `🟢 file:line — verification`. Anything else is a missing
+   block.
+3. **Decide whether the change is non-trivial.** Use the canonical
+   cl-5 definition: `git diff --shortstat --ignore-blank-lines` > 10
+   LOC after dropping `.md`, `.json`, `.lock`, `.toml`, and any path
+   under `docs/`. Spec/plan creation under `specs/<branch>/{spec,plan}.md`
+   is ALWAYS non-trivial. The helper
+   `aiadev.review_log.is_non_trivial_change` implements this exactly;
+   `aiadev preflight requesting-code-review` exposes the same check
+   from the CLI.
+4. **Append a review-log entry** to `specs/<branch>/.review-log.jsonl`
+   regardless of verdict. Shape:
+   `{"timestamp": <ISO-8601 UTC>, "reviewer": <name>, "verdict":
+   "APPROVED"|"CHANGES_REQUESTED", "has_why_no_issues_block": <bool>,
+   "task_id": <TID>}`. Use `aiadev.review_log.append_review_entry`.
+5. **Re-dispatch when the rule is violated.** If verdict is `APPROVED`,
+   the change is non-trivial, and the `### Why no issues` block is
+   missing, dispatch the SAME reviewer again with reinforced
+   adversarial framing. The second prompt MUST escalate to something
+   like: "You approved without justifying. Assume there is at least one bug
+   and either show it OR justify the absence by category (security,
+   performance, spec compliance, tests, complexity)." See
+   `agents/<reviewer>.md` for the canonical wording.
+6. **Hard limit: 2 re-dispatches per reviewer per task.** On the
+   third dispatch attempt, accept the verdict but append a
+   `WARNING: reviewer exhausted re-dispatch budget without justification`
+   line to `.review-log.jsonl` and proceed. Plan ADR-4 calls this out
+   as the loop-prevention guarantee.
+7. **Trivial-change exception.** If the change is trivial (≤ 10 LOC
+   after the cl-5 exclusions), the rule does not apply — accept the
+   `APPROVED` verdict silently and do not re-dispatch. Story 3 sc3
+   exists to keep noise out of the loop.
 
 ## Rules that do not bend
 

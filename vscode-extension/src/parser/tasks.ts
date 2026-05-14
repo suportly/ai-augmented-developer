@@ -5,11 +5,13 @@
  *
  *   1. Canonical heading with status bullet (templates/tasks-template.md).
  *      Any heading level from H3 to H6 is accepted, so authors may group
- *      tasks under a `### Phase N` header and demote tasks to `####`:
+ *      tasks under a `### Phase N` header and demote tasks to `####`. The
+ *      `- ` list bullet is optional; paragraph-style fields work too:
  *
  *        ### T001 — Title
  *        #### T001 — Title           (under a `### Phase` group)
- *        - **Status:** pending
+ *        - **Status:** pending       (canonical bullet form)
+ *        **Status**: done            (paragraph form, also accepted)
  *
  *   2. Loose heading (no separator); status defaults to `unknown` and may
  *      be updated by a status bullet or a table row (#4):
@@ -34,11 +36,13 @@
 import type { Task, TaskStatus } from './types';
 
 const HEADING_RE = /^#{3,6}\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
-// Tolerant of bold around the label and/or value, and of trailing prose
-// after the status word (e.g. `- Status: **done** (commit abc1234)`).
+// Tolerant of bold around the label and/or value, of trailing prose after
+// the status word (e.g. `- Status: **done** (commit abc1234)`), and of the
+// optional leading `- ` bullet — paragraph-style task fields (each on its
+// own line without a list-bullet prefix) are accepted too.
 // Accepts `- **Status:** done`, `- Status: done`, `- **Status**: done`,
-// `- Status: **done** (commit X)`, etc.
-const STATUS_BULLET_RE = /^-\s+\*{0,2}Status:?\*{0,2}:?\s*\*{0,2}([A-Za-z_-]+)\*{0,2}/i;
+// `- Status: **done** (commit X)`, `**Status**: done`, `Status: done`, etc.
+const STATUS_BULLET_RE = /^(?:-\s+)?\*{0,2}Status:?\*{0,2}:?\s*\*{0,2}([A-Za-z_-]+)\*{0,2}/i;
 const CHECKBOX_RE =
   /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
 const TABLE_STATUS_RE =

@@ -24,9 +24,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DEST = REPO_ROOT / "src" / "aiadev" / "_assets"
 
 # (source-relative-to-repo-root, dest-name-under-_assets) pairs.
+#
+# The `_aiadev/team.toml` stub template is shipped explicitly even though
+# `templates/` already covers its parent directory: the explicit entry is
+# the manifest contract referenced by Story 2 sc1 of
+# ``specs/0014-bmad-inspired-evolutions/`` (`install.py` emits the stub;
+# this script tracks the template the install reads).
 COPY_PLAN: list[tuple[str, str]] = [
     ("constitution.md", "constitution.md"),
     ("templates", "templates"),
+    ("templates/_aiadev/team.toml", "templates/_aiadev/team.toml"),
     ("schemas", "schemas"),
     ("skills", "skills"),
     ("presets", "presets"),

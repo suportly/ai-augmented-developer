@@ -157,6 +157,11 @@ def check(
                 )
             )
 
+    if skill == "requesting-code-review":
+        violation = _last_review_violates_zero_findings_halt(feature_dir)
+        if violation is not None:
+            issues.append(PreflightIssue(violation))
+
     if not _should_abort(env):
         issues = [PreflightIssue(i.message, would_abort=False) for i in issues]
 
@@ -217,6 +222,32 @@ def _branch_header_of(text: str) -> str:
 
     match = re.search(r"\*\*Branch:\*\*\s*`([^`]+)`", text)
     return match.group(1) if match else ""
+
+
+def _last_review_violates_zero_findings_halt(feature_dir: Path) -> str | None:
+    """Return a diagnostic if the last review entry breaks zero-findings-halt.
+
+    Story 3 sc1/sc2 from ``specs/0014-bmad-inspired-evolutions/spec.md``:
+    an APPROVED reviewer output on a non-trivial change MUST carry the
+    ``### Why no issues`` block. The reviewer subagents record each run
+    as a JSON line in ``<feature_dir>/.review-log.jsonl``; we inspect the
+    last valid entry. Returns ``None`` when there is nothing to flag
+    (no log, last entry is CHANGES_REQUESTED, or APPROVED with the
+    block present).
+    """
+    from .review_log import last_entry_from_log
+
+    last_valid = last_entry_from_log(feature_dir / ".review-log.jsonl")
+    if last_valid is None:
+        return None
+    if last_valid.get("verdict") != "APPROVED":
+        return None
+    if last_valid.get("has_why_no_issues_block"):
+        return None
+    return (
+        "pre-flight: last APPROVED review missing the `### Why no issues` "
+        "block — re-dispatch the reviewer with adversarial framing"
+    )
 
 
 def _review_is_approved(repo_root: Path | None) -> bool:

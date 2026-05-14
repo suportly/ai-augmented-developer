@@ -18,6 +18,10 @@ Starting in v0.2, this project adopts spec-kit's architecture for spec-driven de
 
 Where we copy verbatim (for example markdownlint config or template scaffolds), the original license notice is preserved alongside the file.
 
+### [bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)
+
+A comparative analysis of BMAD-METHOD v6.6.0 (MIT license at time of adaptation) inspired the feature `0014-bmad-inspired-evolutions`, which introduces the `task-context` skill (Story 1) for per-task context composition before each implementer dispatch, the 3-tier customization resolver (Story 2) layering skill `customize.toml` (base) → `_aiadev/team.toml` (committed) → `_aiadev/user.toml` (gitignored), the zero-findings-halt review pattern (Story 3) requiring an explicit `### Why no issues` block + re-dispatch gate when reviewer subagents return APPROVED on a non-trivial diff, and the state-aware `help` skill (Story 4) via the new `pipeline_state` module. No code is copied verbatim; the framework adapts BMAD's design ideas to the existing Markdown-skill architecture.
+
 ## Bundled catalogs
 
 ### [contains-studio/agents](https://github.com/contains-studio/agents) — not bundled

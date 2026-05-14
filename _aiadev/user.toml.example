@@ -1,0 +1,19 @@
+# _aiadev/user.toml.example — copy to _aiadev/user.toml for personal overrides
+#
+# This file is gitignored; commit only this `.example`. Anything you put in
+# `_aiadev/user.toml` overrides team-level values from `_aiadev/team.toml`,
+# which in turn overrides the base `customize.toml` shipped with each skill.
+#
+# Precedence: user.toml > team.toml > base
+# Tables deep-merge; arrays of tables match by `code` or `id`
+# (replace-or-append). Scalars: the rightmost layer wins.
+#
+# See docs/customization.md for the full merge rules and worked examples.
+
+# Example — uncomment and edit to your taste:
+#
+# default_model = "haiku"
+#
+# [[skill.menu]]
+# code = "my-shortcut"
+# description = "personal helper not shared with the team"

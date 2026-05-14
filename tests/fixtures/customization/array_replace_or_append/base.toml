@@ -1,0 +1,8 @@
+# base.toml — shipped by skill
+[[skill.menu]]
+code = "A"
+description = "first"
+
+[[skill.menu]]
+code = "B"
+description = "second"

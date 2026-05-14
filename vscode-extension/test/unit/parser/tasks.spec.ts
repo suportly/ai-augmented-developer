@@ -171,6 +171,33 @@ describe('parseTasks', () => {
     ]);
   });
 
+  it('accepts paragraph-style task fields without the leading "- " bullet (real trigger: nzr-kdp specs 032/034)', () => {
+    const source = [
+      '### T001 [Phase 0] Management command audit',
+      '',
+      '**Status**: done',
+      '**Depends on**: —',
+      '**Files**:',
+      '- create: `backend/foo.py`',
+      '',
+      '### T002 [Phase 0] Plain colon, no bold around the label',
+      '',
+      'Status: in_progress',
+      '',
+      '### T003 [Phase 1] Canonical bullet form still works',
+      '',
+      '- **Status:** pending',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.status)).to.deep.equal([
+      'done',
+      'in_progress',
+      'pending',
+    ]);
+  });
+
   it('accepts status synonyms: completed/complete/finished -> done, todo -> pending, wip/in-progress -> in_progress (case-insensitive)', () => {
     const source = [
       '### T001 — One',

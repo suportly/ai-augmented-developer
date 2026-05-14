@@ -52,6 +52,25 @@ _ROLE_PRIORITY = {
 
 MANIFEST_REL_PATH = Path(".aiadev") / "installed.yaml"
 
+# Story 2 sc1 of specs/0014-bmad-inspired-evolutions: every project
+# install emits an empty `_aiadev/team.toml` (commit-ready, header-only)
+# and ensures `.gitignore` carries the line for `_aiadev/user.toml`.
+_AIADEV_DIR = Path("_aiadev")
+_TEAM_TOML_REL = _AIADEV_DIR / "team.toml"
+_USER_TOML_GITIGNORE_LINE = "_aiadev/user.toml"
+_TEAM_TOML_TEMPLATE_REL = Path("templates") / "_aiadev" / "team.toml"
+_TEAM_TOML_FALLBACK = (
+    "# _aiadev/team.toml — committed, project-level customization\n"
+    "\n"
+    "# This file overrides the base configuration shipped by skills.\n"
+    "# Precedence: user.toml > team.toml > base (skill's customize.toml).\n"
+    "# Tables deep-merge; arrays of tables match by `code` or `id`\n"
+    "# (replace-or-append). Scalars: the rightmost layer wins.\n"
+    "#\n"
+    "# Place personal/local overrides in `_aiadev/user.toml` (gitignored).\n"
+    "# See docs/customization.md for the full merge rules and examples.\n"
+)
+
 _PLATFORMS = {
     "claude_code": claude_code,
     "cursor": cursor,
@@ -282,7 +301,49 @@ def install(
         manifest.upsert(record)
         save_manifest(manifest, _manifest_path(install_root))
 
+        # Customization stubs land at the project root only — they are a
+        # consumer-project concern, not a per-user-home one. The helpers
+        # are idempotent: re-running install never overwrites a hand-edit
+        # nor duplicates the .gitignore line.
+        if scope == "project":
+            _ensure_team_toml_stub(project_root, framework_root)
+            _ensure_gitignore_entry(project_root)
+
     return report
+
+
+def _ensure_team_toml_stub(project_root: Path, framework_root: Path | None) -> None:
+    """Create ``_aiadev/team.toml`` if missing; never overwrite a hand-edit."""
+    target = project_root / _TEAM_TOML_REL
+    if target.exists():
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_team_toml_template(framework_root), encoding="utf-8")
+
+
+def _team_toml_template(framework_root: Path | None) -> str:
+    """Resolve the stub body, preferring the on-disk template."""
+    if framework_root is not None:
+        candidate = framework_root / _TEAM_TOML_TEMPLATE_REL
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    return _TEAM_TOML_FALLBACK
+
+
+def _ensure_gitignore_entry(project_root: Path) -> None:
+    """Append ``_aiadev/user.toml`` to ``.gitignore`` exactly once."""
+    gitignore = project_root / ".gitignore"
+    if gitignore.is_file():
+        existing = gitignore.read_text(encoding="utf-8")
+        if _USER_TOML_GITIGNORE_LINE in existing.splitlines():
+            return
+        suffix = "" if existing.endswith("\n") or not existing else "\n"
+        gitignore.write_text(
+            existing + suffix + _USER_TOML_GITIGNORE_LINE + "\n",
+            encoding="utf-8",
+        )
+        return
+    gitignore.write_text(_USER_TOML_GITIGNORE_LINE + "\n", encoding="utf-8")
 
 
 def _collect_artifacts(

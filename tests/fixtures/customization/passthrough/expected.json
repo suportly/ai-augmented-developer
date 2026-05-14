@@ -1,0 +1,11 @@
+{
+  "default_model": "sonnet",
+  "skill": {
+    "menu": [
+      {
+        "code": "A",
+        "description": "only A"
+      }
+    ]
+  }
+}

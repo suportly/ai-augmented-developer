@@ -1,0 +1,7 @@
+# base.toml — shipped by skill
+# source: extension foo
+skill_name = "foo-skill"
+
+[[skill.menu]]
+code = "X"
+description = "from extension"
