@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0014 — bmad-inspired-evolutions**. Comparative analysis with
+`bmad-code-org/BMAD-METHOD` v6.6.0 inspired four additive evolutions:
+opt-in per-task context composition, a 3-tier TOML customization
+resolver, a zero-findings-halt rule for reviewer subagents, and a
+state-aware `help` surface. Every change is opt-in or backwards
+compatible — existing pipelines run byte-for-byte unchanged.
+
+### Added
+
+- **`task-context` skill** (`skills/task-context/SKILL.md`) and
+  template (`templates/task-context-template.md`) producing a
+  per-task context file at `specs/<branch>/task-context/<TID>-<slug>.md`
+  before each implementer dispatch. Slices the spec acceptance
+  scenarios, the plan task block, and ≤ 40-line excerpts of the
+  files to modify, plus a TDD checklist and a pointer back to the
+  previous task context. Staleness check via `mtime` vs the last
+  `git log` of the referenced files. Opt-in via preset.yaml
+  `task_context: true` (enabled by default in
+  `presets/django-drf-react/`) or the new
+  `aiadev preflight implement --task-context` flag. When inactive,
+  the existing inline implementer prompt is preserved byte-for-byte.
+  (specs/0014 Story 1)
+- **3-tier customization resolver** (`src/aiadev/customization.py`)
+  merging skill `customize.toml` (base) → `_aiadev/team.toml`
+  (committed) → `_aiadev/user.toml` (gitignored). Scalars follow
+  layer precedence; tables deep-merge; arrays of tables match by
+  `code` / `id` and replace-or-append; parse errors abort with
+  `ERROR: <path> line <N>: <parse-error>`. Performance budget
+  ≤ 50 ms for typical merges. (specs/0014 Story 2)
+- **Zero-findings-halt rule** for the three reviewer subagents
+  (`code-reviewer`, `spec-document-reviewer`, `plan-document-reviewer`):
+  APPROVED on a non-trivial change (> 10 LOC after
+  `.md/.json/.lock/.toml/docs/` exclusions, or any spec/plan
+  creation) MUST include a `### Why no issues` block with ≥ 3
+  citable verifications. The orchestrator re-dispatches the
+  reviewer with reinforced adversarial framing on violation
+  (hard limit 2 re-dispatches per reviewer per task). New
+  `src/aiadev/review_log.py` provides the non-trivial detector
+  and JSONL log at `specs/<branch>/.review-log.jsonl`; new
+  `aiadev preflight requesting-code-review --feature <slug>`
+  validator gates `requesting-code-review` and
+  `finishing-a-branch`. (specs/0014 Story 3)
+- **State-aware `help` skill** prepends a `Próximo passo: <command>`
+  line by inspecting `specs/<branch>/` via the new
+  `aiadev.pipeline_state.recommend_next_command(workspace_path) -> dict`
+  helper. The `--plain` flag and the `AIADEV_HELP_PLAIN=1` env
+  preserve the legacy verbatim output byte-for-byte. Performance
+  budget ≤ 200 ms across a 50-spec workspace. (specs/0014 Story 4)
+- **`🟢 verification` variant** in `schemas/terse-output.schema.json`
+  for terse-mode reviewer "Why no issues" lines. Existing
+  `🔴`/`🟡`/`🟢` (nit) variants remain valid.
+- **`aiadev install`** now emits `_aiadev/team.toml` (commit-ready,
+  with a header explaining the merge rules) and adds
+  `_aiadev/user.toml` to the project's `.gitignore` when
+  `--scope project`. Idempotent across re-installs.
+- **`docs/customization.md`** documents the 3-tier resolver merge
+  rules with three worked examples (override of a skill menu, of
+  an agent's `principles[]` array, and of a scalar `default_model`).
+- Comparative analysis with `bmad-code-org/BMAD-METHOD` v6.6.0
+  inspired this feature — see [CREDITS.md](./CREDITS.md).
+
 ## [0.18.1] - 2026-05-06
 
 Docs/prompt clarification in the `implement` skill. The implementer

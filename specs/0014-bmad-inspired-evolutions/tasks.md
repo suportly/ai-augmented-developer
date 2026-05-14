@@ -329,7 +329,7 @@
 
 ### T022 — Atualizar `CREDITS.md` (atribuição BMAD) + `CHANGELOG.md` (Unreleased)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003, T010, T013, T018
 - **Files:**
   - modify: `CREDITS.md`
