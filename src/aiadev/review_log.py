@@ -73,8 +73,19 @@ def is_non_trivial_change(
     return total_loc > _LOC_THRESHOLD
 
 
-def _branch_dir(workspace_path: Path) -> Path:
-    """Return the single ``<workspace>/specs/<branch>/`` directory."""
+def branch_dir_for_workspace(workspace_path: Path) -> Path:
+    """Return the single ``<workspace>/specs/<branch>/`` directory.
+
+    Public helper so other modules (e.g. ``aiadev.task_context``) do not
+    have to import a private symbol from this module. Single-child
+    assumption is intentional and is documented in the test fixtures
+    under ``tests/fixtures/pipeline_state/``: callers operate inside a
+    workspace where ``specs/`` carries exactly one branch slug at a time.
+    The first ``iterdir()`` entry is returned without sorting because
+    that single-child precondition is checked above; callers facing a
+    multi-branch workspace should pass the branch dir directly to the
+    helpers that accept it (``last_entry_from_log``).
+    """
     specs_dir = workspace_path / "specs"
     if not specs_dir.is_dir():
         raise FileNotFoundError(
@@ -88,9 +99,14 @@ def _branch_dir(workspace_path: Path) -> Path:
     return children[0]
 
 
+# Backwards-compatible alias for any in-tree code still using the
+# underscore-prefixed name. Prefer ``branch_dir_for_workspace`` in new code.
+_branch_dir = branch_dir_for_workspace
+
+
 def append_review_entry(workspace_path: Path, entry: dict) -> None:
     """Append ``entry`` as a JSON line to the workspace review log."""
-    branch_dir = _branch_dir(workspace_path)
+    branch_dir = branch_dir_for_workspace(workspace_path)
     log_path = branch_dir / ".review-log.jsonl"
     line = json.dumps(entry) + "\n"
     with log_path.open("a", encoding="utf-8") as handle:
@@ -124,7 +140,7 @@ def last_entry_from_log(log_path: Path) -> dict | None:
 def last_review_entry(workspace_path: Path) -> dict | None:
     """Return the last valid JSON entry from the review log, or None."""
     try:
-        branch_dir = _branch_dir(workspace_path)
+        branch_dir = branch_dir_for_workspace(workspace_path)
     except FileNotFoundError:
         return None
     return last_entry_from_log(branch_dir / ".review-log.jsonl")

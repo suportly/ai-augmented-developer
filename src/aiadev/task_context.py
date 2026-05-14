@@ -19,7 +19,7 @@ from datetime import date
 from pathlib import Path
 from typing import Callable, Iterable
 
-from aiadev.review_log import _branch_dir
+from aiadev.review_log import branch_dir_for_workspace
 
 _TEMPLATE_RELATIVE = Path("templates") / "task-context-template.md"
 
@@ -60,7 +60,7 @@ def compose(workspace_path: Path, task_id: str) -> Path:
     region, and writes the rendered template to
     ``<workspace>/specs/<branch>/task-context/<TID>-<slug>.md``.
     """
-    branch_dir = _branch_dir(workspace_path)
+    branch_dir = branch_dir_for_workspace(workspace_path)
     tasks_text = (branch_dir / "tasks.md").read_text(encoding="utf-8")
     spec_text = (branch_dir / "spec.md").read_text(encoding="utf-8")
     plan_text = (branch_dir / "plan.md").read_text(encoding="utf-8")
