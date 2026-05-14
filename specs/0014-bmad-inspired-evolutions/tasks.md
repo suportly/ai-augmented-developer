@@ -204,7 +204,7 @@
 
 ### T013 — GREEN: implementar `src/aiadev/customization.py`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T012
 - **Files:**
   - create: `src/aiadev/customization.py`
