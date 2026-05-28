@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`aiadev metrics` subcommand** ([spec 0015](specs/0015-aiadev-metrics/spec.md))
+  aggregating the audit trail produced by every pipeline run. Reads
+  `.review-log.jsonl` (introduced by 0014), `tasks.md` statuses, spec
+  headers, and `git log` to emit first-pass approval rate per
+  reviewer, tasks with rework, post-cutoff coverage, `specify→merge`
+  median, and unresolved-clarification counts. Two output formats:
+  `text` (default) and `--format json` with stable `schema_version: 1`.
+  Privacy by design — reviewer prose is off by default and only
+  exposed via `--show-bodies` (cl-3). Single-repo MVP; cross-repo
+  aggregation is deferred to a future spec (cl-2). Default time
+  window is last 90 days (cl-4). Read-only, no network, no new
+  abstractions beyond `MetricsReport`. See
+  [docs/metrics.md](docs/metrics.md).
+
 ## [0.19.0] - 2026-05-13
 
 Spec **0014 — bmad-inspired-evolutions**. Comparative analysis with
