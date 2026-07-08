@@ -237,7 +237,7 @@
 
 ### T015 — Gerar manifests iniciais + gate no CI
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T014, T004
 - **Files:**
   - modify: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.cursor-plugin/plugin.json`, `.github/workflows/validate.yml`

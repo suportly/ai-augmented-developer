@@ -78,6 +78,25 @@ jobs:
       - name: Run aiadev doctor
         run: aiadev doctor
 
+  manifests:
+    name: plugin manifests in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install aiadev (editable)
+        run: pip install -e '.[dev]'
+
+      - name: Check plugin manifests are derived from VERSION/pyproject.toml/catalog.json
+        run: aiadev manifests --check
+
   install-e2e:
     name: install end-to-end
     runs-on: ubuntu-latest
