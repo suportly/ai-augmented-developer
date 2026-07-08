@@ -146,6 +146,30 @@ describe('parseTasks', () => {
     expect(result[1]).to.deep.include({ id: 'T002', title: 'Outra task', status: 'unknown' });
   });
 
+  // Letter-suffixed ids (T017a, T017b) appear when authors split a task
+  // in place; the explorer must list them instead of silently dropping
+  // them (user report, 2026-07-08).
+  it('parses letter-suffixed task ids in headings, checkboxes and tables', () => {
+    const source = [
+      '### T017a — Primeira metade',
+      '- **Status:** done',
+      '### T017b — Segunda metade',
+      '- **Status:** pending',
+      '- [x] T018a Checkbox variant',
+      '### T019b Loose heading, status via table row',
+      '| T019b | commit | done |',
+    ].join('\n');
+
+    const result = parseTasks(source);
+
+    expect(result.map((t) => t.id)).to.deep.equal(['T017a', 'T017b', 'T018a', 'T019b']);
+    expect(result[0]).to.deep.include({ id: 'T017a', title: 'Primeira metade', status: 'done' });
+    expect(result[1]).to.deep.include({ id: 'T017b', title: 'Segunda metade', status: 'pending' });
+    // Table rows only update statuses of declared tasks (pre-existing
+    // contract) — the suffixed id must round-trip through that path too.
+    expect(result[3]).to.deep.include({ id: 'T019b', status: 'done' });
+  });
+
   it('tolerates flexible Status bullet formatting: unbolded label, bolded value, and trailing prose', () => {
     const source = [
       '### T001 — Plain colon, bold value with trailing commit',

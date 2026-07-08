@@ -4,6 +4,12 @@ All notable changes to the **aiadev Spec Explorer** extension are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.12] - 2026-07-08
+
+### Fixed
+
+- `parser/tasks.ts` now accepts task ids with a single letter suffix (`T017a`, `T017b`) in headings, checkboxes, and status-table rows. Real trigger: user report (2026-07-08) — specs that split a task in place as `T017a — xxxx` / `T017b — yyyy` had those tasks silently dropped from the Spec Explorer because all three id regexes required `T` + digits only. Canonical `T017` ids keep working unchanged.
+
 ## [0.0.11] - 2026-05-13
 
 ### Fixed

@@ -35,7 +35,10 @@
 
 import type { Task, TaskStatus } from './types';
 
-const HEADING_RE = /^#{3,6}\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
+// Task ids accept an optional single letter suffix (T017a, T017b) —
+// authors split tasks that way in the wild and the explorer must not
+// silently drop them.
+const HEADING_RE = /^#{3,6}\s+(T\d+[A-Za-z]?)(?:\s*[—-])?\s+(.+?)\s*$/;
 // Tolerant of bold around the label and/or value, of trailing prose after
 // the status word (e.g. `- Status: **done** (commit abc1234)`), and of the
 // optional leading `- ` bullet — paragraph-style task fields (each on its
@@ -44,9 +47,9 @@ const HEADING_RE = /^#{3,6}\s+(T\d+)(?:\s*[—-])?\s+(.+?)\s*$/;
 // `- Status: **done** (commit X)`, `**Status**: done`, `Status: done`, etc.
 const STATUS_BULLET_RE = /^(?:-\s+)?\*{0,2}Status:?\*{0,2}:?\s*\*{0,2}([A-Za-z_-]+)\*{0,2}/i;
 const CHECKBOX_RE =
-  /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
+  /^-\s+\[([ xX])\]\s+(?:~~)?(?:\*\*)?(T\d+[A-Za-z]?)(?:\*\*)?(?:~~)?\s*(.*?)\s*$/;
 const TABLE_STATUS_RE =
-  /^\|\s*(?:\*\*)?(T\d+)(?:\*\*)?\s*\|.*?\|\s*([^|]*?)\s*\|?\s*$/;
+  /^\|\s*(?:\*\*)?(T\d+[A-Za-z]?)(?:\*\*)?\s*\|.*?\|\s*([^|]*?)\s*\|?\s*$/;
 // Strips `[P]`, `[US1]` and other leading bracket tags from task titles.
 // See `templates/tasks-template.md` for the canonical tag conventions.
 const LEADING_TAG_RE = /^(?:\[[^\]]+\]\s*)+/;
