@@ -132,7 +132,7 @@
 
 ### T008 — `paths:` em rule frontmatter com propagação por plataforma
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/platforms/claude_code.py`, `src/aiadev/platforms/codex.py`, `src/aiadev/platforms/opencode.py`, `src/aiadev/platforms/gemini.py`
