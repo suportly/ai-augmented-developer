@@ -222,7 +222,7 @@
 
 ### T014 — Subcomando `aiadev manifests --check/--write`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T013
 - **Files:**
   - create: `src/aiadev/commands/manifests.py`

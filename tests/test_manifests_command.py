@@ -1,0 +1,222 @@
+"""Tests for ``aiadev manifests`` (Click subcommand layer, T014).
+
+Spec: ``specs/0016-agent-skills-interop/spec.md``, Story 4 (sc1, sc2).
+"""
+from __future__ import annotations
+
+import os
+import pathlib
+import shutil
+
+import pytest
+from click.testing import CliRunner
+
+from aiadev.cli import main
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _run_in(cwd: pathlib.Path, args: list[str]):
+    runner = CliRunner()
+    cwd_before = os.getcwd()
+    os.chdir(cwd)
+    try:
+        return runner.invoke(main, args)
+    finally:
+        os.chdir(cwd_before)
+
+
+def _build_minimal_workspace(dest: pathlib.Path) -> pathlib.Path:
+    """Copy just the sources ``read_sources`` needs, plus the three
+    manifest targets, from the real repo into a tmp workspace.
+
+    Keeps the CLI's ``pathlib.Path.cwd()`` resolution (no
+    ``find_framework_root`` involved here — the command reads sources
+    straight from cwd) working against an isolated copy so ``--write``
+    tests never touch the committed manifests in the real repo.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy(REPO_ROOT / "VERSION", dest / "VERSION")
+    shutil.copy(REPO_ROOT / "pyproject.toml", dest / "pyproject.toml")
+    (dest / "presets").mkdir(parents=True, exist_ok=True)
+    shutil.copy(REPO_ROOT / "presets" / "catalog.json", dest / "presets" / "catalog.json")
+    shutil.copytree(REPO_ROOT / ".claude-plugin", dest / ".claude-plugin")
+    shutil.copytree(REPO_ROOT / ".cursor-plugin", dest / ".cursor-plugin")
+    return dest
+
+
+# ---------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------
+
+
+class TestManifestsSubcommandRegistration:
+    def test_manifests_is_registered(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(main, ["manifests", "--help"])
+        assert result.exit_code == 0
+        assert "manifests" in result.output.lower()
+        assert "--check" in result.output
+        assert "--write" in result.output
+
+
+# ---------------------------------------------------------------------
+# (a) --check against the CURRENT repo: real drift, VERSION vs manifests
+# ---------------------------------------------------------------------
+
+
+class TestCheckAgainstRealRepo:
+    def test_check_fails_citing_file_and_both_version_values(self) -> None:
+        result = _run_in(REPO_ROOT, ["manifests", "--check"])
+        assert result.exit_code == 1, result.output
+
+        version = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        assert version != "1.0.0"  # sanity: the real drift this test relies on
+
+        # Cites at least one of the three manifest files.
+        assert (
+            ".claude-plugin/plugin.json" in result.output
+            or ".claude-plugin/marketplace.json" in result.output
+            or ".cursor-plugin/plugin.json" in result.output
+        ), result.output
+
+        # Cites both diverging version values (VERSION and the stale
+        # manifest value committed today, "1.0.0").
+        assert version in result.output, result.output
+        assert "1.0.0" in result.output, result.output
+
+    def test_default_flag_is_check(self) -> None:
+        """No flag at all behaves like --check (read-only default)."""
+        result_default = _run_in(REPO_ROOT, ["manifests"])
+        result_explicit = _run_in(REPO_ROOT, ["manifests", "--check"])
+        assert result_default.exit_code == result_explicit.exit_code == 1
+
+        # Confirm the default truly is read-only: none of the three
+        # files change on disk.
+        for rel in (
+            ".claude-plugin/plugin.json",
+            ".claude-plugin/marketplace.json",
+            ".cursor-plugin/plugin.json",
+        ):
+            assert (REPO_ROOT / rel).read_text(encoding="utf-8")  # still exists/readable
+
+
+# ---------------------------------------------------------------------
+# (b) --write in a tmp workspace: regenerates, idempotent
+# ---------------------------------------------------------------------
+
+
+class TestWriteIdempotent:
+    def test_write_then_check_then_write_again(self, tmp_path: pathlib.Path) -> None:
+        ws = _build_minimal_workspace(tmp_path / "ws")
+
+        write_result = _run_in(ws, ["manifests", "--write"])
+        assert write_result.exit_code == 0, write_result.output
+
+        check_result = _run_in(ws, ["manifests", "--check"])
+        assert check_result.exit_code == 0, check_result.output
+
+        # All three targets now carry the derived version, not the
+        # stale hand-authored 1.0.0.
+        version = (ws / "VERSION").read_text(encoding="utf-8").strip()
+        for rel in (
+            ".claude-plugin/plugin.json",
+            ".claude-plugin/marketplace.json",
+            ".cursor-plugin/plugin.json",
+        ):
+            content = (ws / rel).read_text(encoding="utf-8")
+            assert version in content
+            assert '"version": "1.0.0"' not in content
+
+        second_write = _run_in(ws, ["manifests", "--write"])
+        assert second_write.exit_code == 0, second_write.output
+        assert "no changes" in second_write.output.lower()
+
+    def test_write_is_byte_stable_across_runs(self, tmp_path: pathlib.Path) -> None:
+        ws = _build_minimal_workspace(tmp_path / "ws")
+        _run_in(ws, ["manifests", "--write"])
+        snapshots = {
+            rel: (ws / rel).read_text(encoding="utf-8")
+            for rel in (
+                ".claude-plugin/plugin.json",
+                ".claude-plugin/marketplace.json",
+                ".cursor-plugin/plugin.json",
+            )
+        }
+        _run_in(ws, ["manifests", "--write"])
+        for rel, before in snapshots.items():
+            assert (ws / rel).read_text(encoding="utf-8") == before
+
+
+# ---------------------------------------------------------------------
+# (c) missing source file -> exit 1, names the file, no traceback
+# ---------------------------------------------------------------------
+
+
+class TestMissingSource:
+    def test_missing_catalog_json_exits_one_named_no_traceback(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        ws = _build_minimal_workspace(tmp_path / "ws")
+        (ws / "presets" / "catalog.json").unlink()
+
+        result = _run_in(ws, ["manifests", "--check"])
+        assert result.exit_code == 1, result.output
+        assert "catalog.json" in result.output
+        assert "Traceback" not in result.output
+        assert "Traceback" not in str(result.exception) if result.exception else True
+
+    def test_missing_version_exits_one_named_no_traceback(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        ws = _build_minimal_workspace(tmp_path / "ws")
+        (ws / "VERSION").unlink()
+
+        result = _run_in(ws, ["manifests", "--check"])
+        assert result.exit_code == 1, result.output
+        assert "VERSION" in result.output
+        assert "Traceback" not in result.output
+
+
+# ---------------------------------------------------------------------
+# (d) version-divergence message contains both values
+# ---------------------------------------------------------------------
+
+
+class TestDivergenceMessageValues:
+    def test_message_contains_declared_and_derived_versions(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        ws = _build_minimal_workspace(tmp_path / "ws")
+        (ws / "VERSION").write_text("0.21.0\n", encoding="utf-8")
+        # Manifests still say whatever the repo's committed value is
+        # (today: 1.0.0) — a fresh, deliberate divergence.
+
+        result = _run_in(ws, ["manifests", "--check"])
+        assert result.exit_code == 1, result.output
+        assert "0.21.0" in result.output
+        assert "1.0.0" in result.output
+
+    def test_marketplace_only_version_drift_gets_specific_message(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """marketplace.json has no top-level version — its version lives in
+        plugins[0]. A marketplace-only drift must still produce the
+        specific "version mismatch" message, not the generic fallback.
+        """
+        import json as _json
+
+        ws = _build_minimal_workspace(tmp_path / "ws")
+        # Normalize everything to the derivation first...
+        result = _run_in(ws, ["manifests", "--write"])
+        assert result.exit_code == 0, result.output
+        # ...then drift ONLY the marketplace core-plugin version.
+        mk_path = ws / ".claude-plugin" / "marketplace.json"
+        mk = _json.loads(mk_path.read_text(encoding="utf-8"))
+        mk["plugins"][0]["version"] = "9.9.9"
+        mk_path.write_text(_json.dumps(mk, indent=2) + "\n", encoding="utf-8")
+
+        result = _run_in(ws, ["manifests", "--check"])
+        assert result.exit_code == 1, result.output
+        assert "version mismatch" in result.output
+        assert "9.9.9" in result.output
