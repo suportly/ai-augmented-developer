@@ -148,7 +148,7 @@
 
 ### T009 — Tradução de `paths:` para globs no `.mdc` do Cursor
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - modify: `src/aiadev/platforms/cursor.py`
