@@ -4,7 +4,7 @@
 
 **Branch:** `feature/aiadev-metrics`
 **Created:** 2026-05-27
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Merged — `916e3d9` (v0.20.0) <!-- Draft | In review | Approved | Implemented | PR Open | Merged -->
 **Spec ID:** 0015 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 

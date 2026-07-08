@@ -38,15 +38,11 @@ def test_readme_has_metrics_usage_example() -> None:
     assert "aiadev metrics" in readme
 
 
-def test_changelog_unreleased_mentions_metrics() -> None:
+def test_changelog_records_metrics_feature() -> None:
     changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    # Extract the [Unreleased] section: everything from "## [Unreleased]"
-    # up to (but not including) the next "## [" line.
-    start = changelog.find("## [Unreleased]")
-    assert start != -1, "CHANGELOG missing [Unreleased] header"
-    rest = changelog[start + len("## [Unreleased]"):]
-    end = rest.find("\n## [")
-    section = rest[:end] if end != -1 else rest
-    assert "metrics" in section.lower(), (
-        f"[Unreleased] section does not mention 'metrics':\n{section[:200]}"
+    assert "## [Unreleased]" in changelog, "CHANGELOG missing [Unreleased] header"
+    # The record starts under [Unreleased] and moves into a released
+    # version block when the release is cut — accept either location.
+    assert "aiadev metrics" in changelog.lower(), (
+        "CHANGELOG does not record the `aiadev metrics` feature (spec 0015)"
     )

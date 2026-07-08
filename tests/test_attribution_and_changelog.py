@@ -17,19 +17,15 @@ CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 _VERSION_HEADING_RE = re.compile(r"^## \[", re.MULTILINE)
 
 
-def _most_recent_changes_block(body: str) -> str:
-    """Return [Unreleased] (if non-empty) plus the latest released version block.
+def _blocks_mentioning(body: str, marker: str) -> str:
+    """Return every ``## [...]`` block whose content mentions ``marker``.
 
-    Keeps the changelog tests resilient across two scenarios:
-
-    * **Freshly cut release** — content was moved from [Unreleased] into
-      ``## [<version>]`` and [Unreleased] is empty. We return the
-      released block.
-    * **Unreleased + still-relevant prior release** — a new feature
-      added content to [Unreleased] while the most recent released
-      block still describes the changes a drift test wants to verify.
-      We return both concatenated so the assertions still find their
-      markers wherever the maintainer placed them.
+    A feature's changelog record starts under [Unreleased] and moves
+    into a ``## [<version>]`` block when the release is cut — and stays
+    there forever. Anchoring on the marker (the spec id) instead of on
+    "the most recent block" keeps these drift tests stable across
+    later releases: spec 0014's record lives in the 0.19.0 block no
+    matter how many versions ship after it.
     """
     headings = list(_VERSION_HEADING_RE.finditer(body))
     if not headings:
@@ -40,19 +36,8 @@ def _most_recent_changes_block(body: str) -> str:
         start = match.start()
         end = headings[i + 1].start() if i + 1 < len(headings) else len(body)
         block = body[start:end]
-        heading_line = block.split("\n", 1)[0]
-        content = block.split("\n", 1)[1] if "\n" in block else ""
-        is_unreleased = "[Unreleased]" in heading_line
-        if not content.strip():
-            continue
-        blocks.append(block)
-        # Stop after we've collected the first non-empty *released*
-        # block — anything older is not "most recent".
-        if not is_unreleased:
-            break
-
-    if not blocks:
-        return body[headings[0].start():]
+        if marker in block:
+            blocks.append(block)
     return "\n".join(blocks)
 
 
@@ -90,47 +75,44 @@ def test_credits_names_inspired_material_for_each_story():
     )
 
 
-def test_changelog_most_recent_block_mentions_all_four_stories():
+def test_changelog_0014_block_mentions_all_four_stories():
     body = CHANGELOG.read_text(encoding="utf-8")
     assert "## [Unreleased]" in body, (
         "CHANGELOG.md must keep an [Unreleased] section per Keep-a-Changelog"
     )
 
-    block = _most_recent_changes_block(body)
+    block = _blocks_mentioning(body, "0014")
     lower = block.lower()
 
     # Story 1 — task-context
     assert "task-context" in lower or "compose" in lower, (
-        "Most recent changelog block must mention the task-context skill "
-        "(spec 0014 Story 1) — found in [Unreleased] or in the most recent "
-        "released version block"
+        "The changelog block recording spec 0014 must mention the "
+        "task-context skill (Story 1)"
     )
 
     # Story 2 — 3-tier customization resolver
     assert "3-tier customization" in lower or "_aiadev/team.toml" in lower, (
-        "Most recent changelog block must mention the 3-tier customization "
-        "resolver (spec 0014 Story 2)"
+        "The changelog block recording spec 0014 must mention the 3-tier "
+        "customization resolver (Story 2)"
     )
 
     # Story 3 — zero-findings-halt review pattern
     assert "zero-findings-halt" in lower or "why no issues" in lower, (
-        "Most recent changelog block must mention the zero-findings-halt "
-        "review pattern (spec 0014 Story 3)"
+        "The changelog block recording spec 0014 must mention the "
+        "zero-findings-halt review pattern (Story 3)"
     )
 
     # Story 4 — state-aware help skill via pipeline_state
     assert "pipeline_state" in lower or "help skill" in lower or "state-aware" in lower, (
-        "Most recent changelog block must mention the state-aware help skill "
-        "(spec 0014 Story 4)"
+        "The changelog block recording spec 0014 must mention the "
+        "state-aware help skill (Story 4)"
     )
 
 
-def test_changelog_most_recent_block_references_spec_0014():
+def test_changelog_references_spec_0014():
     body = CHANGELOG.read_text(encoding="utf-8")
-    block = _most_recent_changes_block(body)
 
-    assert "0014" in block, (
-        "Most recent changelog block must reference spec id 0014 for "
-        "traceability — accepted under [Unreleased] or under the most "
-        "recent released version"
+    assert _blocks_mentioning(body, "0014"), (
+        "CHANGELOG.md must reference spec id 0014 for traceability — "
+        "under [Unreleased] or under a released version block"
     )
