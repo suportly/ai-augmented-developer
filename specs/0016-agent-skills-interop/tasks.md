@@ -208,7 +208,7 @@
 
 ### T013 — Derivação pura dos manifests de plugin
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/manifests.py`
