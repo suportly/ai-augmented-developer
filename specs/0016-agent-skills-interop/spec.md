@@ -4,7 +4,7 @@
 
 **Branch:** `feature/agent-skills-interop`
 **Created:** 2026-07-08
-**Status:** Draft <!-- Draft | In review | Approved | Implemented | PR Open | Merged -->
+**Status:** Merged — `841eefa` (v0.21.0) <!-- Draft | In review | Approved | Implemented | PR Open | Merged -->
 **Spec ID:** 0016 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 

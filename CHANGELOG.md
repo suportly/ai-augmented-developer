@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-07-08
+
 Spec **0016 — agent-skills-interop**. In December 2025 the Agent
 Skills spec (agentskills.io, governed by the Agentic AI Foundation)
 became an open standard adopted by Claude Code, Codex CLI, Cursor,

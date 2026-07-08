@@ -182,13 +182,18 @@ class TestDivergenceMessageValues:
     ) -> None:
         ws = _build_minimal_workspace(tmp_path / "ws")
         stale_version = (ws / "VERSION").read_text(encoding="utf-8").strip()
-        (ws / "VERSION").write_text("0.21.0\n", encoding="utf-8")
+        # Any version guaranteed to differ from the committed one — a
+        # hardcoded literal here would collide with the real VERSION at
+        # the next release flip (it already did once).
+        bumped = "9.9.9"
+        assert bumped != stale_version
+        (ws / "VERSION").write_text(f"{bumped}\n", encoding="utf-8")
         # Manifests still say whatever the workspace's committed value
         # was before the bump above — a fresh, deliberate divergence.
 
         result = _run_in(ws, ["manifests", "--check"])
         assert result.exit_code == 1, result.output
-        assert "0.21.0" in result.output
+        assert bumped in result.output
         assert stale_version in result.output
 
     def test_marketplace_only_version_drift_gets_specific_message(
