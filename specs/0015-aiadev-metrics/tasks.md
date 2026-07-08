@@ -217,7 +217,7 @@
 - **Spec scenarios:** Article IV (Evidence over claims) — PR test plan precisa apontar para docs atualizadas
 - **Acceptance:**
   - [ ] RED: teste falha.
-  - [ ] GREEN: `docs/pipeline-reference.md` ganha seção descrevendo o subcomando, suas flags, e os 3 exit codes; `README.md` ganha um exemplo de 4-6 linhas em Usage demonstrando uma invocação real; `CHANGELOG.md [Unreleased]` ganha entrada `### Added` com link para [spec 0015](../specs/0015-aiadev-metrics/spec.md).
+  - [ ] GREEN: `docs/pipeline-reference.md` ganha seção descrevendo o subcomando, suas flags, e os 3 exit codes; `README.md` ganha um exemplo de 4-6 linhas em Usage demonstrando uma invocação real; `CHANGELOG.md [Unreleased]` ganha entrada `### Added` com link para [spec 0015](spec.md).
   - [ ] `markdownlint-cli2` continua passando em todos os arquivos tocados.
   - [ ] Commit: `docs(metrics): T014 pipeline reference + README + CHANGELOG`.
 
