@@ -176,7 +176,7 @@
 
 ### T011 — AGENTS.md como agent file canônico do sync
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/commands/sync.py`, `src/aiadev/platforms/claude_code.py`, `src/aiadev/platforms/gemini.py`

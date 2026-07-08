@@ -95,8 +95,12 @@ class TestNonInteractiveInstall:
             "PROJECT_NAME=Demo",
         )
         assert result.exit_code == 0, result.output
+        # Spec 0016 Story 3 / ADR-5: AGENTS.md is canonical, CLAUDE.md a
+        # thin wrapper pointing at it.
+        assert (tmp_path / "AGENTS.md").is_file()
+        assert "Demo" in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
         assert (tmp_path / "CLAUDE.md").is_file()
-        assert "Demo" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+        assert "AGENTS.md" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
 
     def test_dry_run_writes_nothing(
         self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
@@ -113,6 +117,7 @@ class TestNonInteractiveInstall:
             "--dry-run",
         )
         assert result.exit_code == 0, result.output
+        assert not (tmp_path / "AGENTS.md").exists()
         assert not (tmp_path / "CLAUDE.md").exists()
         assert not (tmp_path / ".aiadev").exists()
 
@@ -201,7 +206,10 @@ class TestConflictAndForce:
             "--force",
         )
         assert forced.exit_code == 0, forced.output
-        assert "Demo" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+        # CLAUDE.md is the thin wrapper; forcing restores its fixed
+        # pointer content (it never carries variable-rendered text).
+        assert "AGENTS.md" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+        assert "Demo" in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
 
 
 class TestUninstall:
@@ -283,7 +291,7 @@ class TestNewPlatforms:
         assert result.exit_code == 0, result.output
         assert (tmp_path / "AGENTS.md").is_file()
 
-    def test_gemini_writes_gemini_md(
+    def test_gemini_writes_agents_md_and_gemini_wrapper(
         self, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
     ) -> None:
         monkeypatch.chdir(isolated_framework)
@@ -299,8 +307,12 @@ class TestNewPlatforms:
             "PROJECT_NAME=Demo",
         )
         assert result.exit_code == 0, result.output
+        # Spec 0016 Story 3 / ADR-5: AGENTS.md is canonical; GEMINI.md is
+        # the thin wrapper pointing at it.
+        assert (tmp_path / "AGENTS.md").is_file()
+        assert "Demo" in (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
         assert (tmp_path / "GEMINI.md").is_file()
-        assert not (tmp_path / "AGENTS.md").exists()
+        assert "AGENTS.md" in (tmp_path / "GEMINI.md").read_text(encoding="utf-8")
         assert not (tmp_path / "CLAUDE.md").exists()
 
     def test_cursor_then_codex_coexistence(
@@ -402,9 +414,12 @@ class TestExtensionPreset:
         )
         assert result.exit_code == 0, result.output
         assert "from extension" in result.output
-        agent = project / "CLAUDE.md"
+        agent = project / "AGENTS.md"
         assert agent.is_file()
         assert "Demo" in agent.read_text(encoding="utf-8")
+        wrapper = project / "CLAUDE.md"
+        assert wrapper.is_file()
+        assert "AGENTS.md" in wrapper.read_text(encoding="utf-8")
 
     def test_built_in_wins_on_collision(
         self,
@@ -466,7 +481,7 @@ class TestExtensionPreset:
         # rich wraps the warning across two lines; check for both pieces.
         assert "built-in takes" in result.output
         assert "precedence" in result.output
-        agent = project / "CLAUDE.md"
+        agent = project / "AGENTS.md"
         assert agent.is_file()
         assert "lean preset" in agent.read_text(encoding="utf-8")
 

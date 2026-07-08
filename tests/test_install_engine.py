@@ -30,6 +30,12 @@ VARIABLES = {"PROJECT_NAME": "Demo App", "GREETING": "Howdy"}
 
 
 def _agent_file(project_root: pathlib.Path) -> pathlib.Path:
+    """The canonical agent file (spec 0016 Story 3, ADR-5)."""
+    return project_root / "AGENTS.md"
+
+
+def _wrapper_file(project_root: pathlib.Path) -> pathlib.Path:
+    """The thin claude-code wrapper pointing at :func:`_agent_file`."""
     return project_root / "CLAUDE.md"
 
 
@@ -64,6 +70,15 @@ class TestFreshInstall:
         assert "Demo App" in skill_text
         assert find_unresolved(skill_text) == []
 
+    def test_writes_thin_claude_md_wrapper_pointing_at_agents_md(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Spec 0016 Story 3 / ADR-5: claude-code emits a wrapper too."""
+        install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
+        wrapper_text = _wrapper_file(tmp_path).read_text(encoding="utf-8")
+        assert "AGENTS.md" in wrapper_text
+        assert len([line for line in wrapper_text.splitlines() if line.strip()]) <= 5
+
     def test_writes_manifest(self, tmp_path: pathlib.Path) -> None:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         manifest_path = _manifest_file(tmp_path)
@@ -73,11 +88,15 @@ class TestFreshInstall:
         assert record is not None
         assert record.variables == VARIABLES
         assert {f.role for f in record.files} == {"agent_file", "skill"}
+        # Both the canonical agent file and its wrapper are tracked.
+        paths = {f.path for f in record.files}
+        assert "AGENTS.md" in paths
+        assert "CLAUDE.md" in paths
 
     def test_report_lists_every_new_file(self, tmp_path: pathlib.Path) -> None:
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         assert sorted(p.name for p in report.written) == sorted(
-            [_agent_file(tmp_path).name, "SKILL.md"]
+            [_agent_file(tmp_path).name, _wrapper_file(tmp_path).name, "SKILL.md"]
         )
         assert report.skipped == []
         assert report.conflicts == []
@@ -94,13 +113,15 @@ class TestReInstall:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
         assert report.written == []
-        assert len(report.skipped) == 2
+        assert len(report.skipped) == 3
         assert report.conflicts == []
 
     def test_new_values_rewrite_files(self, tmp_path: pathlib.Path) -> None:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         updated = {**VARIABLES, "GREETING": "Bonjour"}
         report = install(FIXTURES, tmp_path, updated, now="2026-04-14T13:00:00Z")
+        # AGENTS.md + SKILL.md pick up new content; the CLAUDE.md wrapper
+        # is variable-independent and stays a skip.
         assert len(report.written) == 2
         assert "Bonjour" in _agent_file(tmp_path).read_text(encoding="utf-8")
 
@@ -176,8 +197,9 @@ class TestDryRun:
             mode=InstallMode.DRY_RUN,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 2
+        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
         assert not _agent_file(tmp_path).exists()
+        assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
         assert not _manifest_file(tmp_path).exists()
 
@@ -210,7 +232,7 @@ class TestUnresolvedPlaceholders:
             allow_unresolved=True,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 2
+        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
         assert "GREETING" in report.unresolved
         # The literal {{GREETING}} survives in the output.
         agent_text = _agent_file(tmp_path).read_text(encoding="utf-8")
@@ -232,8 +254,9 @@ class TestUninstall:
             mode=InstallMode.UNINSTALL,
         )
         assert report.ok
-        assert len(report.removed) == 2
+        assert len(report.removed) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
         assert not _agent_file(tmp_path).exists()
+        assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
         assert not _manifest_file(tmp_path).exists()
 

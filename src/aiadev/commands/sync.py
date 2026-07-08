@@ -15,6 +15,12 @@ The sync flow has three steps:
    manifest's recorded hash for the agent file is refreshed to match so
    a subsequent sync does not mistake the regenerated stack block for a
    hand-edit conflict.
+
+   Spec 0016 Story 3 / ADR-5: the stack block always lands in the
+   canonical ``AGENTS.md``, for every platform — including claude-code
+   and gemini, whose ``CLAUDE.md``/``GEMINI.md`` are now thin wrappers
+   that never carry generated content (see
+   :mod:`aiadev.platforms.claude_code` / :mod:`aiadev.platforms.gemini`).
 3. **Auto-migrate installed skills' frontmatter.** Sweeps every
    ``<platform-dir>/skills/*/SKILL.md`` under the project and rewrites
    any file still using the old proprietary top-level pipeline fields
@@ -64,12 +70,16 @@ _PLATFORM_DIRS = {
     ".gemini": "gemini",
 }
 
+# Spec 0016 Story 3 / ADR-5: every platform's stack block lands in the
+# canonical AGENTS.md. claude-code and gemini used to point here at their
+# own CLAUDE.md/GEMINI.md; those are now thin wrappers that never carry
+# generated content, so all five platforms converge on the same target.
 _PLATFORM_AGENT_FILE = {
-    "claude_code": "CLAUDE.md",
+    "claude_code": "AGENTS.md",
     "cursor": "AGENTS.md",
     "codex": "AGENTS.md",
     "opencode": "AGENTS.md",
-    "gemini": "GEMINI.md",
+    "gemini": "AGENTS.md",
 }
 
 #: Reverse of _PLATFORM_DIRS: platform key -> its dot-directory name.
