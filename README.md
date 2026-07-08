@@ -143,6 +143,35 @@ Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai
 
 Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant skill.
 
+## Inspecting your audit trail with `aiadev metrics`
+
+Every feature you run through the pipeline leaves a structured trail
+(`.review-log.jsonl`, `tasks.md` statuses, spec headers). The
+`aiadev metrics` subcommand aggregates that trail into the indicators
+a tech lead actually needs — first-pass approval rate per reviewer,
+tasks that needed rework, coverage of the post-`0014` cutoff, time
+from `specify` to last commit, and unresolved clarification markers.
+
+```bash
+# Saúde de uma feature em andamento
+aiadev metrics --feature 0015-aiadev-metrics
+
+# Visão agregada (default: últimos 90 dias)
+aiadev metrics
+
+# Para CI / scripts (schema estável, sem timestamp de execução)
+aiadev metrics --format json --since 2026-01-01
+
+# Detalhe por task (Story 3)
+aiadev metrics --feature 0015-aiadev-metrics --tasks
+```
+
+Nada é enviado pela rede; o comando é read-only. A prosa livre dos
+reviewers fica fora da saída padrão (Article VI) — use
+`--show-bodies` se precisar inspecionar.
+
+Detalhes: [docs/metrics.md](docs/metrics.md).
+
 ## Use as LLM tools
 
 The 8 pipeline skills can be invoked programmatically by any LLM agent, outside of Claude Code or other IDE harnesses.

@@ -1,0 +1,5 @@
+{"timestamp": "2026-05-11T10:00:00Z", "reviewer": "spec-document-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "note": "spec clean"}
+{"timestamp": "2026-05-11T11:00:00Z", "reviewer": "plan-document-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "note": "plan clean"}
+{"timestamp": "2026-05-12T12:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "ok"}
+{"timestamp": "2026-05-12T13:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "note": "ok"}
+{"timestamp": "2026-05-12T14:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "note": "ok"}

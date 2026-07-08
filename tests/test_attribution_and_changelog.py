@@ -18,27 +18,42 @@ _VERSION_HEADING_RE = re.compile(r"^## \[", re.MULTILINE)
 
 
 def _most_recent_changes_block(body: str) -> str:
-    """Return the body of [Unreleased] if non-empty, else the latest version block.
+    """Return [Unreleased] (if non-empty) plus the latest released version block.
 
-    Keeps the changelog tests resilient to release-flip: a freshly cut
-    release moves content from [Unreleased] into ``## [<version>]`` and
-    leaves an empty [Unreleased] above it. Both layouts are valid and
-    the same content should still be discoverable.
+    Keeps the changelog tests resilient across two scenarios:
+
+    * **Freshly cut release** — content was moved from [Unreleased] into
+      ``## [<version>]`` and [Unreleased] is empty. We return the
+      released block.
+    * **Unreleased + still-relevant prior release** — a new feature
+      added content to [Unreleased] while the most recent released
+      block still describes the changes a drift test wants to verify.
+      We return both concatenated so the assertions still find their
+      markers wherever the maintainer placed them.
     """
     headings = list(_VERSION_HEADING_RE.finditer(body))
     if not headings:
         return body
 
+    blocks: list[str] = []
     for i, match in enumerate(headings):
         start = match.start()
         end = headings[i + 1].start() if i + 1 < len(headings) else len(body)
         block = body[start:end]
-        # Strip the heading line; the rest is the "content" of this block.
+        heading_line = block.split("\n", 1)[0]
         content = block.split("\n", 1)[1] if "\n" in block else ""
-        if content.strip():
-            return block
+        is_unreleased = "[Unreleased]" in heading_line
+        if not content.strip():
+            continue
+        blocks.append(block)
+        # Stop after we've collected the first non-empty *released*
+        # block — anything older is not "most recent".
+        if not is_unreleased:
+            break
 
-    return body[headings[0].start():]
+    if not blocks:
+        return body[headings[0].start():]
+    return "\n".join(blocks)
 
 
 def test_credits_names_bmad_method_with_url_and_license():

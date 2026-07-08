@@ -1,0 +1,6 @@
+{"timestamp": "2026-05-16T10:00:00Z", "reviewer": "spec-document-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "note": "ok"}
+{"timestamp": "2026-05-16T12:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "ok"}
+{"timestamp": "2026-05-16T13:00:00Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T002", "note": "missing edge case test"}
+{"timestamp": "2026-05-16T14:00:00Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T002", "note": "still missing edge case"}
+{"timestamp": "2026-05-16T15:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "note": "fixed"}
+{"timestamp": "2026-05-17T10:00:00Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "note": "ok"}
