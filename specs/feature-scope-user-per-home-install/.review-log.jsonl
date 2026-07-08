@@ -1,2 +1,0 @@
-{"timestamp": "2026-07-08T17:24:59Z", "reviewer": "spec-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "6 verifications; probed schema beyond test coverage"}
-{"timestamp": "2026-07-08T17:26:49Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "3 verifications; schema conventions and assertion precision probed"}
