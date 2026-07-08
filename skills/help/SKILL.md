@@ -1,15 +1,17 @@
 ---
 name: help
 description: Print the pipeline quick-reference — a one-screen summary of every /aia:* command and its hand-offs, prefixed by a state-aware "Próximo passo" line.
-version: 0.2.0
-inputs: []
-outputs:
-  - type: text
-    description: Optional "Próximo passo:" line followed by the contents of docs/pipeline-reference.md.
-requires:
-  - docs/pipeline-reference.md
-  - src/aiadev/pipeline_state.py
-handoffs: []
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs: []
+    outputs:
+    - type: text
+      description: Optional "Próximo passo:" line followed by the contents of docs/pipeline-reference.md.
+    requires:
+    - docs/pipeline-reference.md
+    - src/aiadev/pipeline_state.py
+    handoffs: []
 ---
 
 # Help

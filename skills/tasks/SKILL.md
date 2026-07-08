@@ -1,19 +1,21 @@
 ---
 name: tasks
 description: Decompose an approved plan.md into an ordered tasks.md ready for `implement`. Each task = one test + one implementation + one commit.
-version: 0.2.0
-inputs:
-  - type: file
-    path: specs/<branch>/plan.md
-outputs:
-  - type: file
-    path: specs/<branch>/tasks.md
-requires:
-  - constitution
-  - templates/tasks-template.md
-handoffs:
-  - implement
-  - analyze
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs:
+    - type: file
+      path: specs/<branch>/plan.md
+    outputs:
+    - type: file
+      path: specs/<branch>/tasks.md
+    requires:
+    - constitution
+    - templates/tasks-template.md
+    handoffs:
+    - implement
+    - analyze
 ---
 
 # Tasks

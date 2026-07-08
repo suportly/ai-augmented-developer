@@ -214,6 +214,12 @@ def migrate_skill_file(path: Path) -> bool:
     something changed. The Markdown body is preserved byte-for-byte: only
     the frontmatter block is re-serialized.
 
+    Known limitation: YAML comments inside the frontmatter block do NOT
+    survive a rewrite (``yaml.safe_load`` discards them). Files that are
+    already conformant are never rewritten, so their comments are safe;
+    when a file with in-frontmatter comments is migrated, restore the
+    comments manually afterwards if they matter.
+
     Returns ``True`` when the file was rewritten, ``False`` when it was
     already conformant (file left untouched).
 

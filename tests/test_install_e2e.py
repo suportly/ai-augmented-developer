@@ -30,13 +30,6 @@ def aiadev_root_env(isolated_framework: pathlib.Path, monkeypatch) -> pathlib.Pa
     return isolated_framework
 
 
-@pytest.mark.xfail(
-    reason="T004 migrates the 22 SKILL.md files to metadata.aiadev; until "
-    "then the doctor step of this round trip fails on 10 real skills with "
-    "proprietary top-level fields (spec 0016 Story 1, T002 rewrites the "
-    "schema first).",
-    strict=False,
-)
 def test_install_doctor_reinstall_uninstall_round_trip(
     aiadev_root_env: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
 ) -> None:

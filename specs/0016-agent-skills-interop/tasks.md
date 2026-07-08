@@ -70,7 +70,7 @@
 
 ### T004 — Migração one-shot dos 22 SKILL.md do repo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `skills/*/SKILL.md` (16), `presets/django-drf-react/skills/*/SKILL.md` (6)

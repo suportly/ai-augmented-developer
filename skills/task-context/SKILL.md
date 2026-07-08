@@ -1,19 +1,21 @@
 ---
 name: task-context
 description: Compose a rich per-task context file (specs/<branch>/task-context/<TID>-<slug>.md) before each implementer dispatch. Opt-in; default off.
-version: 0.1.0
-inputs:
-  - type: text
-    description: Task ID (e.g. T003) the implementer is about to pick up.
-outputs:
-  - type: file
-    path: specs/<branch>/task-context/<TID>-<slug>.md
-    description: Self-contained per-task brief consumed by the implementer subagent.
-requires:
-  - templates/task-context-template.md
-  - aiadev.task_context
-handoffs:
-  - implement
+metadata:
+  aiadev:
+    version: 0.1.0
+    inputs:
+    - type: text
+      description: Task ID (e.g. T003) the implementer is about to pick up.
+    outputs:
+    - type: file
+      path: specs/<branch>/task-context/<TID>-<slug>.md
+      description: Self-contained per-task brief consumed by the implementer subagent.
+    requires:
+    - templates/task-context-template.md
+    - aiadev.task_context
+    handoffs:
+    - implement
 ---
 
 # Task context

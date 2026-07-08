@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
 import yaml
 from jsonschema import Draft202012Validator
 
@@ -24,12 +23,6 @@ def test_help_skill_exists():
     assert SKILL.exists(), f"expected {SKILL} to exist"
 
 
-@pytest.mark.xfail(
-    reason="T004 migrates the 22 SKILL.md files to metadata.aiadev; "
-    "skills/help/SKILL.md still has proprietary fields at the top level "
-    "(spec 0016 Story 1, T002 rewrites the schema first).",
-    strict=False,
-)
 def test_help_skill_frontmatter_validates_against_schema():
     fm, _ = _read_frontmatter()
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))

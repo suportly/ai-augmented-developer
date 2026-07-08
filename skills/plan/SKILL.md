@@ -1,22 +1,24 @@
 ---
 name: plan
 description: Turn an approved spec.md into a plan.md (plus research, data-model, contracts as needed) that passes the Constitution Check.
-version: 0.2.0
-inputs:
-  - type: file
-    path: specs/<branch>/spec.md
-outputs:
-  - type: file
-    path: specs/<branch>/plan.md
-# Auxiliary artifacts (research.md, data-model.md, contracts/) are
-# follow-up invocations — the plan references them but does not write
-# them in the same call. See the "Next-invocation hints" block below.
-requires:
-  - constitution
-  - templates/plan-template.md
-handoffs:
-  - tasks
-  - clarify
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs:
+    - type: file
+      path: specs/<branch>/spec.md
+    outputs:
+    - type: file
+      path: specs/<branch>/plan.md
+    # Auxiliary artifacts (research.md, data-model.md, contracts/) are
+    # follow-up invocations — the plan references them but does not write
+    # them in the same call. See the "Next-invocation hints" block below.
+    requires:
+    - constitution
+    - templates/plan-template.md
+    handoffs:
+    - tasks
+    - clarify
 ---
 
 # Plan
