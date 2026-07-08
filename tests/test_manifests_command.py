@@ -152,7 +152,10 @@ class TestMissingSource:
 
         result = _run_in(ws, ["manifests", "--check"])
         assert result.exit_code == 1, result.output
-        assert "catalog.json" in result.output
+        # rich wraps long tmp paths on CI, splitting the filename across
+        # lines — join before searching for the substring.
+        unwrapped = result.output.replace("\n", "")
+        assert "catalog.json" in unwrapped
         assert "Traceback" not in result.output
         assert "Traceback" not in str(result.exception) if result.exception else True
 
@@ -164,7 +167,7 @@ class TestMissingSource:
 
         result = _run_in(ws, ["manifests", "--check"])
         assert result.exit_code == 1, result.output
-        assert "VERSION" in result.output
+        assert "VERSION" in result.output.replace("\n", "")
         assert "Traceback" not in result.output
 
 

@@ -27,12 +27,26 @@ regenerating the stack block (see ``_migrate_legacy_agent_file`` in
 from __future__ import annotations
 
 import pathlib
+import re
 
 import pytest
 from click.testing import CliRunner
 
 from aiadev.commands.install import install_command
 from aiadev.commands.sync import sync_command
+
+
+# The auto-stack block embeds a per-second generated_at timestamp, so two
+# syncs that straddle a second boundary legitimately differ by one byte
+# run. Normalize it before cross-sync byte-stability comparisons (same
+# approach as tests/test_interop_end_to_end.py; flake seen on CI where
+# runs are slower than local).
+_STACK_TS_RE = re.compile(rb"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+_STACK_TS_TEXT_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+
+
+def _norm_ts(data: bytes) -> bytes:
+    return _STACK_TS_RE.sub(b"<TS>", data)
 
 _LEGACY_MANUAL_TEXT = (
     "# LegacyDemo\n\n"
@@ -229,7 +243,7 @@ class TestClaudeLegacyMigration:
         assert second.exit_code == 0, second.output
         assert "conflict" not in second.output.lower()
 
-        assert (legacy_project / "AGENTS.md").read_bytes() == agents_after_first
+        assert _norm_ts((legacy_project / "AGENTS.md").read_bytes()) == _norm_ts(agents_after_first)
         assert (legacy_project / "CLAUDE.md").read_bytes() == claude_after_first
         assert (legacy_project / "CLAUDE.md.bak").read_bytes() == bak_after_first
 
@@ -410,7 +424,9 @@ class TestFenceAwareMigration:
         assert "conflict" not in second.output.lower()
 
         agents_after_second = (project / "AGENTS.md").read_text(encoding="utf-8")
-        assert agents_after_second == agents_after_first
+        assert _STACK_TS_TEXT_RE.sub("<TS>", agents_after_second) == _STACK_TS_TEXT_RE.sub(
+            "<TS>", agents_after_first
+        )
         assert _FENCED_FAKE_MIGRATED_SAMPLE in agents_after_second
         assert "Tail content after the fence" in agents_after_second
 
