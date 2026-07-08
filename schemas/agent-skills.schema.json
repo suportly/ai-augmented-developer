@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/agent-skills.schema.json",
+  "$comment": "Vendorized snapshot of the open Agent Skills standard frontmatter contract, from agentskills.io/specification, snapshot dated 2025-12-18. This schema is the EXTERNAL conformance check only: it encodes exactly what the Agent Skills spec allows at the top level of a SKILL.md frontmatter block, and nothing aiadev-specific. Do not add aiadev-internal fields here; those live in schemas/skill-frontmatter.schema.json under metadata.aiadev. Directory-name matching for `name` is enforced by code, not by this schema.",
+  "title": "Agent Skills Standard Frontmatter",
+  "description": "Conformance schema for the open Agent Skills standard (agentskills.io) SKILL.md frontmatter contract.",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Lowercase kebab-case skill identifier, 1-64 chars. Must equal the containing skill directory name (checked by tooling, not by this schema)."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Non-empty summary used by agents to decide when to invoke the skill."
+    },
+    "license": {
+      "type": "string",
+      "description": "Optional license identifier or attribution string."
+    },
+    "compatibility": {
+      "type": "object",
+      "description": "Optional free-form map describing runtime/tooling compatibility constraints.",
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional free-form map of additional metadata. Values may be any YAML/JSON type; namespaced keys (e.g. org.example.key) are recommended to avoid collisions.",
+      "additionalProperties": true
+    },
+    "allowed-tools": {
+      "description": "Experimental: restrict which tools the skill may call, either as an array of tool names or as a space/comma-separated string.",
+      "oneOf": [
+        { "type": "array", "items": { "type": "string" } },
+        { "type": "string" }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

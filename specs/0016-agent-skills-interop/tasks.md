@@ -22,7 +22,7 @@
 
 ### T001 — Vendorizar snapshot do schema Agent Skills
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `schemas/agent-skills.schema.json`
