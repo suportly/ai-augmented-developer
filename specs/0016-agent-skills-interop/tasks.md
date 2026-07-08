@@ -269,7 +269,7 @@
 
 ### T017 — Smoke end-to-end multi-plataforma
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007, T009, T012, T015
 - **Files:**
   - test: `tests/test_interop_end_to_end.py`
