@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0016 — agent-skills-interop**. In December 2025 the Agent
+Skills spec (agentskills.io, governed by the Agentic AI Foundation)
+became an open standard adopted by Claude Code, Codex CLI, Cursor,
+Gemini CLI, Copilot, and others — the same platforms `aiadev sync`
+already targets. Four stories: this release aligns the framework's
+skill frontmatter with that standard (Story 1) and closes the three
+adjacent gaps surfaced by the same ecosystem review — conditional rule
+loading, a canonical `AGENTS.md`, and generated plugin manifests
+(Stories 2-4).
+
+### Added
+
+- **Frontmatter conformance with the open Agent Skills standard**
+  (Story 1). Every `SKILL.md` (16 in the root catalog + 6 in
+  `presets/django-drf-react/`) now uses only standard top-level fields
+  (`name`, `description`, `license`, `compatibility`, `metadata`,
+  `allowed-tools`) plus the two documented Claude Code runtime
+  extensions (`disable-model-invocation`, `argument-hint` — cl-7). The
+  5 proprietary aiadev pipeline fields (`version`, `inputs`, `outputs`,
+  `requires`, `handoffs`) now nest under the single namespaced key
+  `metadata.aiadev` instead of living at the top level (cl-1).
+  `schemas/agent-skills.schema.json` vendors a snapshot of the open
+  standard's conformance schema (snapshot dated 2025-12-18, cl-2) and
+  `aiadev validate` runs dual validation — the vendored open-standard
+  schema plus the internal `schemas/skill-frontmatter.schema.json` —
+  with the same error severity as before; nothing became a warning.
+  The old top-level shape is now a hard validation error (cl-5); `aiadev
+  sync` auto-migrates skills already installed in a consumer project to
+  the new shape with no manual intervention required (Story 1 sc4).
+- **Conditional rule loading via `paths:`** (Story 2). Rule frontmatter
+  may now declare an optional `paths:` (glob list); `aiadev sync`
+  propagates the conditionality to every platform that supports it and
+  falls back to the current always-loaded behaviour, without error,
+  on platforms that don't. First (minimal) wave: `rules/testing.md`
+  only (cl-6), with `paths: ["tests/**", "**/*.test.*", "**/*_test.*",
+  "conftest.py"]`. Claude Code keeps the rule's `paths:` intact in
+  `.claude/rules/testing.md`; Cursor translates it into the native
+  `.mdc` `globs` field; platforms without conditional loading strip
+  `paths:` and install the rule exactly as before. Rules without
+  `paths:` are untouched — the feature is strictly opt-in per rule.
+- **`AGENTS.md` as the sync-managed canonical agent file** (Story 3).
+  `aiadev sync` now generates a single `AGENTS.md` at the project root;
+  `CLAUDE.md` and `GEMINI.md` become thin wrappers (~3 lines) pointing
+  at it instead of duplicating the generated content (cl-3). Every
+  managed block (including the `<!-- aiadev:auto-stack -->` block)
+  exists in exactly one physical file. Pre-existing manual content in a
+  consumer's `CLAUDE.md`/`GEMINI.md` is preserved by the migration path
+  and merged into `AGENTS.md`'s own managed block — see
+  [docs/agent-skills-interop.md](docs/agent-skills-interop.md) for the
+  full migration walkthrough, including the `.bak` backup the migration
+  writes alongside each legacy agent file it rewrites.
+- **`aiadev manifests --check|--write`** (Story 4). `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, and `.cursor-plugin/plugin.json`
+  are now derived from `VERSION` + `pyproject.toml` + `presets/catalog.json`
+  instead of hand-maintained. `--check` (the default) fails naming the
+  file and the two diverging values when a manifest drifts from the
+  derivation (e.g. a stale `version`); `--write` regenerates all three
+  and is idempotent. Every `stable` preset in `presets/catalog.json`
+  gets a corresponding entry in `marketplace.json` automatically (cl-4);
+  `beta`/`experimental` presets are omitted until promoted. A new CI job
+  (`manifests` in `.github/workflows/validate.yml`) runs
+  `aiadev manifests --check` so no future release ships with an
+  out-of-sync manifest like the `1.0.0` one this feature found and
+  fixed.
+- [docs/agent-skills-interop.md](docs/agent-skills-interop.md) —
+  consolidated reference for all four stories: the `metadata.aiadev`
+  namespace and migration, dual validation (with a worked error
+  example), the per-platform `paths:` propagation table, the
+  `AGENTS.md` canonical layout and legacy migration, and `aiadev
+  manifests` usage.
+- Attribution for the [Agent Skills open standard](https://agentskills.io)
+  in `CREDITS.md` per Article VII.
+
 ## [0.20.0] - 2026-07-08
 
 ### Added

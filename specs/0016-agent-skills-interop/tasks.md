@@ -255,7 +255,7 @@
 
 ### T016 — Documentação, CREDITS e CHANGELOG
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005, T010, T012, T015
 - **Files:**
   - modify: `CREDITS.md`, `CHANGELOG.md`, `README.md`, `docs/`
