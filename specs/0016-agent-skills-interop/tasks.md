@@ -162,7 +162,7 @@
 
 ### T010 — Primeira leva: `paths:` em rules/testing.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - modify: `rules/testing.md`
