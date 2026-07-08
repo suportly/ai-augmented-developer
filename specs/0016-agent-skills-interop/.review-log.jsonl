@@ -3,3 +3,5 @@
 {"timestamp": "2026-07-08T17:13:25Z", "reviewer": "plan-document-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "note": "pass 2: 4 verifications cited; both prior findings resolved"}
 {"timestamp": "2026-07-08T17:24:59Z", "reviewer": "spec-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "6 verifications; probed schema beyond test coverage"}
 {"timestamp": "2026-07-08T17:26:49Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "note": "3 verifications; schema conventions and assertion precision probed"}
+{"timestamp": "2026-07-08T17:40:56Z", "reviewer": "spec-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "note": "6 verifications; byte-diffed 5 field shapes vs HEAD; xfail scoping audited"}
+{"timestamp": "2026-07-08T17:43:21Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "note": "7 verifications; xfail scoping cross-checked com grep dos 10 arquivos; ReDoS audit nos patterns"}

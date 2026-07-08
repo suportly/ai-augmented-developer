@@ -2,9 +2,39 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/skill-frontmatter.schema.json",
   "title": "Skill Frontmatter",
-  "description": "Provisional schema for the YAML frontmatter at the top of each SKILL.md. Replaced in phase 5 by the one shipped inside the aiadev CLI package.",
+  "description": "Internal schema for the YAML frontmatter at the top of each SKILL.md. Top level matches the open Agent Skills standard (see schemas/agent-skills.schema.json, vendorized snapshot); the 5 proprietary aiadev pipeline fields (version, inputs, outputs, requires, handoffs) are nested under metadata.aiadev instead of living at the top level (spec 0016 Story 1, cl-1, cl-7).",
   "type": "object",
   "required": ["name", "description"],
+  "$defs": {
+    "aiadevInput": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["text", "file", "dir", "command", "artifact"]
+        },
+        "path": { "type": "string" },
+        "description": { "type": "string" },
+        "optional": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "aiadevOutput": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["text", "file", "dir", "commit", "branch", "pr"]
+        },
+        "path": { "type": "string" },
+        "description": { "type": "string" },
+        "optional": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
   "properties": {
     "name": {
       "type": "string",
@@ -17,58 +47,52 @@
       "maxLength": 240,
       "description": "One-line summary used by agents to decide when to invoke the skill."
     },
-    "version": {
+    "license": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$",
-      "description": "Semver. Optional during v0.1; required from v0.2."
+      "description": "Optional attribution line when the skill is adapted from another project. Primary attribution still lives in CREDITS.md."
     },
-    "inputs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["type"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["text", "file", "dir", "command", "artifact"]
+    "compatibility": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Optional 1-500 char string describing environment requirements (intended product, system packages, network access). Per the open Agent Skills standard."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Open map for additional metadata. Third parties may add any other key/value here; aiadev nests its own pipeline fields under the single namespaced key `aiadev`.",
+      "properties": {
+        "aiadev": {
+          "type": "object",
+          "description": "aiadev pipeline metadata, namespaced to avoid collisions with other frameworks. All keys optional.",
+          "properties": {
+            "version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$",
+              "description": "Semver. Optional during v0.1; required from v0.2."
+            },
+            "inputs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/aiadevInput" }
+            },
+            "outputs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/aiadevOutput" }
+            },
+            "requires": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Other skill names, file paths, or artifacts this skill expects to exist."
+            },
+            "handoffs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Skill names this skill typically invokes next. Non-binding; `implement` does not rely on handoffs to route."
+            }
           },
-          "path": { "type": "string" },
-          "description": { "type": "string" },
-          "optional": { "type": "boolean" }
-        },
-        "additionalProperties": false
-      }
-    },
-    "outputs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["type"],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["text", "file", "dir", "commit", "branch", "pr"]
-          },
-          "path": { "type": "string" },
-          "description": { "type": "string" },
-          "optional": { "type": "boolean" }
-        },
-        "additionalProperties": false
-      }
-    },
-    "requires": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Other skill names, file paths, or artifacts this skill expects to exist."
-    },
-    "handoffs": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Skill names this skill typically invokes next. Non-binding; `implement` does not rely on handoffs to route."
-    },
-    "disable-model-invocation": {
-      "type": "boolean",
-      "description": "If true, the skill never runs the model — it is a deterministic script."
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
     },
     "allowed-tools": {
       "oneOf": [
@@ -78,15 +102,15 @@
           "description": "Comma-separated list of tool names."
         }
       ],
-      "description": "Restrict which tools the skill may call. Optional."
+      "description": "Restrict which tools the skill may call. Optional. Kept tolerant of both shapes (string or array) since existing consumer skills use either."
     },
-    "license": {
-      "type": "string",
-      "description": "Optional attribution line when the skill is adapted from another project. Primary attribution still lives in CREDITS.md."
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "If true, the skill never runs the model — it is a deterministic script. Runtime extension read from the top level (spec 0016 cl-7)."
     },
     "argument-hint": {
       "type": "string",
-      "description": "Shown in UIs that prompt the user for arguments before invoking the skill."
+      "description": "Shown in UIs that prompt the user for arguments before invoking the skill. Runtime extension read from the top level (spec 0016 cl-7)."
     }
   },
   "additionalProperties": false

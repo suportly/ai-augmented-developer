@@ -38,7 +38,7 @@
 
 ### T002 — Reescrever skill-frontmatter.schema.json no shape novo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `schemas/skill-frontmatter.schema.json`
