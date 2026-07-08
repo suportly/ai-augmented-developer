@@ -54,7 +54,7 @@
 
 ### T003 — Migrador puro de frontmatter (antigo → novo)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - create: `src/aiadev/frontmatter_migrate.py`
