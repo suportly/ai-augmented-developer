@@ -112,6 +112,36 @@ class TestReadSpecHeader:
         # Raw value preserved for diagnostics.
         assert h["status_raw"] == "PR Open"
 
+    def test_prefix_matches_decorated_canonical_status(self, tmp_path: pathlib.Path) -> None:
+        # Real repo convention: merged specs decorate the Status with
+        # provenance, e.g. "Merged — `ed0554f` (v0.19.0)" (see spec 0014).
+        from aiadev.metrics import read_spec_header
+
+        spec_md = tmp_path / "spec.md"
+        spec_md.write_text(
+            "**Created:** 2026-06-01\n"
+            "**Status:** Merged — `ed0554f` (v0.19.0)\n"
+            "**Spec ID:** 0014\n",
+            encoding="utf-8",
+        )
+        h = read_spec_header(spec_md)
+        assert h["status"] == "Merged"
+        assert h["status_raw"].startswith("Merged —")
+
+    def test_prefix_match_requires_word_boundary(self, tmp_path: pathlib.Path) -> None:
+        # "Drafting" must NOT canonicalise to "Draft".
+        from aiadev.metrics import read_spec_header
+
+        spec_md = tmp_path / "spec.md"
+        spec_md.write_text(
+            "**Created:** 2026-06-01\n"
+            "**Status:** Drafting\n"
+            "**Spec ID:** 0042\n",
+            encoding="utf-8",
+        )
+        h = read_spec_header(spec_md)
+        assert h["status"] == "other"
+
     def test_raises_on_unparseable_spec_id(self, tmp_path: pathlib.Path) -> None:
         from aiadev.metrics import read_spec_header
 
@@ -524,3 +554,104 @@ class TestBuildReport:
         )
         assert report.n_specs_in_window == 0
         assert report.coverage_percent == 0.0
+
+    @staticmethod
+    def _write_spec(
+        ws: pathlib.Path,
+        dirname: str,
+        *,
+        spec_id: int,
+        status: str,
+        entries: list[str] | None = None,
+    ) -> None:
+        spec_dir = ws / "specs" / dirname
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text(
+            f"**Created:** 2026-05-15\n"
+            f"**Status:** {status}\n"
+            f"**Spec ID:** {spec_id:04d}\n",
+            encoding="utf-8",
+        )
+        if entries is not None:
+            (spec_dir / ".review-log.jsonl").write_text(
+                "".join(line + "\n" for line in entries), encoding="utf-8"
+            )
+
+    def test_aggregate_keeps_pairs_from_different_specs_distinct(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Regression: pooling entries across specs collided ``(task_id,
+        reviewer)`` pairs — two specs' T003 (or two branch-review
+        sentinels) counted as ONE first attempt instead of two.
+        """
+        from aiadev.metrics import build_report
+
+        self._write_spec(
+            tmp_path,
+            "0021-a",
+            spec_id=21,
+            status="Merged",
+            entries=[
+                '{"timestamp": "2026-05-16T10:00:00Z", "reviewer": "spec-reviewer", '
+                '"verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review"}',
+                '{"timestamp": "2026-05-16T11:00:00Z", "reviewer": "code-reviewer", '
+                '"verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003"}',
+            ],
+        )
+        self._write_spec(
+            tmp_path,
+            "0022-b",
+            spec_id=22,
+            status="Implemented",
+            entries=[
+                '{"timestamp": "2026-05-17T10:00:00Z", "reviewer": "spec-reviewer", '
+                '"verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review"}',
+                '{"timestamp": "2026-05-17T11:00:00Z", "reviewer": "code-reviewer", '
+                '"verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T003"}',
+                '{"timestamp": "2026-05-17T12:00:00Z", "reviewer": "code-reviewer", '
+                '"verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003"}',
+            ],
+        )
+
+        report = build_report(
+            tmp_path,
+            since=datetime.date(2026, 1, 1),
+            until=datetime.date(2026, 12, 31),
+        )
+        # Two branch-review first attempts (one per spec), both approved.
+        assert report.per_reviewer_first_pass_rate["spec-reviewer"] == (2, 2)
+        # Two T003 first attempts: spec A approved, spec B changes-requested.
+        assert report.per_reviewer_first_pass_rate["code-reviewer"] == (1, 2)
+        # Rework rows are qualified by spec dir so they stay distinguishable.
+        assert report.tasks_with_rework == [("0022-b/T003", 2, 1)]
+        # T003 reached review in BOTH specs.
+        assert report.tasks_reached_review == 2
+
+    def test_aggregate_filters_to_implemented_or_merged(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Spec success criterion 2: aggregate sample = Status in
+        {Implemented, Merged}. Drafts drop silently; non-canonical
+        statuses drop but are surfaced via ``unknown_status_count``.
+        """
+        from aiadev.metrics import build_report
+
+        self._write_spec(tmp_path, "0031-merged", spec_id=31, status="Merged", entries=[])
+        self._write_spec(tmp_path, "0032-draft", spec_id=32, status="Draft")
+        self._write_spec(tmp_path, "0033-legacy", spec_id=33, status="PR Open — #34")
+
+        report = build_report(
+            tmp_path,
+            since=datetime.date(2026, 1, 1),
+            until=datetime.date(2026, 12, 31),
+        )
+        assert report.n_specs_in_window == 1
+        assert report.coverage_percent == 100.0
+        assert report.unknown_status_count == 1
+
+    def test_feature_mode_bypasses_status_filter(self, tmp_path: pathlib.Path) -> None:
+        from aiadev.metrics import build_report
+
+        self._write_spec(tmp_path, "0032-draft", spec_id=32, status="Draft")
+        report = build_report(tmp_path, feature="0032-draft")
+        assert report.n_specs_in_window == 1

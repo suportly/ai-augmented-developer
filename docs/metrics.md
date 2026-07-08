@@ -17,7 +17,8 @@ Spec: [`specs/0015-aiadev-metrics/spec.md`](../specs/0015-aiadev-metrics/spec.md
 # Visão de uma feature específica
 aiadev metrics --feature 0015-aiadev-metrics
 
-# Visão agregada da janela default (últimos 90 dias)
+# Visão agregada da janela default (últimos 90 dias);
+# só entram specs com Status Implemented ou Merged
 aiadev metrics
 
 # Em CI / scripts (JSON estável)
@@ -32,7 +33,21 @@ aiadev metrics --format json --since 2026-01-01
 | `--since YYYY-MM-DD` | `today - 90` dias | Início da janela. Filtra sobre o campo `Created:` do header de `spec.md`. |
 | `--format {text,json}` | `text` | Formato de saída. `text` é human-friendly; `json` tem `schema_version: 1` estável. |
 | `--tasks` | off | Inclui listing por-task de rework (Story 3 do spec). |
-| `--show-bodies` | off | Imprime a prosa livre (`note`) das entries em `.review-log.jsonl`. Off por padrão (Article VI). |
+| `--show-bodies` | off | Imprime a prosa livre (`note`) das entries em `.review-log.jsonl`. Off por padrão (Article VI). Só tem efeito com `--feature`; no modo agregado é ignorado. |
+
+## Amostra do modo agregado
+
+Sem `--feature`, entram na amostra apenas specs cujo header tem
+`Status:` **Implemented** ou **Merged** e cujo `Created:` cai na janela.
+Specs em andamento (`Draft`, `In review`, `Approved`) ficam de fora —
+use `--feature` para inspecioná-las individualmente. Valores decorados
+como `Merged — \`ed0554f\` (v0.19.0)` são reconhecidos por prefixo;
+valores fora do enum (ex.: `PR Open — #34`, legado) são excluídos e
+contados na linha "Specs com Status fora do enum canônico".
+
+No listing de rework agregado, os task ids vêm qualificados pelo
+diretório do spec (ex.: `0014-bmad-inspired-evolutions/T003`) para que
+tasks homônimas de specs diferentes não se confundam.
 
 ## Exit codes
 
@@ -40,7 +55,7 @@ aiadev metrics --format json --since 2026-01-01
 | --- | --- |
 | `0` | Sucesso. Pode haver `coverage=0%` se nenhum spec na janela tiver `.review-log.jsonl` — não é erro. |
 | `1` | Erro de parse (spec.md com header não-recuperável) ou feature inexistente. |
-| `2` | Nenhum spec na janela, OU feature solicitada está antes do cutoff `0014` (sem `.review-log.jsonl`). |
+| `2` | Nenhum spec `Implemented`/`Merged` na janela, OU feature solicitada está antes do cutoff `0014` (sem `.review-log.jsonl`). |
 
 ## Métricas reportadas
 
@@ -82,3 +97,10 @@ output (success criterion #4 do spec).
 - Single-repo apenas (cl-2). Agregação cross-repo é spec futura.
 - Sem dashboard / persistência. Cada execução recalcula do audit trail.
 - Sem estimativa de custo de API. Deliberadamente fora de escopo.
+- `Iterações de clarify` sub-reporta: a contagem deriva do `git log -p`
+  de `spec.md`, então markers `cl-N` criados **e** resolvidos antes do
+  primeiro commit da spec nunca aparecem no histórico.
+- O parser de `tasks.md` usa a gramática canônica estrita
+  (`### TNNN — título` + `- **Status:** ...`). A extensão VSCode tolera
+  formatos mais soltos (checkbox, tabela, sinônimos); em repos com esses
+  formatos, os números de tasks podem divergir entre as duas superfícies.

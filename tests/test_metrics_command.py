@@ -178,6 +178,15 @@ class TestMetricsSinceAndFormat:
         finally:
             os.chdir(cwd_before)
 
+    def test_aggregate_with_only_in_flight_specs_exit_two(self, tmp_path: pathlib.Path) -> None:
+        # empty_log's spec has Status: Draft — in-flight specs are
+        # excluded from the aggregate sample (success criterion 2), so
+        # a repo with only drafts in the window has no data → exit 2.
+        result = self._aggregate_run("empty_log", ["--since", "2026-01-01"], tmp_path)
+        assert result.exit_code == 2, result.output
+        combined = result.output + (result.stderr if result.stderr_bytes is not None else "")
+        assert "Implemented/Merged" in combined
+
     def test_since_filters_on_created(self, tmp_path: pathlib.Path) -> None:
         # pristine fixture Created 2026-05-10. Setting --since 2027-01-01
         # excludes it → exit 2.

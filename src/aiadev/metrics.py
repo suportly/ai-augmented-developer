@@ -42,6 +42,12 @@ CANONICAL_STATUSES = frozenset({
     "Merged",
 })
 
+# Statuses that qualify a spec for the aggregate (no ``--feature``)
+# sample — spec success criterion 2. In-flight specs (Draft, In review,
+# Approved) are excluded from the aggregate so a repo full of drafts
+# does not deflate coverage; ``--feature`` mode bypasses this filter.
+AGGREGATE_STATUSES = frozenset({"Implemented", "Merged"})
+
 
 # Header field regexes. Each field is matched independently to tolerate
 # specs whose field order drifts (the template orders them
@@ -70,7 +76,9 @@ class MetricsReport:
     # Window the metrics cover (inclusive).
     window: tuple[datetime.date, datetime.date]
 
-    # How many specs (by spec.md ``Created:``) fell in the window.
+    # Sample size: in aggregate mode, specs whose ``Created:`` fell in
+    # the window AND whose Status is in ``AGGREGATE_STATUSES``; in
+    # ``--feature`` mode, the single resolved spec (any status).
     n_specs_in_window: int
 
     # Fraction of those specs that have a non-missing ``.review-log.jsonl``.
@@ -121,13 +129,36 @@ class MetricsReport:
     disclaimer_lines: tuple[str, ...]
 
     # Count of specs in the window whose header ``Status:`` value is
-    # outside ``CANONICAL_STATUSES`` (bucketised as "other").
+    # outside ``CANONICAL_STATUSES`` (bucketised as "other"). In
+    # aggregate mode these specs are EXCLUDED from the sample — the
+    # count exists so the reader can see the sample lost specs it
+    # could not classify.
     unknown_status_count: int
 
 
 # ---------------------------------------------------------------------
 # Header parsing
 # ---------------------------------------------------------------------
+
+
+def _canonicalize_status(status_raw: str) -> str:
+    """Map a raw ``Status:`` value onto the canonical enum.
+
+    The repo's real-world convention decorates the canonical value with
+    provenance — e.g. ``Merged — `ed0554f` (v0.19.0)`` or
+    ``PR Open — #34`` — so an exact match alone would misfile every
+    merged spec as "other". A canonical value followed by a
+    non-alphanumeric separator matches; ``Drafting`` does not become
+    ``Draft``.
+    """
+    if status_raw in CANONICAL_STATUSES:
+        return status_raw
+    for canonical in CANONICAL_STATUSES:
+        if status_raw.startswith(canonical):
+            tail = status_raw[len(canonical):]
+            if tail and not tail[0].isalnum():
+                return canonical
+    return "other"
 
 
 def read_spec_header(spec_md_path: pathlib.Path) -> dict:
@@ -154,7 +185,7 @@ def read_spec_header(spec_md_path: pathlib.Path) -> dict:
         raise ValueError(f"{spec_md_path}: missing or unparseable Created header")
 
     status_raw = status_m.group(1).strip() if status_m else ""
-    status = status_raw if status_raw in CANONICAL_STATUSES else "other"
+    status = _canonicalize_status(status_raw)
 
     return {
         "spec_id": int(spec_id_m.group(1)),
@@ -450,8 +481,9 @@ def build_report(
     """Top-level composer: walk specs, aggregate, return a ``MetricsReport``.
 
     ``feature``: when set, restricts the aggregation to a single spec
-    (window check is bypassed). Otherwise every spec whose ``Created:``
-    falls in ``[since, until]`` is aggregated.
+    (window and status checks are bypassed). Otherwise every spec whose
+    ``Created:`` falls in ``[since, until]`` AND whose header Status is
+    in ``AGGREGATE_STATUSES`` is aggregated.
 
     ``now``: the calendar reference used to compute defaults for
     ``since`` (``now − 90 days``) and ``until`` (``now``). Required to
@@ -482,15 +514,16 @@ def build_report(
     else:
         spec_dirs = list(iter_specs_in_window(workspace, since=since, until=until))
 
-    n = len(spec_dirs)
-    specs_with_log = 0
-    all_entries: list[dict] = []
-    tasks_buckets = {"pending": 0, "in_progress": 0, "blocked": 0, "done": 0}
-    unknown_status = 0
-    unresolved_cl_total = 0
-    spec_to_commit_samples: list[int] = []
-    historical_cl_total = 0
+    aggregate = feature is None
 
+    # Resolve headers first. Aggregate mode filters the sample to
+    # ``AGGREGATE_STATUSES`` (spec success criterion 2): in-flight
+    # specs (Draft / In review / Approved) drop out silently, while
+    # non-canonical statuses drop out but are surfaced via
+    # ``unknown_status_count``. ``--feature`` mode bypasses the filter —
+    # the caller named the spec explicitly.
+    unknown_status = 0
+    included: list[tuple[pathlib.Path, dict]] = []
     for spec_dir in spec_dirs:
         try:
             header = read_spec_header(spec_dir / "spec.md")
@@ -498,10 +531,47 @@ def build_report(
             continue
         if header["status"] == "other":
             unknown_status += 1
+            if aggregate:
+                continue
+        elif aggregate and header["status"] not in AGGREGATE_STATUSES:
+            continue
+        included.append((spec_dir, header))
+
+    n = len(included)
+    specs_with_log = 0
+    tasks_buckets = {"pending": 0, "in_progress": 0, "blocked": 0, "done": 0}
+    unresolved_cl_total = 0
+    spec_to_commit_samples: list[int] = []
+    historical_cl_total = 0
+    rates_acc: dict[str, list[int]] = {}
+    rework: list[tuple[str, int, int]] = []
+    reached = 0
+
+    for spec_dir, header in included:
         log_path = spec_dir / ".review-log.jsonl"
+        entries: list[dict] = []
         if log_path.exists():
             specs_with_log += 1
-            all_entries.extend(read_review_log(log_path))
+            entries = read_review_log(log_path)
+
+        # Review-trail metrics are computed per spec and merged, never
+        # over a pooled entry list: entries carry no spec identifier,
+        # so pooling would collide ``(task_id, reviewer)`` pairs from
+        # different features (every spec has a T003; every branch has
+        # a ``branch-review`` sentinel) and undercount first attempts.
+        for reviewer, (approved, total) in first_pass_rate_by_reviewer(entries).items():
+            bucket = rates_acc.setdefault(reviewer, [0, 0])
+            bucket[0] += approved
+            bucket[1] += total
+        # In aggregate mode, qualify task ids with the spec dir so two
+        # specs' T003 rows stay distinguishable in the listing.
+        prefix = f"{spec_dir.name}/" if aggregate else ""
+        rework.extend(
+            (prefix + task_id, rounds, cr_count)
+            for task_id, rounds, cr_count in task_rework_counts(entries)
+        )
+        reached += tasks_reached_review(entries)
+
         for tid_status, count in tasks_by_status(spec_dir).items():
             tasks_buckets[tid_status] += count
 
@@ -520,9 +590,8 @@ def build_report(
                 header["spec_id"], git_log_output
             )
 
-    rates = first_pass_rate_by_reviewer(all_entries)
-    rework = task_rework_counts(all_entries)
-    reached = tasks_reached_review(all_entries)
+    rework.sort(key=lambda item: (-item[1], item[0]))
+    rates = {r: (a, t) for r, (a, t) in rates_acc.items()}
     total_tasks = sum(tasks_buckets.values())
     coverage = round(100.0 * specs_with_log / n, 1) if n else 0.0
     median = statistics.median(spec_to_commit_samples) if spec_to_commit_samples else None

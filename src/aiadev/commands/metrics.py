@@ -120,7 +120,11 @@ def _resolve_feature(workspace: pathlib.Path, slug: str) -> Optional[pathlib.Pat
     "show_bodies",
     is_flag=True,
     default=False,
-    help="Imprime a prosa livre (note) das entries em .review-log.jsonl. Off por padrão (privacy).",
+    help=(
+        "Imprime a prosa livre (note) das entries em .review-log.jsonl. "
+        "Off por padrão (privacy). Só tem efeito com --feature; no modo "
+        "agregado é ignorado."
+    ),
 )
 def metrics_command(
     feature: Optional[str],
@@ -168,8 +172,9 @@ def metrics_command(
         entries = _metrics.read_review_log(log_path)
 
         # Read the spec header to know whether the feature predates the
-        # ``.review-log.jsonl`` cutoff. The cutoff (spec id ≤ 10) is the
-        # same one used by ``schemas/spec-recon.schema.json``.
+        # ``.review-log.jsonl`` cutoff (spec id ≤ 13, see
+        # ``_REVIEW_LOG_CUTOFF_LAST_SPEC_ID`` above — NOT the schema
+        # recon cutover, which is 10).
         try:
             header = _metrics.read_spec_header(feature_dir / "spec.md")
         except ValueError:
@@ -211,7 +216,9 @@ def metrics_command(
 
     if report.n_specs_in_window == 0:
         click.echo(
-            f"Nenhum spec no intervalo [{since_date}, {until_date}]. "
+            f"Nenhum spec com Status Implemented/Merged no intervalo "
+            f"[{since_date}, {until_date}] (specs em andamento não entram "
+            f"no agregado; use --feature para inspecioná-los). "
             f"Cutoff de review trail: spec 0014.",
             err=True,
         )
