@@ -86,7 +86,7 @@
 
 ### T005 — Dupla validação no aiadev validate + erro didático
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T004
 - **Files:**
   - modify: `src/aiadev/validate.py`, `src/aiadev/paths.py`

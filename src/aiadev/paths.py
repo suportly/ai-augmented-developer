@@ -110,6 +110,17 @@ def skill_frontmatter_schema(root: pathlib.Path | None = None) -> pathlib.Path:
     return schemas_dir(root) / "skill-frontmatter.schema.json"
 
 
+def agent_skills_schema(root: pathlib.Path | None = None) -> pathlib.Path:
+    """Vendored snapshot of the open Agent Skills standard (spec 0016 ADR-2).
+
+    External conformance check, kept as a sibling schema to
+    :func:`skill_frontmatter_schema` rather than merged with it (ADR-3):
+    ``aiadev validate`` runs both in sequence and reports which one a
+    given error came from.
+    """
+    return schemas_dir(root) / "agent-skills.schema.json"
+
+
 def running_inside_framework_repo() -> bool:
     """True when cwd is inside the framework's own checkout, not a consumer."""
     try:
