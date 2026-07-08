@@ -192,7 +192,7 @@
 
 ### T012 — Migração preservando conteúdo manual dos agent files
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - modify: `src/aiadev/commands/sync.py`, `src/aiadev/project_introspect.py`
