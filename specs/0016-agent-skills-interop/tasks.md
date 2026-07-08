@@ -116,7 +116,7 @@
 
 ### T007 — Auto-migração de skills instaladas no sync
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `src/aiadev/install_engine.py`, `src/aiadev/commands/sync.py`
