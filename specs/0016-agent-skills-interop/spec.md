@@ -37,7 +37,7 @@ Em dezembro de 2025 a spec de Agent Skills virou padrão aberto (agentskills.io,
 ## Success criteria
 
 - Toda `SKILL.md` do repo (catálogo + presets) valida contra a spec aberta de Agent Skills: apenas campos padrão em nível de topo (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), com os campos proprietários relocados sob `metadata` — e `aiadev validate` continua verificando o conteúdo relocado com a mesma severidade de hoje (nada vira warning).
-- O validador de referência do padrão (`skills-ref validate` ou equivalente vendorizado, decisão em cl-2) roda no CI ao lado do `aiadev validate` e passa em 100% das skills.
+- O schema do padrão aberto, vendorizado em `schemas/` (cl-2), é verificado pelo `aiadev validate` no CI e passa em 100% das skills.
 - Rules com escopo de arquivo declaram `paths:` (globs) no frontmatter e o `aiadev sync` propaga a condicionalidade para cada plataforma que a suporte; em plataformas sem suporte, o comportamento atual (sempre carregada) é preservado sem erro.
 - `aiadev sync` produz um único `AGENTS.md` canônico por projeto consumidor, e os agent files específicos (`CLAUDE.md`, `GEMINI.md`) não divergem dele em conteúdo gerado — qualquer bloco gerado existe numa única fonte.
 - `.claude-plugin/plugin.json` e `marketplace.json` são gerados/verificados a partir de `VERSION` e do catálogo de presets: um comando (ou passo de CI) falha quando os manifests divergem da fonte, e nenhuma release futura ships com manifest órfão como o `1.0.0` atual.
@@ -95,18 +95,18 @@ Como **mantenedor**, quero que os manifests `.claude-plugin/plugin.json` e `mark
 
 1. Given `VERSION` = `0.21.0` e manifests dizendo `0.20.0`, When o passo de verificação roda (CI ou `aiadev doctor`), Then ele falha citando o arquivo e os dois valores divergentes.
 2. Given o comando de geração executado num repo limpo, When ele termina, Then `plugin.json` reflete `VERSION` e os metadados do repo, `marketplace.json` lista o plugin core com `source` válido — e rodar o comando duas vezes é idempotente (segunda execução não muda nada).
-3. Given um preset marcado `stable` no `presets/catalog.json`, When os manifests são gerados, Then a decisão de representá-lo (plugin separado, componente do core, ou omitido) segue a resolução de cl-4 e é aplicada consistentemente para todos os presets do catálogo.
+3. Given um preset marcado `stable` no `presets/catalog.json`, When os manifests são gerados, Then o `marketplace.json` lista um plugin para esse preset (cl-4) e presets `beta`/`experimental` são omitidos — adicionar um preset stable novo ao catálogo produz o plugin correspondente sem edição manual de manifest.
 4. Given um usuário Claude Code com o marketplace adicionado, When ele instala o plugin, Then as skills e agents empacotados carregam sem erro de validação de frontmatter (dependência da Story 1).
 
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 A spec aberta define `metadata` como mapa livre. Os campos relocados devem ficar (a) aninhados num único namespace (`metadata.aiadev: {requires: [...], handoffs: [...]}`), (b) achatados com prefixo (`metadata.aiadev-requires: [...]`), ou (c) sem prefixo (`metadata.requires: [...]`)? A escolha afeta colisão com outros frameworks e a legibilidade dos 22 arquivos.]
-- [NEEDS CLARIFICATION:cl-2 O validador de referência (`skills-ref`) deve entrar no CI como dependência externa (instalada no workflow) ou o schema do padrão deve ser vendorizado em `schemas/` e verificado pelo próprio `aiadev validate`? Dependência externa acompanha o padrão automaticamente; vendorizar mantém o CI hermético.]
-- [NEEDS CLARIFICATION:cl-3 No AGENTS.md canônico, o `CLAUDE.md` derivado deve (a) virar ponteiro fino ("see AGENTS.md") ou (b) manter conteúdo completo com blocos regenerados espelhados? O Claude Code lê AGENTS.md nativamente desde 2026, o que favorece (a), mas (a) muda a experiência de quem abre CLAUDE.md direto — decisão de produto.]
-- [NEEDS CLARIFICATION:cl-4 No marketplace, os presets (`lean`, `django-drf-react`, `mobile-ops`) devem ser plugins separados, componentes opcionais do plugin core, ou ficar fora do marketplace (só via `aiadev sync`)? Plugins separados dão descoberta individual mas multiplicam manifests a manter.]
-- [NEEDS CLARIFICATION:cl-5 A migração de frontmatter é breaking para consumidores que fizeram fork/custom de skills no formato antigo. O `aiadev validate` deve aceitar o formato antigo por um período de depreciação (warning por N releases) ou cortar de uma vez na próxima minor? O framework está pré-1.0, o que permite corte seco, mas há consumidores reais.]
-- [NEEDS CLARIFICATION:cl-6 Quais rules do conjunto atual devem ganhar `paths:` na primeira leva, e com quais globs? Candidatas óbvias: `testing.md` (tests/**), `api-conventions.md` (rotas/serializers — depende do preset). `security.md` e `git-workflow.md` parecem globais. A atribuição por rule é decisão de conteúdo, não de mecanismo.]
+- **cl-1 (resolved):** Os campos relocados ficam **aninhados num namespace único**: `metadata.aiadev: {version, inputs, outputs, requires, handoffs}`. Um só ponto de colisão com outros frameworks, legível nos 22 arquivos, e o schema valida o shape interno do namespace inteiro.
+- **cl-2 (resolved):** O schema do padrão aberto é **vendorizado em `schemas/`** (snapshot com data/versão da spec registrada em comentário) e verificado pelo próprio `aiadev validate` — CI permanece hermético, alinhado à filosofia zero-install do repo. Atualização do snapshot é manutenção deliberada, não drift automático.
+- **cl-3 (resolved):** `CLAUDE.md` (e `GEMINI.md`) dos consumidores viram **ponteiro fino** (~3 linhas apontando para `AGENTS.md`). O Claude Code lê AGENTS.md nativamente desde 2026; a divergência entre agent files é eliminada por construção. Conteúdo manual pré-existente em CLAUDE.md é preservado pelo caminho de migração (Story 3 sc2).
+- **cl-4 (resolved):** **Um plugin por preset stable** além do `aiadev-core`, todos **gerados de `presets/catalog.json`** — preset novo no catálogo vira plugin no marketplace sem manifest escrito à mão (zero-toque). Presets `beta`/`experimental` ficam fora até promoção.
+- **cl-5 (resolved):** **Corte seco com auto-migração**: o formato antigo vira erro no `aiadev validate` já na minor desta feature, mas `aiadev sync` reescreve automaticamente skills instaladas no formato novo (Story 1 sc4) e a mensagem de erro do validate ensina a localização correta sob `metadata.aiadev`. Justificativa: pré-1.0 + migração automática cobre o caminho comum.
+- **cl-6 (resolved):** Primeira leva de `paths:` é **mínima: apenas `rules/testing.md`** (globs `tests/**`, `**/*.test.*`, `**/*_test.*`, `conftest.py`). As demais rules permanecem globais; atribuir `paths:` a outras (inclusive por preset) é evolução de conteúdo pós-merge, sem mudança de mecanismo.
 
 <!-- section: Data touched -->
 ## Data touched
