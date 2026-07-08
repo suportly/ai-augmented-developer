@@ -58,15 +58,33 @@ def test_accepts_optional_standard_fields_including_nested_metadata():
         "name": "my-skill",
         "description": "Does a thing when invoked.",
         "license": "MIT",
-        "compatibility": {"claude-code": ">=1.0.0"},
+        # Per the published spec, compatibility is a 1-500 char STRING.
+        "compatibility": "Designed for Claude Code; requires git and jq",
         "metadata": {
             "org.example.category": "productivity",
+            # The spec prose recommends string values; the reference
+            # validator does not enforce value types, and aiadev nests an
+            # object under metadata.aiadev (spec 0016 cl-1/cl-7).
             "org.example.nested": {"foo": "bar", "count": 3},
         },
-        "allowed-tools": ["Read", "Write"],
+        "allowed-tools": "Read Write",
     }
     errors = list(validator.iter_errors(full))
     assert not errors, f"full standard frontmatter should validate: {errors}"
+
+
+def test_rejects_compatibility_as_object():
+    # Earlier drafts of this snapshot mis-modelled compatibility as a map;
+    # the published spec says string, max 500 chars.
+    schema = _load_schema()
+    validator = Draft202012Validator(schema)
+    payload = {
+        "name": "my-skill",
+        "description": "Does a thing when invoked.",
+        "compatibility": {"claude-code": ">=1.0.0"},
+    }
+    errors = list(validator.iter_errors(payload))
+    assert errors, "compatibility must be a string per the published spec"
 
 
 def test_accepts_allowed_tools_as_space_or_comma_separated_string():
@@ -79,6 +97,22 @@ def test_accepts_allowed_tools_as_space_or_comma_separated_string():
     }
     errors = list(validator.iter_errors(payload))
     assert not errors, f"string allowed-tools should validate: {errors}"
+
+
+def test_accepts_documented_runtime_extension_fields():
+    # disable-model-invocation and argument-hint are Claude Code runtime
+    # extensions read from the top level; spec 0016 cl-7 keeps them there
+    # as a deliberate, documented deviation from strict skills-ref.
+    schema = _load_schema()
+    validator = Draft202012Validator(schema)
+    payload = {
+        "name": "deploy",
+        "description": "Deploys the app when the user explicitly asks.",
+        "disable-model-invocation": True,
+        "argument-hint": "[backend|frontend] [--skip-checks]",
+    }
+    errors = list(validator.iter_errors(payload))
+    assert not errors, f"documented runtime extensions should validate: {errors}"
 
 
 @pytest.mark.parametrize("proprietary_field", ["requires", "handoffs"])

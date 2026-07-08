@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/alairjt/ai-augmented-developer/schemas/agent-skills.schema.json",
-  "$comment": "Vendorized snapshot of the open Agent Skills standard frontmatter contract, from agentskills.io/specification, snapshot dated 2025-12-18. This schema is the EXTERNAL conformance check only: it encodes exactly what the Agent Skills spec allows at the top level of a SKILL.md frontmatter block, and nothing aiadev-specific. Do not add aiadev-internal fields here; those live in schemas/skill-frontmatter.schema.json under metadata.aiadev. Directory-name matching for `name` is enforced by code, not by this schema.",
+  "$comment": "Vendorized snapshot of the open Agent Skills standard frontmatter contract, from agentskills.io/specification, snapshot dated 2025-12-18, re-verified against the published spec and the skills-ref reference validator on 2026-07-08. This schema is the EXTERNAL conformance check only: it encodes what the Agent Skills spec allows at the top level of a SKILL.md frontmatter block, plus two documented runtime extension fields (disable-model-invocation, argument-hint) that Claude Code reads from the top level — a deliberate, recorded deviation from strict skills-ref (which rejects unknown fields), decided in spec 0016 cl-7 because relocating them would break runtime behaviour (e.g. disable-model-invocation guards deploy skills). The spec prose says metadata values are strings; the reference validator does not enforce value types, and aiadev deliberately nests an object under metadata.aiadev (spec 0016 cl-1/cl-7). Do not add aiadev-internal fields here; those live in schemas/skill-frontmatter.schema.json under metadata.aiadev. Directory-name matching for `name` is enforced by code, not by this schema.",
   "title": "Agent Skills Standard Frontmatter",
-  "description": "Conformance schema for the open Agent Skills standard (agentskills.io) SKILL.md frontmatter contract.",
+  "description": "Conformance schema for the open Agent Skills standard (agentskills.io) SKILL.md frontmatter contract, with documented Claude Code runtime extensions.",
   "type": "object",
   "required": ["name", "description"],
   "properties": {
@@ -25,21 +25,27 @@
       "description": "Optional license identifier or attribution string."
     },
     "compatibility": {
-      "type": "object",
-      "description": "Optional free-form map describing runtime/tooling compatibility constraints.",
-      "additionalProperties": true
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Optional 1-500 char string describing environment requirements (intended product, system packages, network access)."
     },
     "metadata": {
       "type": "object",
-      "description": "Optional free-form map of additional metadata. Values may be any YAML/JSON type; namespaced keys (e.g. org.example.key) are recommended to avoid collisions.",
+      "description": "Optional map for additional metadata not defined by the spec. The spec prose recommends string values and reasonably unique key names; the reference validator does not enforce value types, and aiadev nests its pipeline fields under the single namespaced key `aiadev` (validated by schemas/skill-frontmatter.schema.json).",
       "additionalProperties": true
     },
     "allowed-tools": {
-      "description": "Experimental: restrict which tools the skill may call, either as an array of tool names or as a space/comma-separated string.",
-      "oneOf": [
-        { "type": "array", "items": { "type": "string" } },
-        { "type": "string" }
-      ]
+      "description": "Experimental: pre-approved tools the skill may use. The standard documents a space-separated string; a comma-separated string is tolerated (existing catalog usage).",
+      "type": "string"
+    },
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "Runtime extension (Claude Code): when true, only the user can invoke the skill. Kept at top level because the runtime reads it there; see $comment."
+    },
+    "argument-hint": {
+      "type": "string",
+      "description": "Runtime extension (Claude Code): hint shown for slash-command arguments. Kept at top level because the runtime reads it there; see $comment."
     }
   },
   "additionalProperties": false
