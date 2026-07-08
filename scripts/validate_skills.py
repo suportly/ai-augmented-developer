@@ -1,9 +1,22 @@
 #!/usr/bin/env python3
-"""Provisional skill validator. Replaced by ``aiadev validate`` in phase 5.
+"""Zero-install fallback skill validator (no ``aiadev`` package import).
 
-Validates every ``skills/*/SKILL.md`` frontmatter against
-``schemas/skill-frontmatter.schema.json`` and checks that the frontmatter
-``name`` matches the containing directory.
+Validates every ``skills/*/SKILL.md`` frontmatter against BOTH schemas
+(spec 0016, ADR-3), mirroring ``aiadev validate`` (``src/aiadev/validate.py``):
+
+- the vendored open Agent Skills standard snapshot
+  (``schemas/agent-skills.schema.json``) — external conformance, errors
+  prefixed ``[agent-skills]``;
+- the internal aiadev schema (``schemas/skill-frontmatter.schema.json``) —
+  shape of the ``metadata.aiadev`` pipeline namespace, errors prefixed
+  ``[aiadev]``.
+
+A proprietary pipeline field (``version``, ``inputs``, ``outputs``,
+``requires``, ``handoffs``) left at the top level (pre-0016 format) gets an
+additional didactic ``[aiadev]`` message naming the field and its new
+location under ``metadata.aiadev.<field>`` (cl-5, ADR-3, spec 0016).
+
+Also checks that the frontmatter ``name`` matches the containing directory.
 
 Usage:
     scripts/validate_skills.py              # validate every skill
@@ -24,7 +37,21 @@ from typing import Iterable
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "schemas" / "skill-frontmatter.schema.json"
+STANDARD_SCHEMA_PATH = ROOT / "schemas" / "agent-skills.schema.json"
 MARKER_SCHEMA_PATH = ROOT / "schemas" / "marker-grammar.schema.json"
+
+#: The 5 proprietary aiadev pipeline fields that must live under
+#: ``metadata.aiadev`` (spec 0016 ADR-4). Kept as a local literal — not
+#: imported from ``aiadev.frontmatter_migrate.PROPRIETARY_KEYS`` — so this
+#: script stays a zero-install fallback with no dependency on the aiadev
+#: package. Keep in sync with that module if the field list ever changes.
+PROPRIETARY_KEYS: tuple[str, ...] = (
+    "version",
+    "inputs",
+    "outputs",
+    "requires",
+    "handoffs",
+)
 
 
 def load_marker_pattern() -> re.Pattern[str]:
@@ -120,9 +147,25 @@ def iter_skill_files(args: list[str]) -> Iterable[pathlib.Path]:
                 yield path
 
 
+def _didactic_proprietary_field_errors(frontmatter: dict) -> list[str]:
+    """Didactic message for a proprietary field left at the top level.
+
+    Mirrors ``aiadev.validate._didactic_proprietary_field_errors``: names
+    the offending field AND the exact new location (cl-5, ADR-3).
+    """
+    return [
+        f"[aiadev] {key}: proprietary pipeline field at top level — "
+        f"move it to metadata.aiadev.{key} (see spec 0016)"
+        for key in PROPRIETARY_KEYS
+        if key in frontmatter
+    ]
+
+
 def main(argv: list[str]) -> int:
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    validator = Draft202012Validator(schema)
+    aiadev_schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    aiadev_validator = Draft202012Validator(aiadev_schema)
+    standard_schema = json.loads(STANDARD_SCHEMA_PATH.read_text(encoding="utf-8"))
+    standard_validator = Draft202012Validator(standard_schema)
     failed = False
 
     for skill_path in iter_skill_files(argv):
@@ -152,12 +195,23 @@ def main(argv: list[str]) -> int:
             failed = True
             continue
 
-        errors = sorted(validator.iter_errors(frontmatter), key=lambda e: e.path)
-        if errors:
+        # Dual validation (spec 0016, ADR-3): standard conformance first,
+        # then the didactic proprietary-field check, then the internal
+        # aiadev shape — same order and origin prefixes as
+        # aiadev.validate.validate_paths.
+        messages: list[str] = []
+        for error in sorted(standard_validator.iter_errors(frontmatter), key=lambda e: e.path):
+            location = "/".join(str(p) for p in error.path) or "<root>"
+            messages.append(f"[agent-skills] {location}: {error.message}")
+        messages.extend(_didactic_proprietary_field_errors(frontmatter))
+        for error in sorted(aiadev_validator.iter_errors(frontmatter), key=lambda e: e.path):
+            location = "/".join(str(p) for p in error.path) or "<root>"
+            messages.append(f"[aiadev] {location}: {error.message}")
+
+        if messages:
             print(f"FAIL {skill_path}:")
-            for error in errors:
-                location = "/".join(str(p) for p in error.path) or "<root>"
-                print(f"  - {location}: {error.message}")
+            for message in messages:
+                print(f"  - {message}")
             failed = True
             continue
 

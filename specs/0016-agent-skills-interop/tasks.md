@@ -102,7 +102,7 @@
 
 ### T006 — Espelhar dupla validação no fallback zero-install
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `scripts/validate_skills.py`
