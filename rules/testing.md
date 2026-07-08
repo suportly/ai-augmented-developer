@@ -1,6 +1,10 @@
 ---
 description: Test-first workflow, naming, and structure baseline for every stack.
-alwaysApply: true
+paths:
+  - "tests/**"
+  - "**/*.test.*"
+  - "**/*_test.*"
+  - "conftest.py"
 ---
 
 # Testing

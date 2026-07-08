@@ -161,6 +161,60 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _write_one_target(
+    target: Path,
+    rendered: str,
+    role: str,
+    *,
+    install_root: Path,
+    mode: InstallMode,
+    force: bool,
+    previous_by_path: dict[str, InstalledFile],
+    report: InstallReport,
+    recorded_files: list[InstalledFile],
+) -> None:
+    """Decide write/skip/conflict for a single resolved ``target`` and act on it.
+
+    Shared by the primary per-artifact target and the optional
+    claude-code/gemini agent-file wrapper (spec 0016 Story 3, ADR-5) so
+    both go through identical conflict-detection semantics: a file
+    already on disk with a hash the manifest doesn't recognize (and that
+    doesn't match what we're about to write) is a conflict, not a
+    silent overwrite.
+    """
+    target_rel = _to_rel(target, install_root)
+    rendered_sha = _sha256_text(rendered)
+
+    if target.is_file():
+        current_sha = compute_sha256(target)
+        prev = previous_by_path.get(target_rel)
+        recognized = prev is not None and prev.sha256 == current_sha
+        if recognized and rendered_sha == current_sha:
+            # Identical; nothing to do, but keep the record.
+            report.skipped.append(target)
+            recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
+            return
+        if recognized or force:
+            if mode is InstallMode.INSTALL:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(rendered, encoding="utf-8")
+            report.written.append(target)
+            recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
+            return
+        # Target is present, not tracked (or edited) → conflict.
+        report.conflicts.append(target)
+        if prev is not None:
+            recorded_files.append(prev)
+        return
+
+    # Fresh file — write and record.
+    if mode is InstallMode.INSTALL:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(rendered, encoding="utf-8")
+    report.written.append(target)
+    recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
+
+
 def install(
     preset_path: Path,
     project_root: Path,
@@ -248,37 +302,42 @@ def install(
             rendered = render_hook(role, name, rendered)
 
         target = platform_module.resolve_target(role, name, install_root, scope=scope)
-        target_rel = _to_rel(target, install_root)
-        rendered_sha = _sha256_text(rendered)
+        _write_one_target(
+            target,
+            rendered,
+            role,
+            install_root=install_root,
+            mode=mode,
+            force=force,
+            previous_by_path=previous_by_path,
+            report=report,
+            recorded_files=recorded_files,
+        )
 
-        if target.is_file():
-            current_sha = compute_sha256(target)
-            prev = previous_by_path.get(target_rel)
-            recognized = prev is not None and prev.sha256 == current_sha
-            if recognized and rendered_sha == current_sha:
-                # Identical; nothing to do, but keep the record.
-                report.skipped.append(target)
-                recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
-                continue
-            if recognized or force:
-                if mode is InstallMode.INSTALL:
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_text(rendered, encoding="utf-8")
-                report.written.append(target)
-                recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
-                continue
-            # Target is present, not tracked (or edited) → conflict.
-            report.conflicts.append(target)
-            if prev is not None:
-                recorded_files.append(prev)
-            continue
-
-        # Fresh file — write and record.
-        if mode is InstallMode.INSTALL:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(rendered, encoding="utf-8")
-        report.written.append(target)
-        recorded_files.append(InstalledFile(target_rel, rendered_sha, role))
+        # Spec 0016 Story 3 / ADR-5: claude-code and gemini additionally
+        # emit a thin wrapper file (CLAUDE.md / GEMINI.md) pointing at the
+        # canonical agent_file target resolved above. The hook is optional
+        # — platforms that already share AGENTS.md as their one physical
+        # agent file (cursor/codex/opencode) do not define it, so nothing
+        # extra is written for them.
+        wrapper_hook = getattr(platform_module, "wrapper_target", None)
+        render_wrapper_hook = getattr(platform_module, "render_wrapper", None)
+        if wrapper_hook is not None and render_wrapper_hook is not None:
+            wrapper_path = wrapper_hook(role, name, install_root, scope=scope)
+            if wrapper_path is not None:
+                wrapper_text = render_wrapper_hook(role, target.name)
+                if wrapper_text is not None:
+                    _write_one_target(
+                        wrapper_path,
+                        wrapper_text,
+                        role,
+                        install_root=install_root,
+                        mode=mode,
+                        force=force,
+                        previous_by_path=previous_by_path,
+                        report=report,
+                        recorded_files=recorded_files,
+                    )
 
     if report.unresolved and not allow_unresolved:
         raise InstallError(

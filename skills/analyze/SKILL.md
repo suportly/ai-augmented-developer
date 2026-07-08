@@ -1,19 +1,21 @@
 ---
 name: analyze
 description: Check for drift between spec.md, plan.md, tasks.md, and the actual code. Reports the gaps; does not fix them.
-version: 0.2.0
-inputs:
-  - type: dir
-    path: specs/<branch>/
-outputs:
-  - type: text
-    description: A gap report. Optionally written to specs/<branch>/analysis.md.
-requires:
-  - constitution
-handoffs:
-  - plan
-  - tasks
-  - clarify
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs:
+    - type: dir
+      path: specs/<branch>/
+    outputs:
+    - type: text
+      description: A gap report. Optionally written to specs/<branch>/analysis.md.
+    requires:
+    - constitution
+    handoffs:
+    - plan
+    - tasks
+    - clarify
 ---
 
 # Analyze

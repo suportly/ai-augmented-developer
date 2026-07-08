@@ -22,6 +22,32 @@ Where we copy verbatim (for example markdownlint config or template scaffolds), 
 
 A comparative analysis of BMAD-METHOD v6.6.0 (MIT license at time of adaptation) inspired the feature `0014-bmad-inspired-evolutions`, which introduces the `task-context` skill (Story 1) for per-task context composition before each implementer dispatch, the 3-tier customization resolver (Story 2) layering skill `customize.toml` (base) → `_aiadev/team.toml` (committed) → `_aiadev/user.toml` (gitignored), the zero-findings-halt review pattern (Story 3) requiring an explicit `### Why no issues` block + re-dispatch gate when reviewer subagents return APPROVED on a non-trivial diff, and the state-aware `help` skill (Story 4) via the new `pipeline_state` module. No code is copied verbatim; the framework adapts BMAD's design ideas to the existing Markdown-skill architecture.
 
+### [Agent Skills open standard](https://agentskills.io) ([agentskills/agentskills](https://github.com/agentskills/agentskills))
+
+Starting with feature `0016-agent-skills-interop`, every `SKILL.md`
+frontmatter in this repo conforms at the top level to the open Agent
+Skills standard published at agentskills.io (governed by the Agentic
+AI Foundation) — `name`, `description`, `license`, `compatibility`,
+`metadata`, `allowed-tools`, plus the two documented Claude Code
+runtime extensions `disable-model-invocation` and `argument-hint`
+(spec 0016 cl-7). The five proprietary aiadev pipeline fields
+(`version`, `inputs`, `outputs`, `requires`, `handoffs`) that used to
+live at the top level now nest under the single namespaced key
+`metadata.aiadev`, so they no longer collide with the open standard or
+with other frameworks' metadata.
+
+We vendor a snapshot of the standard's conformance schema at
+`schemas/agent-skills.schema.json` (snapshot dated 2025-12-18,
+re-verified against the published spec and the `skills-ref` reference
+validator on 2026-07-08 — see the `$comment` in that file for the
+exact deviations recorded). No code from the reference implementation
+is bundled; we only vendor the schema shape and validate against it in
+`aiadev validate`. The `agentskills/agentskills` repository (verified
+via the GitHub API at the time of this adaptation) licenses its code
+under **Apache License 2.0** and its documentation under **CC-BY-4.0**;
+we cite both here per Article VII rather than re-publish the license
+text.
+
 ## Bundled catalogs
 
 ### [contains-studio/agents](https://github.com/contains-studio/agents) — not bundled

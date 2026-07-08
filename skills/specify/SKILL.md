@@ -1,19 +1,21 @@
 ---
 name: specify
 description: Turn a natural-language demand into a numbered spec.md under specs/<NNNN-slug>/. Use when the user describes what they want but no spec exists yet.
-version: 0.2.0
-inputs:
-  - type: text
-    description: Feature request in free-form natural language (issue, user quote, product brief).
-outputs:
-  - type: file
-    path: specs/<NNNN-slug>/spec.md
-requires:
-  - constitution
-  - templates/spec-template.md
-handoffs:
-  - clarify
-  - plan
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs:
+    - type: text
+      description: Feature request in free-form natural language (issue, user quote, product brief).
+    outputs:
+    - type: file
+      path: specs/<NNNN-slug>/spec.md
+    requires:
+    - constitution
+    - templates/spec-template.md
+    handoffs:
+    - clarify
+    - plan
 ---
 
 # Specify

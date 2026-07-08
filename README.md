@@ -143,6 +143,20 @@ Fetch and follow instructions from https://raw.githubusercontent.com/suportly/ai
 
 Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant skill.
 
+### `AGENTS.md` — the canonical agent file
+
+`aiadev sync` writes a single canonical `AGENTS.md` at your project
+root — the cross-tool convention that Claude Code, Cursor, Codex, and
+OpenCode all read natively (Gemini CLI keeps its own `GEMINI.md`, also
+generated as a thin wrapper). `CLAUDE.md`/`GEMINI.md` become ~3-line
+pointers instead of duplicating generated content, so the five
+platforms can no longer silently diverge. Any manual content you
+already had in those files is preserved and merged into `AGENTS.md`'s
+migration block the first time `aiadev sync` runs against it (a
+`.bak` copy of the original is kept alongside). See
+[docs/agent-skills-interop.md](docs/agent-skills-interop.md) for the
+full migration walkthrough.
+
 ## Inspecting your audit trail with `aiadev metrics`
 
 Every feature you run through the pipeline leaves a structured trail
@@ -171,6 +185,26 @@ reviewers fica fora da saída padrão (Article VI) — use
 `--show-bodies` se precisar inspecionar.
 
 Detalhes: [docs/metrics.md](docs/metrics.md).
+
+## Keeping plugin manifests in sync with `aiadev manifests`
+
+`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
+`.cursor-plugin/plugin.json` are generated from `VERSION` +
+`pyproject.toml` + `presets/catalog.json` — no more hand-edited
+manifests drifting from the release version.
+
+```bash
+# Read-only check (default); fails naming the file and the
+# diverging values when a manifest is out of sync.
+aiadev manifests
+
+# Regenerate all three in place. Idempotent.
+aiadev manifests --write
+```
+
+Every `stable` preset in `presets/catalog.json` gets a corresponding
+marketplace plugin entry automatically. Details:
+[docs/agent-skills-interop.md](docs/agent-skills-interop.md).
 
 ## Use as LLM tools
 

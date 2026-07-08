@@ -1,22 +1,24 @@
 ---
 name: implement
 description: Execute an approved plan + tasks list by dispatching one fresh subagent per task and applying two-stage review (spec compliance, then code quality) before moving on.
-version: 0.2.0
-inputs:
-  - type: file
-    path: specs/<branch>/plan.md
-  - type: file
-    path: specs/<branch>/tasks.md
-outputs:
-  - type: commit
-    description: One commit per task, in order, with the task id in the commit message.
-requires:
-  - constitution
-  - test-driven-development
-handoffs:
-  - requesting-code-review
-  - finishing-a-branch
-  - systematic-debugging
+metadata:
+  aiadev:
+    version: 0.2.0
+    inputs:
+    - type: file
+      path: specs/<branch>/plan.md
+    - type: file
+      path: specs/<branch>/tasks.md
+    outputs:
+    - type: commit
+      description: One commit per task, in order, with the task id in the commit message.
+    requires:
+    - constitution
+    - test-driven-development
+    handoffs:
+    - requesting-code-review
+    - finishing-a-branch
+    - systematic-debugging
 ---
 
 # Implement

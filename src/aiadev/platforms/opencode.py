@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
+import yaml
+
 from ..mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME, load_servers_from_text
 
 ArtifactRole = Literal[
@@ -118,7 +120,60 @@ def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
             "mcp": {s.name: _opencode_mcp_entry(s) for s in servers},
         }
         return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    if role == "rule":
+        return _strip_rule_paths(source_text)
     return source_text
+
+
+def _strip_rule_paths(source_text: str) -> str:
+    """Remove the ``paths:`` key from a rule's frontmatter, if present.
+
+    Story 2 sc2 of specs/0016-agent-skills-interop (ADR-6): OpenCode's
+    runtime does not support conditional/paths-scoped rules, so the
+    ``paths:`` key is stripped from the installed frontmatter. Rules
+    without ``paths:`` pass through byte-identical (opt-in feature; no
+    glob evaluation happens here or anywhere in aiadev).
+    """
+    frontmatter, body, has_trailing_newline = _split_rule_frontmatter(source_text)
+    if frontmatter is None or "paths" not in frontmatter:
+        return source_text
+    updated = {k: v for k, v in frontmatter.items() if k != "paths"}
+    return _join_rule_frontmatter(updated, body, has_trailing_newline)
+
+
+def _split_rule_frontmatter(text: str) -> tuple[dict | None, str, bool]:
+    """Split ``text`` into (frontmatter, body, had_trailing_newline).
+
+    Returns ``(None, text, False)`` when there is no well-formed YAML
+    frontmatter block, so callers can fall back to a pass-through.
+    """
+    lines = text.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return None, text, False
+    end_idx: int | None = None
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end_idx = idx
+            break
+    if end_idx is None:
+        return None, text, False
+    fm_text = "".join(lines[1:end_idx])
+    try:
+        parsed = yaml.safe_load(fm_text) or {}
+    except yaml.YAMLError:
+        return None, text, False
+    if not isinstance(parsed, dict):
+        return None, text, False
+    body = "".join(lines[end_idx + 1 :])
+    return parsed, body, text.endswith("\n")
+
+
+def _join_rule_frontmatter(frontmatter: dict, body: str, has_trailing_newline: bool) -> str:
+    dumped = yaml.safe_dump(frontmatter, sort_keys=False, default_flow_style=False)
+    rendered = f"---\n{dumped}---\n{body}"
+    if has_trailing_newline and not rendered.endswith("\n"):
+        rendered += "\n"
+    return rendered
 
 
 def _opencode_mcp_entry(server) -> dict:

@@ -14,7 +14,8 @@ from typing import Iterable
 import yaml
 from jsonschema import Draft202012Validator
 
-from .paths import find_framework_root, skill_frontmatter_schema
+from .frontmatter_migrate import PROPRIETARY_KEYS
+from .paths import agent_skills_schema, find_framework_root, skill_frontmatter_schema
 
 _SPEC_ID_RE = re.compile(r"^\*\*Spec ID:\*\*\s*(\d+)", re.MULTILINE)
 _RECON_ANCHOR = "<!-- section: Reconnaissance -->"
@@ -193,6 +194,32 @@ def iter_skill_files(root: pathlib.Path) -> Iterable[pathlib.Path]:
             yield from sorted(preset_skills.rglob("SKILL.md"))
 
 
+def _format_schema_errors(errors: Iterable, origin: str) -> list[str]:
+    """Render ``jsonschema`` errors as ``[origin] path: message`` lines."""
+    return [
+        f"[{origin}] {'/'.join(str(p) for p in err.path) or '<root>'}: {err.message}"
+        for err in sorted(errors, key=lambda e: list(e.path))
+    ]
+
+
+def _didactic_proprietary_field_errors(data: dict) -> list[str]:
+    """Clean-cut check for the pre-0016 format (cl-5, ADR-3).
+
+    A proprietary pipeline field (``version``, ``inputs``, ``outputs``,
+    ``requires``, ``handoffs``) sitting at the top level of the
+    frontmatter — instead of nested under ``metadata.aiadev`` — gets a
+    didactic message naming the offending field and the exact new
+    location, on top of whatever the standard schema already reports for
+    the same unknown top-level key.
+    """
+    return [
+        f"[aiadev] {key}: proprietary pipeline field at top level — "
+        f"move it to metadata.aiadev.{key} (see spec 0016)"
+        for key in PROPRIETARY_KEYS
+        if key in data
+    ]
+
+
 def validate_paths(
     paths: Iterable[pathlib.Path],
     *,
@@ -202,13 +229,26 @@ def validate_paths(
 
     Files are dispatched by basename: ``spec.md`` → :func:`validate_spec`
     (recon rule, issue #26), every other ``SKILL.md``-style path → the
-    skill-frontmatter validator. When ``paths`` is empty, the function
+    skill-frontmatter validators. When ``paths`` is empty, the function
     sweeps every ``SKILL.md`` under ``root``; spec sweeping is explicit
     only — pass the ``spec.md`` paths the caller wants validated.
+
+    Each SKILL.md is checked against TWO schemas in sequence (spec 0016,
+    ADR-3): the vendored open Agent Skills standard snapshot
+    (``schemas/agent-skills.schema.json`` — external conformance) and the
+    internal aiadev schema (``schemas/skill-frontmatter.schema.json`` —
+    shape of the ``metadata.aiadev`` pipeline namespace). Every reported
+    error line is prefixed with its origin, ``[agent-skills]`` or
+    ``[aiadev]``, so the author knows which contract they violated. A
+    proprietary pipeline field left at the top level (pre-0016 format)
+    additionally gets a didactic ``[aiadev]`` message naming the field and
+    its new location (cl-5).
     """
     root = (root or find_framework_root()).resolve()
-    schema = json.loads(skill_frontmatter_schema(root).read_text(encoding="utf-8"))
-    validator = Draft202012Validator(schema)
+    aiadev_schema = json.loads(skill_frontmatter_schema(root).read_text(encoding="utf-8"))
+    aiadev_validator = Draft202012Validator(aiadev_schema)
+    standard_schema = json.loads(agent_skills_schema(root).read_text(encoding="utf-8"))
+    standard_validator = Draft202012Validator(standard_schema)
 
     report = ValidationReport()
     targets = list(paths) or list(iter_skill_files(root))
@@ -241,13 +281,17 @@ def validate_paths(
             )
             continue
 
-        schema_errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
-        if schema_errors:
-            details = "; ".join(
-                f"{'/'.join(str(p) for p in err.path) or '<root>'}: {err.message}"
-                for err in schema_errors
-            )
-            report.failed.append(SkillIssue(skill_path, details))
+        messages: list[str] = []
+        messages.extend(
+            _format_schema_errors(standard_validator.iter_errors(data), "agent-skills")
+        )
+        messages.extend(_didactic_proprietary_field_errors(data))
+        messages.extend(
+            _format_schema_errors(aiadev_validator.iter_errors(data), "aiadev")
+        )
+
+        if messages:
+            report.failed.append(SkillIssue(skill_path, "; ".join(messages)))
             continue
 
         report.passed.append(skill_path)

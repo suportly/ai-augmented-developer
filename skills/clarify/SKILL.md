@@ -1,17 +1,19 @@
 ---
 name: clarify
 description: Surface [NEEDS CLARIFICATION] markers in spec.md (or plan.md) to the user, one at a time, and edit the file with the answers.
-version: 0.3.0
-inputs:
-  - type: file
-    path: specs/<branch>/spec.md
-outputs:
-  - type: file
-    path: specs/<branch>/spec.md
-requires:
-  - constitution
-handoffs:
-  - plan
+metadata:
+  aiadev:
+    version: 0.3.0
+    inputs:
+    - type: file
+      path: specs/<branch>/spec.md
+    outputs:
+    - type: file
+      path: specs/<branch>/spec.md
+    requires:
+    - constitution
+    handoffs:
+    - plan
 ---
 
 # Clarify

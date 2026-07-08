@@ -2,7 +2,8 @@
 """Emit docs/pipeline-reference.md from skill frontmatter (spec 0009 T008).
 
 Walks ``skills/`` + ``presets/*/skills/`` at the repo root, reads each
-``SKILL.md``'s YAML frontmatter (``name``, ``description``, ``handoffs``),
+``SKILL.md``'s YAML frontmatter (``name``, ``description``, and ``handoffs``
+from ``metadata.aiadev`` — falling back to the pre-spec-0016 top level),
 and renders the pipeline commands as a terse Markdown table. Skills that
 are not part of the pipeline (``frontend-design``, ``using-ai-augmented-developer``,
 ``systematic-debugging``, ``constitution``, ``test-driven-development``,
@@ -64,6 +65,17 @@ def _discover_skills(repo_root: Path) -> dict[str, dict]:
     return found
 
 
+def _handoffs(fm: dict) -> list | None:
+    """Read handoffs from ``metadata.aiadev`` (new shape, spec 0016) with a
+    fallback to the top level (pre-migration frontmatter)."""
+    metadata = fm.get("metadata")
+    if isinstance(metadata, dict):
+        aiadev = metadata.get("aiadev")
+        if isinstance(aiadev, dict) and "handoffs" in aiadev:
+            return aiadev.get("handoffs")
+    return fm.get("handoffs")
+
+
 def _format_handoffs(handoffs: Iterable[str] | None) -> str:
     if not handoffs:
         return "—"
@@ -103,7 +115,7 @@ def render(repo_root: Path) -> str:
             lines.append(f"| `/aia:{name}` | _missing_ | — |")
             continue
         description = _compose_one_liner(fm.get("description", ""))
-        nxt = _format_handoffs(fm.get("handoffs"))
+        nxt = _format_handoffs(_handoffs(fm))
         lines.append(f"| `/aia:{name}` | {description} | → {nxt} |")
     lines.append("")
     return "\n".join(lines)

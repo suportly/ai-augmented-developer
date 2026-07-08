@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 from typing import Iterator, Literal, Tuple
 
+import yaml
+
 from ..mcp import MCP_ARTIFACT_NAME, MCP_SOURCE_FILENAME, load_servers_from_text
 
 ArtifactRole = Literal[
@@ -108,7 +110,16 @@ def iter_preset_artifacts(preset_root: Path) -> Iterator[ArtifactTuple]:
 
 
 def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
-    """Convert canonical ``mcps.yaml`` into Cursor's ``.cursor/mcp.json``."""
+    """Convert canonical ``mcps.yaml`` into Cursor's ``.cursor/mcp.json``.
+
+    ``rule`` artifacts get a narrower transform (Story 2 sc4 of
+    specs/0016-agent-skills-interop, ADR-6): Cursor's native ``.mdc``
+    rule format is conditional on ``globs``, not ``paths:``, so when the
+    rule's frontmatter declares ``paths:`` it is translated into
+    Cursor's own vocabulary (``globs`` + ``alwaysApply: false``). Rules
+    without ``paths:`` pass through byte-identical (opt-in feature; no
+    glob evaluation happens here or anywhere in aiadev).
+    """
     if role == "mcp":
         servers = load_servers_from_text(source_text, label=f".cursor/mcp.json[{name}]")
         payload = {
@@ -117,7 +128,72 @@ def render_target(role: ArtifactRole, name: str, source_text: str) -> str:
             }
         }
         return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    if role == "rule":
+        return _render_rule_frontmatter(source_text)
     return source_text
+
+
+def _render_rule_frontmatter(source_text: str) -> str:
+    """Translate a rule's ``paths:`` key into Cursor's ``.mdc`` vocabulary.
+
+    Cursor's documented ``.mdc`` frontmatter is ``description`` /
+    ``globs`` / ``alwaysApply``. Its frontmatter parser is not strict
+    YAML, and the convention seen across Cursor's own docs and rules in
+    the wild is a comma-separated, unquoted string for ``globs`` (e.g.
+    ``globs: *.ts,src/**``) rather than a YAML list — that form is
+    chosen here deliberately, over a list, to stay compatible with that
+    non-standard parser. Known limitation of that convention: a glob
+    that itself contains a comma (e.g. brace expansion ``*.{ts,tsx}``)
+    becomes ambiguous in the joined string — same trade-off a
+    hand-authored ``.mdc`` faces; prefer comma-free globs in ``paths:``.
+
+    Rules without a ``paths:`` key are returned unchanged (opt-in
+    feature — no glob evaluation happens here or anywhere in aiadev,
+    this is pure declaration transport per ADR-6).
+    """
+    frontmatter, body, has_trailing_newline = _split_rule_frontmatter(source_text)
+    if frontmatter is None or "paths" not in frontmatter:
+        return source_text
+    updated = dict(frontmatter)
+    paths = updated.pop("paths")
+    updated["globs"] = ",".join(str(p) for p in paths)
+    updated["alwaysApply"] = False
+    return _join_rule_frontmatter(updated, body, has_trailing_newline)
+
+
+def _split_rule_frontmatter(text: str) -> tuple[dict | None, str, bool]:
+    """Split ``text`` into (frontmatter, body, had_trailing_newline).
+
+    Returns ``(None, text, False)`` when there is no well-formed YAML
+    frontmatter block, so callers can fall back to a pass-through.
+    """
+    lines = text.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return None, text, False
+    end_idx: int | None = None
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end_idx = idx
+            break
+    if end_idx is None:
+        return None, text, False
+    fm_text = "".join(lines[1:end_idx])
+    try:
+        parsed = yaml.safe_load(fm_text) or {}
+    except yaml.YAMLError:
+        return None, text, False
+    if not isinstance(parsed, dict):
+        return None, text, False
+    body = "".join(lines[end_idx + 1 :])
+    return parsed, body, text.endswith("\n")
+
+
+def _join_rule_frontmatter(frontmatter: dict, body: str, has_trailing_newline: bool) -> str:
+    dumped = yaml.safe_dump(frontmatter, sort_keys=False, default_flow_style=False)
+    rendered = f"---\n{dumped}---\n{body}"
+    if has_trailing_newline and not rendered.endswith("\n"):
+        rendered += "\n"
+    return rendered
 
 
 def _cursor_entry(server) -> dict:

@@ -1,17 +1,19 @@
 ---
 name: constitution
-description: "Bootstrap or amend constitution.md (framework, preset, or project). Inspects existing project context first; enforces the amendment process: issue first, one article per PR, reviewer non-author."
-version: 0.3.0
-inputs:
-  - type: text
-    description: Optional. Proposed amendment (new article, edit, or repeal) with motivation. If omitted, the skill inspects the project context and either proposes a bootstrap draft (when no constitution exists yet) or lists the current articles and asks which one to amend.
-outputs:
-  - type: file
-    path: constitution.md
-  - type: file
-    path: CHANGELOG.md
-requires:
-  - constitution
+description: 'Bootstrap or amend constitution.md (framework, preset, or project). Inspects existing project context first; enforces the amendment process: issue first, one article per PR, reviewer non-author.'
+metadata:
+  aiadev:
+    version: 0.3.0
+    inputs:
+    - type: text
+      description: Optional. Proposed amendment (new article, edit, or repeal) with motivation. If omitted, the skill inspects the project context and either proposes a bootstrap draft (when no constitution exists yet) or lists the current articles and asks which one to amend.
+    outputs:
+    - type: file
+      path: constitution.md
+    - type: file
+      path: CHANGELOG.md
+    requires:
+    - constitution
 ---
 
 # Constitution

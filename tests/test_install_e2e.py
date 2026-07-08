@@ -50,11 +50,16 @@ def test_install_doctor_reinstall_uninstall_round_trip(
         "PROJECT_NAME=RoundTrip",
     )
     assert install.exit_code == 0, install.output
+    # Spec 0016 Story 3 / ADR-5: AGENTS.md is canonical; CLAUDE.md is a
+    # thin wrapper pointing at it.
+    agents_md = project / "AGENTS.md"
     claude_md = project / "CLAUDE.md"
     manifest = project / ".aiadev" / "installed.yaml"
+    assert agents_md.is_file()
     assert claude_md.is_file()
     assert manifest.is_file()
-    assert "RoundTrip" in claude_md.read_text(encoding="utf-8")
+    assert "RoundTrip" in agents_md.read_text(encoding="utf-8")
+    assert "AGENTS.md" in claude_md.read_text(encoding="utf-8")
 
     # 2. Doctor (targets the framework, not the project; still must
     #    pass since we did not touch the framework).
@@ -74,11 +79,13 @@ def test_install_doctor_reinstall_uninstall_round_trip(
     )
     assert reinstall.exit_code == 0, reinstall.output
     assert "write" not in reinstall.output  # no new writes
+    assert agents_md.is_file()
     assert claude_md.is_file()
 
     # 4. Uninstall cleans up every file the install wrote.
     uninstall = _invoke_install(runner, project, "--preset", "lean", "--uninstall")
     assert uninstall.exit_code == 0, uninstall.output
+    assert not agents_md.exists()
     assert not claude_md.exists()
     assert not manifest.exists()
     assert not (project / ".aiadev").exists()
@@ -417,15 +424,20 @@ def test_extension_round_trip(
         "PROJECT_NAME=ExtDemo",
     )
     assert install.exit_code == 0, install.output
-    agent = project / "CLAUDE.md"
+    # Spec 0016 Story 3 / ADR-5: AGENTS.md is canonical; CLAUDE.md is a
+    # thin wrapper pointing at it.
+    agent = project / "AGENTS.md"
+    wrapper = project / "CLAUDE.md"
     assert agent.is_file()
     assert "ExtDemo" in agent.read_text(encoding="utf-8")
+    assert wrapper.is_file()
 
     uninstall = _invoke_install(
         runner, project, "--preset", "sample", "--uninstall"
     )
     assert uninstall.exit_code == 0, uninstall.output
     assert not agent.exists()
+    assert not wrapper.exists()
 
     remove = runner.invoke(extension_command, ["remove", "sample-extension"])
     assert remove.exit_code == 0, remove.output

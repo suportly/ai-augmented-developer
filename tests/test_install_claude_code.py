@@ -12,7 +12,9 @@ FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "mini-preset"
 
 class TestResolveTarget:
     def test_agent_file_lands_at_project_root(self, tmp_path: pathlib.Path) -> None:
-        assert cc.resolve_target("agent_file", "", tmp_path) == tmp_path / "CLAUDE.md"
+        # Spec 0016 Story 3 / ADR-5: AGENTS.md is the canonical agent
+        # file; CLAUDE.md is a thin wrapper (see TestWrapper below).
+        assert cc.resolve_target("agent_file", "", tmp_path) == tmp_path / "AGENTS.md"
 
     def test_constitution_lands_at_project_root(self, tmp_path: pathlib.Path) -> None:
         assert cc.resolve_target("constitution", "", tmp_path) == tmp_path / "constitution.md"
@@ -47,6 +49,33 @@ class TestUserScope:
     def test_user_scope_rejects_constitution(self, tmp_path: pathlib.Path) -> None:
         with pytest.raises(ValueError, match="not installable at user scope"):
             cc.resolve_target("constitution", "", tmp_path, scope="user")
+
+
+class TestWrapper:
+    """Spec 0016 Story 3 / ADR-5: CLAUDE.md is a thin wrapper pointing
+    at the canonical AGENTS.md the engine writes."""
+
+    def test_wrapper_target_is_claude_md_for_agent_file(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        assert cc.wrapper_target("agent_file", "", tmp_path) == tmp_path / "CLAUDE.md"
+
+    def test_wrapper_target_is_none_for_other_roles(self, tmp_path: pathlib.Path) -> None:
+        assert cc.wrapper_target("constitution", "", tmp_path) is None
+        assert cc.wrapper_target("skill", "hello", tmp_path) is None
+
+    def test_wrapper_target_is_none_at_user_scope(self, tmp_path: pathlib.Path) -> None:
+        assert cc.wrapper_target("agent_file", "", tmp_path, scope="user") is None
+
+    def test_render_wrapper_points_at_agents_md(self) -> None:
+        text = cc.render_wrapper("agent_file", "AGENTS.md")
+        assert text is not None
+        assert "AGENTS.md" in text
+        lines = [line for line in text.splitlines() if line.strip()]
+        assert len(lines) <= 5
+
+    def test_render_wrapper_is_none_for_other_roles(self) -> None:
+        assert cc.render_wrapper("constitution", "AGENTS.md") is None
 
 
 class TestIterPresetArtifacts:
