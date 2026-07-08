@@ -58,6 +58,9 @@
     "venv/",
     ".claude/",
     "presets/**/skills/",
+    // Test fixtures replicate the canonical tasks.md grammar
+    // (H1 title + ### TNNN rows) on purpose; they are data, not docs.
+    "tests/fixtures/",
     // Ignore Markdown inside code fences of other Markdown files.
     "**/CHANGELOG.md.bak"
   ]

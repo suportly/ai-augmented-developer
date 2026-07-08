@@ -12,9 +12,9 @@ lead without forcing a file-by-file scan.
 
 ## Spec Reference
 
-- Spec: [specs/0015-aiadev-metrics/spec.md](specs/0015-aiadev-metrics/spec.md)
-- Plan: [specs/0015-aiadev-metrics/plan.md](specs/0015-aiadev-metrics/plan.md)
-- Tasks: [specs/0015-aiadev-metrics/tasks.md](specs/0015-aiadev-metrics/tasks.md)
+- Spec: [specs/0015-aiadev-metrics/spec.md](spec.md)
+- Plan: [specs/0015-aiadev-metrics/plan.md](plan.md)
+- Tasks: [specs/0015-aiadev-metrics/tasks.md](tasks.md)
 
 All six `[NEEDS CLARIFICATION:cl-N]` markers resolved during `clarify`;
 their resolution rationale is preserved inline in the spec. Plan's
@@ -85,14 +85,14 @@ Listing what I think deserves a careful look — not because I have
 doubts, but because these are the spots where a reviewer can catch
 something I missed:
 
-1. **`first_pass_rate_by_reviewer` in [src/aiadev/metrics.py](src/aiadev/metrics.py)**
+1. **`first_pass_rate_by_reviewer` in [src/aiadev/metrics.py](../../src/aiadev/metrics.py)**
    — The grouping key for `task_id == "branch-review"` collapses to
    per-reviewer (no task component) so that two consecutive branch-level
    reviews from the same reviewer don't double-count. Worth verifying
    the helper does not accidentally double-count when a reviewer
    re-runs on the same task.
 
-2. **`specify_to_last_commit_days` in [src/aiadev/metrics.py](src/aiadev/metrics.py)**
+2. **`specify_to_last_commit_days` in [src/aiadev/metrics.py](../../src/aiadev/metrics.py)**
    — Parses `git log -p --name-only` output by walking line-by-line.
    I tested with two synthetic commits; production `git log` output
    includes lines I might be ignoring (merge commit headers,
@@ -100,21 +100,21 @@ something I missed:
    real-world git log shapes is the question.
 
 3. **`_collect_git_log` exit-code-resilience in
-   [src/aiadev/commands/metrics.py](src/aiadev/commands/metrics.py)**
+   [src/aiadev/commands/metrics.py](../../src/aiadev/commands/metrics.py)**
    — A failed git subprocess returns `""`, which makes git-derived
    metrics degrade to `None`. Intentional, but verify the CLI never
    crashes on a non-git directory (the smoke run I did is inside the
    real repo).
 
 4. **Determinism guard in
-   [tests/test_metrics_format.py::test_json_deterministic_for_same_input](tests/test_metrics_format.py)**
+   [tests/test_metrics_format.py::test_json_deterministic_for_same_input](../../tests/test_metrics_format.py)**
    — runs `build_report` twice and byte-compares. Confirms ADR-3
    actually holds. If you can spot any source of non-determinism
    (dict iteration order, default `today()` leaking in), that test
    should have failed but did not — worth a look.
 
 5. **Drift fix in
-   [tests/test_attribution_and_changelog.py](tests/test_attribution_and_changelog.py)**
+   [tests/test_attribution_and_changelog.py](../../tests/test_attribution_and_changelog.py)**
    — Not feature work, strictly. The helper
    `_most_recent_changes_block` failed because my CHANGELOG edit
    added `[Unreleased]` content alongside the still-relevant 0.19.0
@@ -164,6 +164,6 @@ by the user before they were taken:
    tasks.md in one atomic commit per task, so crash recovery works
    between commits). The user signalled the feature is conceptually
    one unit and asked for one commit on the branch. Done — see
-   [commit 1694a20](specs/0015-aiadev-metrics/).
+   [commit 1694a20](./).
 
 Both departures are noted in the commit body.
