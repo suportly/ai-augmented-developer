@@ -102,6 +102,17 @@ jobs:
         if: steps.ctx.outputs.should_release == 'true'
         working-directory: vscode-extension
         run: npm run package
+      - name: Publish to Marketplace
+        if: steps.ctx.outputs.should_release == 'true' && env.VSCE_PAT != ''
+        working-directory: vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --no-install vsce publish --no-dependencies --pat "$VSCE_PAT"
+      # The tag is created AFTER a successful publish on purpose: the
+      # main-push guard treats an existing tag as "already released", so
+      # tagging first turns every publish failure (e.g. expired PAT) into
+      # an unrecoverable no-op on rerun — the 0.0.12 release hit exactly
+      # that and had to be published by hand.
       - name: Create and push tag (main-push path)
         if: steps.ctx.outputs.create_tag == 'true'
         env:
@@ -113,12 +124,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "vscode-extension ${VERSION} (auto-tagged from main)"
           git push origin "$TAG"
-      - name: Publish to Marketplace
-        if: steps.ctx.outputs.should_release == 'true' && env.VSCE_PAT != ''
-        working-directory: vscode-extension
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx --no-install vsce publish --no-dependencies --pat "$VSCE_PAT"
       - name: Attach VSIX to GitHub release
         if: steps.ctx.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
