@@ -4,7 +4,7 @@
 
 **Branch:** `claude/graphify-aiadev-analysis-oiggl4`
 **Created:** 2026-07-18
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0017 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -63,7 +63,7 @@ As a tech lead, I want que o `analyze` fundamente cada gap num fato do grafo cit
 2. Given arquivos alterados no branch que nenhuma task pediu, When rodo `analyze`, Then o gap "code without task" lista cada arquivo com a aresta do grafo que o conecta a um subsistema.
 3. Given nenhum provider configurado, When rodo `analyze`, Then o relatório é idêntico ao comportamento atual (mesmas 4 classes de gap por inferência) e nenhum erro é emitido por provider ausente.
 
-### Story 2 — Blast-radius no `plan` e no code review (P1)
+### Story 2 — Blast-radius no `plan` e no code review (P2, fast-follow pós-v1)
 
 As a dev do projeto consumidor, I want ver as superfícies afetadas por uma mudança derivadas do grafo so that eu dimensione o esforço e o risco sem caçar dependências na mão.
 
@@ -86,11 +86,11 @@ As a tech lead, I want que todo fato de grafo citado pelas skills declare sua pr
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Este spec deve cobrir só a integração do provider de grafo, ou também empacotar o hook post-commit (#3), o merge driver (#6) e os benchmarks publicados (#7)? Recomendação: specs separados, mantendo este focado.]
-- [NEEDS CLARIFICATION:cl-2 Tratamos o graphify como o provider concreto suportado, ou definimos um contrato de provider genérico (Artigo V) e o graphify é apenas uma implementação de referência?]
-- [NEEDS CLARIFICATION:cl-3 Escopo das skills no v1: começar só pelo `analyze`, ou já entregar `analyze` + `plan` + `requesting-code-review` juntos?]
-- [NEEDS CLARIFICATION:cl-4 A taxonomia de confiança adota os rótulos do graphify (EXTRACTED/INFERRED/AMBIGUOUS) verbatim, ou os mapeamos para um vocabulário próprio do aiadev?]
-- [NEEDS CLARIFICATION:cl-5 O provider é declarado no `mcps.yaml` do framework (afeta todos os presets) ou fica restrito a um preset opcional que o consumidor liga sob demanda?]
+- **cl-1 (escopo):** Este spec cobre **apenas** a integração do provider de grafo. Hook post-commit (#3), merge driver (#6) e benchmarks publicados (#7) são specs separados.
+- **cl-2 (modelo do provider):** Definimos um **contrato de provider genérico** (Artigo V); o graphify é a implementação de referência e os testes usam um fake do contrato, não o SDK.
+- **cl-3 (skills na v1):** A v1 entrega o provider **apenas no `analyze`** (fatia vertical mínima que prova o contrato end-to-end). `plan` e `requesting-code-review` são fast-follow pós-v1.
+- **cl-4 (taxonomia de confiança):** O aiadev usa um **vocabulário de confiança próprio**, mapeado de forma estável a partir da taxonomia do provider (ex.: `EXTRACTED`/`INFERRED`/`AMBIGUOUS` do graphify).
+- **cl-5 (declaração):** O provider é declarado num **preset opcional** que o consumidor liga sob demanda; nenhum preset existente ganha dependência nova.
 
 <!-- section: Data touched -->
 ## Data touched
