@@ -37,7 +37,7 @@
 
 ### T002 — Fake do provider conforme ao contrato
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `tests/fixtures/graph_provider_fake/__init__.py`
