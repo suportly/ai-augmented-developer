@@ -35,3 +35,10 @@ def test_analyze_declares_code_without_task_provider_step() -> None:
     assert "Code without task (provider-grounded)" in body
     assert "`extra`" in body
     assert "edge to its subsystem" in body
+
+
+def test_analyze_graceful_degradation_clause() -> None:
+    body = _body()
+    assert "Graceful degradation" in body
+    assert "never emit an error because a provider is absent" in body
+    assert "exact same report" in body

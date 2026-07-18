@@ -64,6 +64,13 @@ gap classes in facts from the provider instead of inference alone. Follow
   the changed file with the graph edge to its subsystem, so the drift reads
   as "this file belongs to subsystem X but no task asked for it".
 
+**Graceful degradation.** The provider is optional. When no provider is
+configured, produce the exact same report as the inference-only Loop above
+(the four gap classes) and never emit an error because a provider is absent.
+A provider that is configured but unavailable at runtime (timeout/error) is
+treated the same way: omit the provider-grounded contribution with a short
+note and keep the base report.
+
 ## Hand-off
 
 Suggest the skill most likely to close each gap:

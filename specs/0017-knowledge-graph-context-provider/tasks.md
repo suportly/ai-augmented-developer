@@ -97,7 +97,7 @@
 
 ### T006 — `analyze`: degradação graciosa sem provider
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `skills/analyze/SKILL.md`
