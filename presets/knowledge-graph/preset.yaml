@@ -1,0 +1,19 @@
+name: knowledge-graph
+version: 1.0.0
+description: >
+  Opt-in preset that declares an optional knowledge-graph context provider
+  (graphify reference impl) so the analyze skill can ground its drift gaps
+  in cited graph facts. Nothing mandatory; analyze degrades when the
+  provider is absent. See specs/0017-knowledge-graph-context-provider/.
+
+variables:
+  - name: PROJECT_NAME
+    prompt: Project display name
+    required: true
+
+provides:
+  agent_file: CLAUDE.md
+  skills: []                        # no preset-specific skills
+
+adds_articles: []
+tightens: []

@@ -127,7 +127,7 @@
 
 ### T008 — Preset opcional `knowledge-graph` (mcps.yaml + README)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `presets/knowledge-graph/mcps.yaml`
