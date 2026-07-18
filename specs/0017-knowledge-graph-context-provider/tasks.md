@@ -143,7 +143,7 @@
 
 ### T009 — Registrar o preset no catálogo como opt-in
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - modify: `presets/catalog.json`

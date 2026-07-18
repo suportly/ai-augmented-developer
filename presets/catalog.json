@@ -25,6 +25,14 @@
       "use_when": "Project ships a Cloud Run backend alongside an Expo mobile app on EAS and optionally a React admin app.",
       "maintained_by": "ai-augmented-developer core",
       "stability": "beta"
+    },
+    {
+      "name": "knowledge-graph",
+      "path": "presets/knowledge-graph",
+      "summary": "Opt-in knowledge-graph context provider (graphify reference impl) that grounds the analyze skill's drift gaps in cited graph facts.",
+      "use_when": "You want analyze to ground its gaps in a deterministic local code graph; requires installing a provider (e.g. graphify).",
+      "maintained_by": "ai-augmented-developer core",
+      "stability": "experimental"
     }
   ]
 }
