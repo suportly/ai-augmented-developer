@@ -22,7 +22,7 @@
 
 ### T001 — Contrato de queries do provider (schema)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `specs/0017-knowledge-graph-context-provider/contracts/graph-provider.schema.json`
