@@ -63,6 +63,10 @@ gap classes in facts from the provider instead of inference alone. Follow
 - **Code without task (provider-grounded).** For each fact in `extra`, list
   the changed file with the graph edge to its subsystem, so the drift reads
   as "this file belongs to subsystem X but no task asked for it".
+- **Confidence.** Cite every fact with its confidence label per
+  `rules/graph-facts.md` — one of `explicit`, `inferred`, or `ambiguous`. A
+  fact labelled `inferred` or `ambiguous` is a signal to verify, and is
+  not a definitive gap; only `explicit` facts back a definitive statement.
 
 **Graceful degradation.** The provider is optional. When no provider is
 configured, produce the exact same report as the inference-only Loop above

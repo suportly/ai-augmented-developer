@@ -112,7 +112,7 @@
 
 ### T007 — `analyze`: rótulos de confiança e regra do inferido não-definitivo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - modify: `skills/analyze/SKILL.md`

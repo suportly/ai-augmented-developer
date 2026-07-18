@@ -42,3 +42,12 @@ def test_analyze_graceful_degradation_clause() -> None:
     assert "Graceful degradation" in body
     assert "never emit an error because a provider is absent" in body
     assert "exact same report" in body
+
+
+def test_analyze_labels_and_non_definitive_inferred() -> None:
+    body = _body()
+    assert "rules/graph-facts.md" in body
+    assert "`explicit`" in body and "`inferred`" in body and "`ambiguous`" in body
+    # inferred/ambiguous facts are signals, not definitive gaps
+    assert "not a definitive gap" in body
+    assert "only `explicit` facts" in body
