@@ -67,7 +67,7 @@
 
 ### T004 — `analyze`: gap "task without code" ancorado no provider
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T003
 - **Files:**
   - modify: `skills/analyze/SKILL.md`
