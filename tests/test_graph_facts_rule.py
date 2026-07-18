@@ -1,10 +1,11 @@
-"""T003 — rules/graph-facts.md: confidence vocabulary + provider mapping.
+"""T003 — graph-facts rule: confidence vocabulary + provider mapping.
 
 Story 3 (spec 0017): every graph-derived fact a skill cites declares its
 provenance. This rule is the single source of truth for the aiadev-canonical
 confidence vocabulary and the stable mapping from a provider's native
-taxonomy (e.g. graphify's EXTRACTED/INFERRED/AMBIGUOUS). It is a global,
-cross-cutting rule so `plan`/review inherit it in the fast-follow.
+taxonomy (e.g. graphify's EXTRACTED/INFERRED/AMBIGUOUS). It ships **with the
+opt-in `knowledge-graph` preset** (not framework-global) so only projects
+that enable the provider get it; `plan`/review inherit it in the fast-follow.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import pathlib
 import yaml
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
-RULE = REPO_ROOT / "rules" / "graph-facts.md"
+RULE = REPO_ROOT / "presets" / "knowledge-graph" / "rules" / "graph-facts.md"
 
 AIADEV_LABELS = ("explicit", "inferred", "ambiguous")
 PROVIDER_LABELS = ("EXTRACTED", "INFERRED", "AMBIGUOUS")
@@ -33,12 +34,14 @@ def test_rule_exists() -> None:
     assert RULE.exists(), f"expected the graph-facts rule at {RULE}"
 
 
-def test_rule_is_a_global_rule() -> None:
+def test_rule_is_always_apply_within_the_preset() -> None:
     fm, _ = _split_frontmatter(RULE.read_text(encoding="utf-8"))
     assert fm is not None, "graph-facts.md must carry YAML frontmatter"
     assert "description" in fm and fm["description"].strip()
-    assert fm.get("alwaysApply") is True, "graph-facts is a global rule"
-    assert "paths" not in fm, "graph-facts stays global (no paths: scoping)"
+    # alwaysApply within the preset: once the opt-in knowledge-graph preset is
+    # installed, the rule applies everywhere in that project.
+    assert fm.get("alwaysApply") is True
+    assert "paths" not in fm
 
 
 def test_rule_defines_vocabulary_and_mapping() -> None:

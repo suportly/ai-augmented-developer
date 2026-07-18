@@ -7,6 +7,12 @@
 #
 # Privacy: the provider parses code locally. A remote LLM backend is only
 # used if you configure one for docs/media — see README.md.
+#
+# PATH: `command` must resolve on the launcher's PATH. After `pip install
+# graphifyy`, confirm `graphify` is reachable (`which graphify`); pipx and
+# Windows users may need to add the Python Scripts dir to PATH. If the binary
+# is not found the MCP server silently fails to start and `analyze` degrades
+# to its provider-free report — set an absolute path here to avoid that.
 
 servers:
   graphify:
