@@ -48,6 +48,8 @@ RULES_WITH_FRONTMATTER_NO_PATHS = {
     "code-style.md",
     "git-workflow.md",
     "security.md",
+    # spec 0017: global rule for citing graph facts + confidence labels.
+    "graph-facts.md",
 }
 RULE_WITH_PATHS = "testing.md"
 

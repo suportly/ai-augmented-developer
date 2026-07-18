@@ -52,7 +52,7 @@
 
 ### T003 — Regra `graph-facts` com vocabulário de confiança e mapeamento
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `rules/graph-facts.md`
