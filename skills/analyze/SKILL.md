@@ -60,6 +60,9 @@ gap classes in facts from the provider instead of inference alone. Follow
 - **Task without code (provider-grounded).** Query the provider's `drift`
   operation; for each fact in `missing`, report the gap citing the
   expected-and-absent `path:symbol`.
+- **Code without task (provider-grounded).** For each fact in `extra`, list
+  the changed file with the graph edge to its subsystem, so the drift reads
+  as "this file belongs to subsystem X but no task asked for it".
 
 ## Hand-off
 

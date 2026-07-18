@@ -28,3 +28,10 @@ def test_analyze_declares_task_without_code_provider_step() -> None:
     assert "Task without code (provider-grounded)" in body
     assert "`drift`" in body and "`missing`" in body
     assert "expected-and-absent `path:symbol`" in body
+
+
+def test_analyze_declares_code_without_task_provider_step() -> None:
+    body = _body()
+    assert "Code without task (provider-grounded)" in body
+    assert "`extra`" in body
+    assert "edge to its subsystem" in body
