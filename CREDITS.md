@@ -12,6 +12,19 @@ The original source for the "skill-first, opinionated workflow" structure. Early
 
 The terse-output contract for reviewer subagents (feature `0009-token-economy-terse-mode`) is adapted from caveman's one-line-per-finding output style — originally a Claude Code skill that compresses model output by roughly 22–87 % (MIT license at time of adaptation). We do not bundle caveman itself; we borrow the shape of its reviewer output and codify it in `schemas/terse-output.schema.json`. The meme/caveman-voice aesthetic and the companion `cavemem` / `cavekit` tools are out of scope for this framework.
 
+### [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify)
+
+Feature `0017-knowledge-graph-context-provider` adapts ideas from graphify,
+a tool that maps a codebase into a queryable knowledge graph. We borrow the
+*shape* of three concepts — the provider query contract (impact / drift /
+provenance), the per-edge confidence tags (`EXTRACTED` / `INFERRED` /
+`AMBIGUOUS`, which we map to our own `explicit` / `inferred` / `ambiguous`
+vocabulary), and blast-radius as first-class output — to let the `analyze`
+skill ground its gaps in a knowledge graph instead of inference alone. We do
+not bundle or copy graphify; it is one reference implementation behind the
+provider contract in `specs/0017-.../contracts/graph-provider.schema.json`.
+License per the upstream repository at time of adaptation.
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).

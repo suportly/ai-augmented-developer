@@ -158,7 +158,7 @@
 
 ### T010 — Atribuição a Graphify-Labs/graphify (Artigo VII)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `CREDITS.md`
