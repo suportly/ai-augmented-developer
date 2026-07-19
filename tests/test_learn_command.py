@@ -69,3 +69,20 @@ def test_learn_text_output_ranks_patterns(tmp_path) -> None:
     assert result.exit_code == 0, result.output
     assert "plan-document-reviewer" in result.output
     assert "T007" in result.output  # task-rework subject surfaced
+
+
+# --- T006 -------------------------------------------------------------------
+
+
+def test_learn_json_is_stable(tmp_path) -> None:
+    ws = _build_workspace(tmp_path)
+    result = _invoke(ws, ["--format", "json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert "schema_version" in payload
+    assert "timestamp" not in result.output  # no execution timestamp
+    subjects = {p["subject"] for p in payload["patterns"]}
+    assert "plan-document-reviewer" in subjects
+    # stable: same input → identical output
+    result2 = _invoke(ws, ["--format", "json"])
+    assert result2.output == result.output

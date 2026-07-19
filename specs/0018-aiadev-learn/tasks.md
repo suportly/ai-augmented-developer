@@ -98,7 +98,7 @@
 
 ### T006 — Comando: `--format json` estável (sem timestamp)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `src/aiadev/commands/learn.py`
