@@ -57,20 +57,32 @@ def test_reviewer_passing_first_pass_is_not_a_pattern() -> None:
 # --- T002: recurring task rework --------------------------------------------
 
 
+def _task_reworked(task_id: str = "T003"):
+    return [
+        _entry("2026-07-01T10:00:00Z", "code-reviewer", "CHANGES_REQUESTED", task_id=task_id),
+        _entry("2026-07-01T11:00:00Z", "code-reviewer", "APPROVED", task_id=task_id),
+    ]
+
+
 def test_detects_task_rework_pattern() -> None:
-    per_spec = {
-        "0001": [
-            _entry("2026-07-01T10:00:00Z", "code-reviewer", "CHANGES_REQUESTED", task_id="T003"),
-            _entry("2026-07-01T11:00:00Z", "code-reviewer", "APPROVED", task_id="T003"),
-        ],
-    }
+    # Same task reworked across two features → a recurring, sufficient pattern.
+    per_spec = {"0001": _task_reworked("T003"), "0002": _task_reworked("T003")}
     patterns = _learn.recurring_task_rework(per_spec)
     rework = [p for p in patterns if p.kind == "task-rework"]
     assert rework, "expected a task-rework pattern"
     p = rework[0]
     assert p.subject == "T003"
-    assert p.occurrences == 2  # rounds
-    assert p.features == ("0001",)
+    assert p.occurrences == 2  # features
+    assert p.features == ("0001", "0002")
+    assert p.sufficient is True
+
+
+def test_single_feature_rework_is_insufficient() -> None:
+    # Reworked in only one feature → not a recurring pattern (Story 3 sc2).
+    per_spec = {"0001": _task_reworked("T003")}
+    patterns = _learn.recurring_task_rework(per_spec, min_features=2)
+    p = next(p for p in patterns if p.subject == "T003")
+    assert p.sufficient is False
 
 
 def test_task_without_rework_is_not_a_pattern() -> None:

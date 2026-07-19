@@ -119,26 +119,36 @@ def recurring_reviewer_failures(
 
 def recurring_task_rework(
     per_spec_entries: Mapping[str, list[dict]],
+    *,
+    min_features: int = 2,
 ) -> list[Pattern]:
-    """Tasks that needed rework (≥ 1 ``CHANGES_REQUESTED`` code review round).
+    """Task ids that needed rework across **multiple** features.
 
-    Uses :func:`aiadev.metrics.task_rework_counts` per feature, which already
-    filters out pristine (single-``APPROVED``) tasks. Returns one ``Pattern``
-    per reworked task, ``occurrences`` = total review rounds, ``features`` =
-    the spec id it belongs to. Sorted by rounds descending, then task id.
+    Uses :func:`aiadev.metrics.task_rework_counts` per feature (which already
+    filters out pristine, single-``APPROVED`` tasks) and aggregates by
+    ``task_id`` across features. ``occurrences`` = number of features in which
+    the task needed rework; ``features`` = those spec ids. Like the reviewer
+    detector, a task reworked in fewer than ``min_features`` features is
+    returned with ``sufficient=False`` ("insufficient evidence", Story 3 sc2)
+    rather than asserted as a recurring pattern.
     """
-    patterns: list[Pattern] = []
+    features_by_task: dict[str, list[str]] = {}
     for spec_id, entries in per_spec_entries.items():
-        for task_id, rounds, _cr in _metrics.task_rework_counts(entries):
-            patterns.append(
-                Pattern(
-                    kind="task-rework",
-                    subject=task_id,
-                    occurrences=rounds,
-                    features=(spec_id,),
-                )
+        for task_id, _rounds, _cr in _metrics.task_rework_counts(entries):
+            features_by_task.setdefault(task_id, []).append(spec_id)
+
+    patterns: list[Pattern] = []
+    for task_id, specs in sorted(features_by_task.items()):
+        features = tuple(sorted(specs))
+        patterns.append(
+            Pattern(
+                kind="task-rework",
+                subject=task_id,
+                occurrences=len(features),
+                features=features,
+                sufficient=len(features) >= min_features,
             )
-    patterns.sort(key=lambda p: (-p.occurrences, p.subject))
+        )
     return patterns
 
 
@@ -164,10 +174,12 @@ def collect_per_spec_entries(
     for spec_dir in sorted(p for p in specs_dir.iterdir() if p.is_dir()):
         entries = _metrics.read_review_log(spec_dir / ".review-log.jsonl")
         if since is not None:
-            entries = [
-                e for e in entries
-                if (_entry_date(e) is None or _entry_date(e) >= since)
-            ]
+            kept = []
+            for e in entries:
+                date = _entry_date(e)
+                if date is None or date >= since:
+                    kept.append(e)
+            entries = kept
         if entries:
             per_spec[spec_dir.name] = entries
     return per_spec
@@ -188,7 +200,7 @@ def detect_all(
         *recurring_reviewer_failures(
             per_spec_entries, min_features=min_features, show_bodies=show_bodies
         ),
-        *recurring_task_rework(per_spec_entries),
+        *recurring_task_rework(per_spec_entries, min_features=min_features),
     ]
     patterns = [
         dataclasses.replace(p, proposal=propose_guidance(p)) if p.sufficient else p
@@ -218,9 +230,9 @@ def propose_guidance(pattern: Pattern) -> Proposal:
         target = "rules/review-recurrence.md"
     else:  # task-rework
         snippet = (
-            f"Task `{pattern.subject}` needed {pattern.occurrences} review "
-            f"rounds ({evidence}). Capture the pattern that caused the rework "
-            f"as a rule so future tasks avoid it."
+            f"Task `{pattern.subject}` needed rework in {pattern.occurrences} "
+            f"features ({evidence}). Capture the pattern that caused the "
+            f"repeated rework as a rule so future tasks avoid it."
         )
         target = "rules/task-rework.md"
     return Proposal(snippet=snippet, target_file=target)

@@ -32,13 +32,13 @@ def _format_text(patterns: list[_learn.Pattern]) -> str:
         evidence = ", ".join(p.features)
         if p.sufficient:
             lines.append(
-                f"- [{p.kind}] {p.subject} — {p.occurrences} "
+                f"- [{p.kind}] {p.subject} — {p.occurrences} features "
                 f"({evidence})"
             )
         else:
             lines.append(
                 f"- [{p.kind}] {p.subject} — evidência insuficiente "
-                f"({p.occurrences}: {evidence})"
+                f"({p.occurrences} feature(s): {evidence})"
             )
         for note in p.notes:
             lines.append(f"    note: {note}")
@@ -64,7 +64,7 @@ def _render_learnings(patterns: list[_learn.Pattern]) -> str:
     for p in proposed:
         lines.append(f"## [{p.kind}] {p.subject}")
         lines.append("")
-        lines.append(f"- **Evidência:** {p.occurrences} — {', '.join(p.features)}")
+        lines.append(f"- **Evidência:** {p.occurrences} features — {', '.join(p.features)}")
         lines.append(f"- **Arquivo-alvo proposto:** `{p.proposal.target_file}`")
         lines.append(f"- **Sugestão:** {p.proposal.snippet}")
         lines.append("")
