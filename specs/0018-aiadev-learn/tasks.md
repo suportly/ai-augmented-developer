@@ -128,7 +128,7 @@
 
 ### T008 — Comando: read-only por default e sem rede
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `src/aiadev/commands/learn.py`

@@ -111,3 +111,35 @@ def test_learn_since_window_defaults_90d(tmp_path) -> None:
     since = _invoke(ws, ["--since", "1999-01-01", "--format", "json"])
     subjects = {p["subject"] for p in json.loads(since.output)["patterns"]}
     assert "plan-document-reviewer" in subjects
+
+
+# --- T008 -------------------------------------------------------------------
+
+
+def _snapshot(root: pathlib.Path) -> dict[str, bytes]:
+    return {
+        str(p.relative_to(root)): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_learn_readonly_default_no_writes(tmp_path) -> None:
+    ws = _build_workspace(tmp_path)
+    before = _snapshot(ws)
+    result = _invoke(ws, [])
+    assert result.exit_code == 0, result.output
+    assert _snapshot(ws) == before  # no file created or modified without --write
+
+
+def test_learn_makes_no_network_calls(tmp_path) -> None:
+    ws = _build_workspace(tmp_path)
+
+    def _boom(*a, **k):
+        raise AssertionError("learn must not touch the network")
+
+    from unittest import mock
+
+    with mock.patch("socket.socket", _boom):
+        result = _invoke(ws, ["--format", "json"])
+    assert result.exit_code == 0, result.output
