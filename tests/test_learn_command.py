@@ -86,3 +86,28 @@ def test_learn_json_is_stable(tmp_path) -> None:
     # stable: same input → identical output
     result2 = _invoke(ws, ["--format", "json"])
     assert result2.output == result.output
+
+
+# --- T007 -------------------------------------------------------------------
+
+
+def test_learn_since_window_defaults_90d(tmp_path) -> None:
+    ws = tmp_path / "ws"
+    specs = ws / "specs"
+    # Two features with an OLD reviewer failure (well beyond 90 days).
+    old = [
+        _entry("2000-01-01T10:00:00Z", "plan-document-reviewer", "CHANGES_REQUESTED"),
+        _entry("2000-01-01T10:30:00Z", "plan-document-reviewer", "APPROVED"),
+    ]
+    _write_log(specs / "0001-old", old)
+    _write_log(specs / "0002-old", old)
+
+    # Default 90d window: the 2000 entries fall outside → no pattern.
+    default = _invoke(ws, ["--format", "json"])
+    assert default.exit_code == 0, default.output
+    assert json.loads(default.output)["patterns"] == []
+
+    # Explicit --since before 2000 → the pattern appears.
+    since = _invoke(ws, ["--since", "1999-01-01", "--format", "json"])
+    subjects = {p["subject"] for p in json.loads(since.output)["patterns"]}
+    assert "plan-document-reviewer" in subjects

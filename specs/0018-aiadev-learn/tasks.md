@@ -113,7 +113,7 @@
 
 ### T007 — Comando: janela `--since` (default 90 dias)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - modify: `src/aiadev/commands/learn.py`

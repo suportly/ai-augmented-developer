@@ -8,12 +8,16 @@ and formats output. Detection lives in :mod:`aiadev.learn`.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import pathlib
 
 import click
 
 from .. import learn as _learn
+
+# Default aggregation window, mirroring ``aiadev metrics``.
+_DEFAULT_SINCE_DAYS = 90
 
 # JSON output schema version. Additive fields bump this; the payload is a pure
 # function of the trail (no execution timestamp) so CI diffs are stable.
@@ -69,15 +73,26 @@ def _format_json(patterns: list[_learn.Pattern]) -> str:
     help="Formato de saída. json é estável (schema fixo, sem timestamp) para CI.",
 )
 @click.option(
+    "--since",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="Janela de agregação (YYYY-MM-DD). Default: últimos 90 dias (espelha metrics).",
+)
+@click.option(
     "--show-bodies",
     is_flag=True,
     default=False,
     help="Inclui a prosa livre do reviewer (campo note). Fora do padrão por privacidade (Artigo VI).",
 )
-def learn_command(output_format: str, show_bodies: bool) -> None:
+def learn_command(output_format: str, since: datetime.datetime | None, show_bodies: bool) -> None:
     """Report recurring failure patterns mined from the audit trail."""
     workspace = pathlib.Path.cwd()
-    per_spec = _learn.collect_per_spec_entries(workspace)
+    since_date = (
+        since.date()
+        if since is not None
+        else datetime.date.today() - datetime.timedelta(days=_DEFAULT_SINCE_DAYS)
+    )
+    per_spec = _learn.collect_per_spec_entries(workspace, since=since_date)
     patterns = _learn.detect_all(per_spec, show_bodies=show_bodies)
     if output_format == "json":
         click.echo(_format_json(patterns), nl=False)

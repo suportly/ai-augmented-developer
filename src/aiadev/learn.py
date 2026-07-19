@@ -13,10 +13,22 @@ functions that take injected data and return patterns. The CLI layer
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import pathlib
 from typing import Mapping
 
 from . import metrics as _metrics
+
+
+def _entry_date(entry: dict) -> datetime.date | None:
+    """Parse the ``YYYY-MM-DD`` date prefix of an entry timestamp, or None."""
+    ts = entry.get("timestamp")
+    if not isinstance(ts, str) or len(ts) < 10:
+        return None
+    try:
+        return datetime.date.fromisoformat(ts[:10])
+    except ValueError:
+        return None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -118,12 +130,18 @@ def recurring_task_rework(
 
 def collect_per_spec_entries(
     workspace: pathlib.Path,
+    *,
+    since: datetime.date | None = None,
 ) -> dict[str, list[dict]]:
     """Read every ``specs/*/.review-log.jsonl`` under ``workspace``.
 
     Returns ``{spec_dir_name: entries}`` in sorted dir order. Read-only;
     reuses :func:`aiadev.metrics.read_review_log` for the JSONL grammar. Spec
-    dirs without a log file are skipped.
+    dirs without a log file (or with no entries left after the ``since``
+    filter) are skipped.
+
+    ``since`` (inclusive) drops entries dated before it. Entries whose
+    timestamp cannot be parsed are kept (never silently drop evidence).
     """
     per_spec: dict[str, list[dict]] = {}
     specs_dir = workspace / "specs"
@@ -131,6 +149,11 @@ def collect_per_spec_entries(
         return per_spec
     for spec_dir in sorted(p for p in specs_dir.iterdir() if p.is_dir()):
         entries = _metrics.read_review_log(spec_dir / ".review-log.jsonl")
+        if since is not None:
+            entries = [
+                e for e in entries
+                if (_entry_date(e) is None or _entry_date(e) >= since)
+            ]
         if entries:
             per_spec[spec_dir.name] = entries
     return per_spec
