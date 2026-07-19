@@ -37,7 +37,7 @@
 
 ### T002 — Motor: recorrência de rework de tasks
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `src/aiadev/learn.py`

@@ -52,3 +52,29 @@ def test_reviewer_passing_first_pass_is_not_a_pattern() -> None:
     }
     patterns = _learn.recurring_reviewer_failures(per_spec)
     assert all(p.subject != "code-reviewer" for p in patterns)
+
+
+# --- T002: recurring task rework --------------------------------------------
+
+
+def test_detects_task_rework_pattern() -> None:
+    per_spec = {
+        "0001": [
+            _entry("2026-07-01T10:00:00Z", "code-reviewer", "CHANGES_REQUESTED", task_id="T003"),
+            _entry("2026-07-01T11:00:00Z", "code-reviewer", "APPROVED", task_id="T003"),
+        ],
+    }
+    patterns = _learn.recurring_task_rework(per_spec)
+    rework = [p for p in patterns if p.kind == "task-rework"]
+    assert rework, "expected a task-rework pattern"
+    p = rework[0]
+    assert p.subject == "T003"
+    assert p.occurrences == 2  # rounds
+    assert p.features == ("0001",)
+
+
+def test_task_without_rework_is_not_a_pattern() -> None:
+    per_spec = {
+        "0001": [_entry("2026-07-01T10:00:00Z", "code-reviewer", "APPROVED", task_id="T003")],
+    }
+    assert _learn.recurring_task_rework(per_spec) == []

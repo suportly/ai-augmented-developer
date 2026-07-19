@@ -67,3 +67,28 @@ def recurring_reviewer_failures(
             )
         )
     return patterns
+
+
+def recurring_task_rework(
+    per_spec_entries: Mapping[str, list[dict]],
+) -> list[Pattern]:
+    """Tasks that needed rework (≥ 1 ``CHANGES_REQUESTED`` code review round).
+
+    Uses :func:`aiadev.metrics.task_rework_counts` per feature, which already
+    filters out pristine (single-``APPROVED``) tasks. Returns one ``Pattern``
+    per reworked task, ``occurrences`` = total review rounds, ``features`` =
+    the spec id it belongs to. Sorted by rounds descending, then task id.
+    """
+    patterns: list[Pattern] = []
+    for spec_id, entries in per_spec_entries.items():
+        for task_id, rounds, _cr in _metrics.task_rework_counts(entries):
+            patterns.append(
+                Pattern(
+                    kind="task-rework",
+                    subject=task_id,
+                    occurrences=rounds,
+                    features=(spec_id,),
+                )
+            )
+    patterns.sort(key=lambda p: (-p.occurrences, p.subject))
+    return patterns
