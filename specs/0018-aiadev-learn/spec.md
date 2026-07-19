@@ -4,7 +4,7 @@
 
 **Branch:** `claude/graphify-aiadev-analysis-oiggl4`
 **Created:** 2026-07-18
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0018 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -86,11 +86,11 @@ As a tech lead, I want que a mineração respeite privacidade e não invente pad
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Quais alvos de escrita entram no escopo das propostas: só `rules/`, ou também `AGENTS.md` e categorias de `checklist`? Recomendação: começar por `rules/` + um artefato de propostas.]
-- [NEEDS CLARIFICATION:cl-2 Escopo da v1: só o relatório read-only (sem escrever), ou já inclui o `--write` que grava as propostas num artefato?]
-- [NEEDS CLARIFICATION:cl-3 O `learn` pode em algum momento tocar `constitution.md`, ou isso é sempre fora (processo de emenda)?]
-- [NEEDS CLARIFICATION:cl-4 Janela de agregação: todas as specs, ou uma janela `--since` como no `metrics`?]
-- [NEEDS CLARIFICATION:cl-5 Onde as propostas são gravadas com `--write`: um único `specs/_learnings.md`, diffs por-regra, ou o bloco de migração do `AGENTS.md`?]
+- **cl-2 (escopo v1):** A v1 entrega o **relatório + `--write`**, mas o `--write` grava apenas num **artefato de propostas** (não nos arquivos de guia finais). Fecha o loop com risco baixo.
+- **cl-1 (alvos de escrita):** Só **`rules/`** + o artefato de propostas. `AGENTS.md` e categorias de `checklist` ficam para fast-follow (Artigo III).
+- **cl-5 (onde grava):** Um único **`specs/_learnings.md`** — propostas revisáveis, fora dos arquivos de guia vivos.
+- **cl-4 (janela):** Espelha o `metrics`: flag **`--since`** com default de **90 dias**.
+- **cl-3 (constituição):** O `learn` **nunca** propõe diff na `constitution.md`; no máximo sugere no relatório "considere emendar", deixando o processo documentado (issue + RFC + revisor) intacto.
 
 <!-- section: Data touched -->
 ## Data touched
