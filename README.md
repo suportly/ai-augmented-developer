@@ -186,6 +186,29 @@ reviewers fica fora da saída padrão (Article VI) — use
 
 Detalhes: [docs/metrics.md](docs/metrics.md).
 
+## Turning the audit trail into durable guidance with `aiadev learn`
+
+Where `aiadev metrics` *aggregates* the trail, `aiadev learn` *mines* it for
+**recurring failure patterns** — the same reviewer failing first pass across
+features, tasks that keep needing rework — and proposes reviewable guidance
+edits so the team stops re-learning the same lesson.
+
+```bash
+# Ranked report over the last 90 days (default window)
+aiadev learn
+
+# Stable JSON for CI (fixed schema, no execution timestamp)
+aiadev learn --format json --since 2026-01-01
+
+# Write reviewable proposals to specs/_learnings.md (never the live guide files)
+aiadev learn --write
+```
+
+Read-only by default, local, no network. Reviewer free-text prose stays out of
+the output unless you pass `--show-bodies` (Article VI). Nothing is applied
+automatically — proposals land in `specs/_learnings.md` for a human to accept,
+edit, or reject. Details: [docs/learn.md](docs/learn.md).
+
 ## Keeping plugin manifests in sync with `aiadev manifests`
 
 `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
@@ -305,7 +328,7 @@ Stack-specific skills live under `presets/<preset>/skills/` and load only when t
 - **deploy** — Cloud Run + EAS deployment runbooks.
 - **run-tests** — pytest backend + Jest frontend entry point.
 
-A minimal `lean` preset is also available for projects with an exotic stack. See `presets/catalog.json` for the full list.
+A minimal `lean` preset is also available for projects with an exotic stack. There is also an experimental, opt-in `knowledge-graph` preset (spec 0017) that declares an optional knowledge-graph context provider so the `analyze` skill can ground its drift gaps in cited graph facts (`arquivo:símbolo` with a confidence label) instead of inference alone; it ships nothing mandatory and `analyze` degrades to its provider-free behaviour when no provider is configured. See `presets/catalog.json` for the full list.
 
 ### Commands
 

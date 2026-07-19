@@ -1,0 +1,20 @@
+# Optional knowledge-graph context provider (spec 0017).
+#
+# This preset is opt-in: enabling it declares the graph provider MCP so the
+# `analyze` skill can ground its gaps in graph-derived facts. No other preset
+# gains a dependency. graphify is the reference implementation behind the
+# provider contract (specs/0017-.../contracts/graph-provider.schema.json).
+#
+# Privacy: the provider parses code locally. A remote LLM backend is only
+# used if you configure one for docs/media — see README.md.
+#
+# PATH: `command` must resolve on the launcher's PATH. After `pip install
+# graphifyy`, confirm `graphify` is reachable (`which graphify`); pipx and
+# Windows users may need to add the Python Scripts dir to PATH. If the binary
+# is not found the MCP server silently fails to start and `analyze` degrades
+# to its provider-free report — set an absolute path here to avoid that.
+
+servers:
+  graphify:
+    command: "graphify"
+    args: ["--mcp"]

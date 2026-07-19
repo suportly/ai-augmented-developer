@@ -50,6 +50,31 @@ Run pre-flight first: `aiadev preflight analyze --feature <slug>`. Abort on non-
 - Do not open issues or edit skill files — drop your report in `specs/<branch>/analysis.md` (optional) or straight to the user.
 - No silent "looks fine". If there is truly no drift, say so explicitly.
 
+## Graph provider (optional)
+
+When a knowledge-graph context provider is configured (the optional
+`knowledge-graph` preset declares it in `mcps.yaml`, spec 0017), ground the
+gap classes in facts from the provider instead of inference alone. Follow
+`rules/graph-facts.md` for how to cite and label every fact.
+
+- **Task without code (provider-grounded).** Query the provider's `drift`
+  operation; for each fact in `missing`, report the gap citing the
+  expected-and-absent `path:symbol`.
+- **Code without task (provider-grounded).** For each fact in `extra`, list
+  the changed file with the graph edge to its subsystem, so the drift reads
+  as "this file belongs to subsystem X but no task asked for it".
+- **Confidence.** Cite every fact with its confidence label per
+  `rules/graph-facts.md` — one of `explicit`, `inferred`, or `ambiguous`. A
+  fact labelled `inferred` or `ambiguous` is a signal to verify, and is
+  not a definitive gap; only `explicit` facts back a definitive statement.
+
+**Graceful degradation.** The provider is optional. When no provider is
+configured, produce the exact same report as the inference-only Loop above
+(the four gap classes) and never emit an error because a provider is absent.
+A provider that is configured but unavailable at runtime (timeout/error) is
+treated the same way: omit the provider-grounded contribution with a short
+note and keep the base report.
+
 ## Hand-off
 
 Suggest the skill most likely to close each gap:

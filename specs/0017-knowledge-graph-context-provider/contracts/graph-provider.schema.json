@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-augmented-developer/specs/0017/contracts/graph-provider.schema.json",
+  "title": "Knowledge-graph context provider contract",
+  "description": "Article V provider contract for the optional knowledge-graph context provider (spec 0017). Skills query the provider through these three operations; graphify is one reference implementation behind this contract, never imported directly. Every fact carries an aiadev-canonical confidence label (see rules/graph-facts.md).",
+  "type": "object",
+  "required": ["queries", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "confidence": {"$ref": "#/$defs/confidence"},
+    "queries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "drift", "provenance"],
+      "properties": {
+        "impact": {
+          "type": "object",
+          "description": "Which subsystems a set of changed paths touches (blast-radius).",
+          "required": ["request", "response"],
+          "additionalProperties": false,
+          "properties": {
+            "request": {"$ref": "#/$defs/impactRequest"},
+            "response": {"$ref": "#/$defs/impactResponse"}
+          }
+        },
+        "drift": {
+          "type": "object",
+          "description": "Facts backing the analyze gap classes 'task without code' and 'code without task'.",
+          "required": ["request", "response"],
+          "additionalProperties": false,
+          "properties": {
+            "request": {"$ref": "#/$defs/driftRequest"},
+            "response": {"$ref": "#/$defs/driftResponse"}
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "description": "The confidence and provider-native label behind a single fact.",
+          "required": ["request", "response"],
+          "additionalProperties": false,
+          "properties": {
+            "request": {"$ref": "#/$defs/provenanceRequest"},
+            "response": {"$ref": "#/$defs/provenanceResponse"}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "description": "aiadev-canonical confidence vocabulary, mapped from the provider taxonomy in rules/graph-facts.md.",
+      "enum": ["explicit", "inferred", "ambiguous"]
+    },
+    "fact": {
+      "type": "object",
+      "description": "One graph-derived fact citable by a skill.",
+      "required": ["symbol", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Verifiable citation of the form 'path:symbol' (e.g. src/aiadev/cli.py:main)."
+        },
+        "subsystem": {"type": "string"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "provider_label": {
+          "type": "string",
+          "description": "Raw label emitted by the provider before mapping (e.g. EXTRACTED / INFERRED / AMBIGUOUS)."
+        }
+      }
+    },
+    "impactRequest": {
+      "type": "object",
+      "required": ["paths"],
+      "additionalProperties": false,
+      "properties": {
+        "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "impactResponse": {
+      "type": "object",
+      "required": ["subsystems"],
+      "additionalProperties": false,
+      "properties": {
+        "subsystems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "edges"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {"type": "string"},
+              "edges": {"type": "array", "items": {"$ref": "#/$defs/fact"}}
+            }
+          }
+        }
+      }
+    },
+    "driftRequest": {
+      "type": "object",
+      "required": ["tasks", "diff_paths"],
+      "additionalProperties": false,
+      "properties": {
+        "tasks": {"type": "array", "items": {"type": "string"}},
+        "diff_paths": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "driftResponse": {
+      "type": "object",
+      "description": "'missing' = symbols a done task claimed but the diff lacks (task without code). 'extra' = changed files no task requested (code without task).",
+      "required": ["missing", "extra"],
+      "additionalProperties": false,
+      "properties": {
+        "missing": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
+        "extra": {"type": "array", "items": {"$ref": "#/$defs/fact"}}
+      }
+    },
+    "provenanceRequest": {
+      "type": "object",
+      "required": ["symbol"],
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {"type": "string"}
+      }
+    },
+    "provenanceResponse": {"$ref": "#/$defs/fact"}
+  }
+}

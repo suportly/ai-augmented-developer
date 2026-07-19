@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0018 — aiadev-learn**. Adapts the idea behind
+[`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom)'s
+`headroom learn` (see `CREDITS.md`): a new `aiadev learn` subcommand mines the
+pipeline's own audit trail (`.review-log.jsonl`) for **recurring failure
+patterns** — the same reviewer failing first pass across features, tasks that
+keep needing rework — reusing the `aiadev metrics` primitives. Each
+sufficiently-evidenced pattern carries a reviewable guidance proposal; a thin
+trail is reported as "insufficient evidence" rather than asserted. The command
+is **read-only by default**, local, and makes no network calls; reviewer prose
+(the `note` field) stays out of output unless `--show-bodies` is passed
+(Article VI). `--write` renders proposals to `specs/_learnings.md` only — never
+the live guide files and never `constitution.md` (which keeps its amendment
+process). Output has a stable JSON schema for CI (`--format json`) and a
+`--since` window (default 90 days) mirroring `aiadev metrics`.
+
+Spec **0017 — knowledge-graph-context-provider**. Adapts ideas from
+[`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify) (see
+`CREDITS.md`) to let the `analyze` skill ground its drift gaps in facts from
+an **optional** knowledge-graph context provider instead of inference alone.
+Introduces a generic provider contract (`impact`/`drift`/`provenance` queries
+with an aiadev-canonical `explicit`/`inferred`/`ambiguous` confidence
+vocabulary mapped from the provider's own taxonomy) at
+`specs/0017-knowledge-graph-context-provider/contracts/graph-provider.schema.json`,
+so graphify is one reference implementation behind an Article V boundary — not
+a hardcoded dependency. The provider ships via an **opt-in, experimental
+`knowledge-graph` preset** (its `mcps.yaml` declares the server and its
+`rules/graph-facts.md` documents the citation rules), so no existing preset
+gains a dependency; when no provider is configured `analyze` behaves exactly
+as before (graceful degradation, Article VI privacy: local by default, LLM
+backend opt-in). v1 wires the provider into `analyze` only; `plan`/review
+blast-radius is a documented fast-follow.
+
 ## [0.21.0] - 2026-07-08
 
 Spec **0016 — agent-skills-interop**. In December 2025 the Agent

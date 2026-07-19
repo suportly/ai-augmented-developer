@@ -1,0 +1,53 @@
+"""T004–T007 — the analyze skill's optional graph-provider integration.
+
+Spec 0017, Story 1 (grounded drift) and Story 3 (confidence). The `analyze`
+skill gains an *additive, conditional* provider step: when a knowledge-graph
+provider is configured it grounds the gap classes in cited facts; when none
+is configured it behaves exactly as before. These tests assert the SKILL.md
+instructions are present and unambiguous.
+"""
+from __future__ import annotations
+
+import pathlib
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+SKILL = REPO_ROOT / "skills" / "analyze" / "SKILL.md"
+
+
+def _body() -> str:
+    return SKILL.read_text(encoding="utf-8")
+
+
+def test_has_optional_graph_provider_section() -> None:
+    body = _body()
+    assert "Graph provider (optional)" in body
+
+
+def test_analyze_declares_task_without_code_provider_step() -> None:
+    body = _body()
+    assert "Task without code (provider-grounded)" in body
+    assert "`drift`" in body and "`missing`" in body
+    assert "expected-and-absent `path:symbol`" in body
+
+
+def test_analyze_declares_code_without_task_provider_step() -> None:
+    body = _body()
+    assert "Code without task (provider-grounded)" in body
+    assert "`extra`" in body
+    assert "edge to its subsystem" in body
+
+
+def test_analyze_graceful_degradation_clause() -> None:
+    body = _body()
+    assert "Graceful degradation" in body
+    assert "never emit an error because a provider is absent" in body
+    assert "exact same report" in body
+
+
+def test_analyze_labels_and_non_definitive_inferred() -> None:
+    body = _body()
+    assert "rules/graph-facts.md" in body
+    assert "`explicit`" in body and "`inferred`" in body and "`ambiguous`" in body
+    # inferred/ambiguous facts are signals, not definitive gaps
+    assert "not a definitive gap" in body
+    assert "only `explicit` facts" in body
