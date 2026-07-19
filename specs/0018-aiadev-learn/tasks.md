@@ -20,7 +20,7 @@
 
 ## Task list
 
-### T001 — Motor: recorrência de reprovação por reviewer/categoria
+### T001 — Motor: recorrência de reprovação por reviewer
 
 - **Status:** pending
 - **Depends on:** —
@@ -29,8 +29,8 @@
   - test: `tests/test_learn.py`
 - **Spec scenarios:** Story 1 scenario 1
 - **Acceptance:**
-  - [ ] Failing test written and observed failing: `test_detects_recurring_reviewer_category`.
-  - [ ] `learn.py` consome as primitivas do `metrics`/`review_log` e retorna um padrão quando o mesmo reviewer reprova a mesma categoria em ≥ N features, com evidência (specs + contagem).
+  - [ ] Failing test written and observed failing: `test_detects_recurring_reviewer_failure`.
+  - [ ] `learn.py` consome as primitivas do `metrics`/`review_log` e retorna um padrão quando o mesmo reviewer reprova o first-pass em ≥ N features, com evidência (specs + contagem). O rastro não tem "categoria"; o sinal é por reviewer.
   - [ ] No other existing test regresses.
   - [ ] Commit message: `feat(learn): T001 motor detecta recorrência de reviewer`.
 - **Notes:** Depende só de funções públicas de `src/aiadev/metrics.py`.

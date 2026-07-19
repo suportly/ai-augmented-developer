@@ -59,7 +59,7 @@ As a tech lead, I want que o `aiadev learn` me mostre os padrões de falha que s
 
 **Acceptance scenarios** (Given / When / Then, ≥ 3 per story):
 
-1. Given um reviewer reprovou a mesma categoria em ≥ N features, When rodo `aiadev learn`, Then o padrão aparece no topo, citando as specs e a contagem de ocorrências.
+1. Given o mesmo reviewer reprovou o first-pass em ≥ N features (via `first_pass_rate_by_reviewer`), When rodo `aiadev learn`, Then o padrão aparece no topo, citando as specs e a contagem de ocorrências. (Nota: o rastro não carrega "categoria" de reprovação; o sinal é por reviewer, e a prosa do `note` só aparece sob `--show-bodies`.)
 2. Given várias tasks precisaram de rework (via `task_rework_counts`), When rodo `aiadev learn`, Then o padrão de rework é reportado com os ids de task/spec de evidência.
 3. Given rodo `aiadev learn --format json`, When a saída é gerada, Then é JSON estável (schema fixo, sem timestamp de execução) consumível por CI.
 
