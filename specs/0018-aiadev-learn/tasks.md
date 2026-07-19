@@ -52,7 +52,7 @@
 
 ### T003 — Motor: limiar de evidência e "evidência insuficiente"
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `src/aiadev/learn.py`

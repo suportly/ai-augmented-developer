@@ -32,10 +32,13 @@ class Pattern:
     subject: str
     occurrences: int
     features: tuple[str, ...]
+    sufficient: bool = True
 
 
 def recurring_reviewer_failures(
     per_spec_entries: Mapping[str, list[dict]],
+    *,
+    min_features: int = 2,
 ) -> list[Pattern]:
     """Reviewers that failed the **first pass** across multiple features.
 
@@ -46,7 +49,9 @@ def recurring_reviewer_failures(
     "category" of rejection, so the signal is per reviewer.
 
     Returns one ``Pattern`` per reviewer that failed first pass in ≥ 1
-    feature, sorted by reviewer name.
+    feature, sorted by reviewer name. A pattern seen in fewer than
+    ``min_features`` features is returned with ``sufficient=False`` (thin
+    trail → "insufficient evidence", Story 3 sc2) rather than dropped.
     """
     failures: dict[str, list[str]] = {}
     for spec_id, entries in per_spec_entries.items():
@@ -64,6 +69,7 @@ def recurring_reviewer_failures(
                 subject=reviewer,
                 occurrences=len(features),
                 features=features,
+                sufficient=len(features) >= min_features,
             )
         )
     return patterns

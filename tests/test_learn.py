@@ -78,3 +78,26 @@ def test_task_without_rework_is_not_a_pattern() -> None:
         "0001": [_entry("2026-07-01T10:00:00Z", "code-reviewer", "APPROVED", task_id="T003")],
     }
     assert _learn.recurring_task_rework(per_spec) == []
+
+
+# --- T003: evidence threshold -----------------------------------------------
+
+
+def test_thin_trail_marks_insufficient_evidence() -> None:
+    # Only one feature where the reviewer failed → below the default threshold.
+    per_spec = {
+        "0001": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+    }
+    patterns = _learn.recurring_reviewer_failures(per_spec, min_features=2)
+    p = next(p for p in patterns if p.subject == "plan-document-reviewer")
+    assert p.sufficient is False
+
+
+def test_meets_threshold_is_sufficient() -> None:
+    per_spec = {
+        "0001": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+        "0002": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+    }
+    patterns = _learn.recurring_reviewer_failures(per_spec, min_features=2)
+    p = next(p for p in patterns if p.subject == "plan-document-reviewer")
+    assert p.sufficient is True
