@@ -158,7 +158,7 @@
 
 ### T010 — Comando: `--write` grava em `specs/_learnings.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008, T009
 - **Files:**
   - modify: `src/aiadev/commands/learn.py`

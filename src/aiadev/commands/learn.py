@@ -46,6 +46,31 @@ def _format_text(patterns: list[_learn.Pattern]) -> str:
     return "\n".join(lines)
 
 
+def _render_learnings(patterns: list[_learn.Pattern]) -> str:
+    """Render the reviewable proposals artifact (specs/_learnings.md)."""
+    lines = [
+        "# Learnings (propostas de `aiadev learn`)",
+        "",
+        "> Propostas revisáveis geradas a partir do rastro do pipeline.",
+        "> **Nada aqui é aplicado automaticamente** — aceite, edite ou",
+        "> rejeite cada item e promova manualmente ao arquivo-alvo.",
+        "",
+    ]
+    proposed = [p for p in patterns if p.proposal is not None]
+    if not proposed:
+        lines.append("_Sem propostas: evidência insuficiente no rastro._")
+        lines.append("")
+        return "\n".join(lines)
+    for p in proposed:
+        lines.append(f"## [{p.kind}] {p.subject}")
+        lines.append("")
+        lines.append(f"- **Evidência:** {p.occurrences} — {', '.join(p.features)}")
+        lines.append(f"- **Arquivo-alvo proposto:** `{p.proposal.target_file}`")
+        lines.append(f"- **Sugestão:** {p.proposal.snippet}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _format_json(patterns: list[_learn.Pattern]) -> str:
     payload = {
         "schema_version": JSON_SCHEMA_VERSION,
@@ -84,7 +109,19 @@ def _format_json(patterns: list[_learn.Pattern]) -> str:
     default=False,
     help="Inclui a prosa livre do reviewer (campo note). Fora do padrão por privacidade (Artigo VI).",
 )
-def learn_command(output_format: str, since: datetime.datetime | None, show_bodies: bool) -> None:
+@click.option(
+    "--write",
+    "write_proposals",
+    is_flag=True,
+    default=False,
+    help="Grava as propostas em specs/_learnings.md (nunca nos arquivos de guia finais).",
+)
+def learn_command(
+    output_format: str,
+    since: datetime.datetime | None,
+    show_bodies: bool,
+    write_proposals: bool,
+) -> None:
     """Report recurring failure patterns mined from the audit trail."""
     workspace = pathlib.Path.cwd()
     since_date = (
@@ -98,3 +135,9 @@ def learn_command(output_format: str, since: datetime.datetime | None, show_bodi
         click.echo(_format_json(patterns), nl=False)
     else:
         click.echo(_format_text(patterns), nl=False)
+
+    if write_proposals:
+        target = workspace / "specs" / "_learnings.md"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(_render_learnings(patterns), encoding="utf-8")
+        click.echo(f"Propostas gravadas em: {target.relative_to(workspace)}")

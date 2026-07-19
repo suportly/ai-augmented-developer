@@ -143,3 +143,23 @@ def test_learn_makes_no_network_calls(tmp_path) -> None:
     with mock.patch("socket.socket", _boom):
         result = _invoke(ws, ["--format", "json"])
     assert result.exit_code == 0, result.output
+
+
+# --- T010 -------------------------------------------------------------------
+
+
+def test_learn_write_lands_in_learnings_file(tmp_path) -> None:
+    ws = _build_workspace(tmp_path)
+    learnings = ws / "specs" / "_learnings.md"
+    assert not learnings.exists()
+
+    result = _invoke(ws, ["--write"])
+    assert result.exit_code == 0, result.output
+    assert learnings.exists(), "expected specs/_learnings.md to be written"
+    body = learnings.read_text(encoding="utf-8")
+    assert "rules/review-recurrence.md" in body  # proposal target
+    assert "plan-document-reviewer" in body
+    assert "_learnings.md" in result.output  # reports the path
+
+    # Guard: the write target is ONLY the learnings file — no live guide file.
+    assert not (ws / "rules").exists()
