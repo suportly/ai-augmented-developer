@@ -101,3 +101,20 @@ def test_meets_threshold_is_sufficient() -> None:
     patterns = _learn.recurring_reviewer_failures(per_spec, min_features=2)
     p = next(p for p in patterns if p.subject == "plan-document-reviewer")
     assert p.sufficient is True
+
+
+# --- T004: reviewer prose excluded by default (Article VI) ------------------
+
+
+def test_bodies_excluded_by_default() -> None:
+    per_spec = {
+        "0001": _spec_where_reviewer_fails_first_pass("plan-document-reviewer", note="secret prose"),
+        "0002": _spec_where_reviewer_fails_first_pass("plan-document-reviewer", note="secret prose"),
+    }
+    default = _learn.recurring_reviewer_failures(per_spec)
+    p = next(p for p in default if p.subject == "plan-document-reviewer")
+    assert p.notes == ()  # no reviewer prose by default
+
+    shown = _learn.recurring_reviewer_failures(per_spec, show_bodies=True)
+    p2 = next(p for p in shown if p.subject == "plan-document-reviewer")
+    assert "secret prose" in p2.notes

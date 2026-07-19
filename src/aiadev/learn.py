@@ -33,12 +33,17 @@ class Pattern:
     occurrences: int
     features: tuple[str, ...]
     sufficient: bool = True
+    # Reviewer free-text prose (the ``note`` field). Empty unless the caller
+    # opts in with ``show_bodies=True`` — kept out of the default output per
+    # Article VI (mirrors ``metrics --show-bodies``).
+    notes: tuple[str, ...] = ()
 
 
 def recurring_reviewer_failures(
     per_spec_entries: Mapping[str, list[dict]],
     *,
     min_features: int = 2,
+    show_bodies: bool = False,
 ) -> list[Pattern]:
     """Reviewers that failed the **first pass** across multiple features.
 
@@ -54,11 +59,20 @@ def recurring_reviewer_failures(
     trail → "insufficient evidence", Story 3 sc2) rather than dropped.
     """
     failures: dict[str, list[str]] = {}
+    notes: dict[str, list[str]] = {}
     for spec_id, entries in per_spec_entries.items():
         rates = _metrics.first_pass_rate_by_reviewer(entries)
         for reviewer, (approved, total) in rates.items():
             if approved < total:
                 failures.setdefault(reviewer, []).append(spec_id)
+                if show_bodies:
+                    for entry in entries:
+                        if (
+                            entry.get("reviewer") == reviewer
+                            and entry.get("verdict") == "CHANGES_REQUESTED"
+                            and entry.get("note")
+                        ):
+                            notes.setdefault(reviewer, []).append(entry["note"])
 
     patterns: list[Pattern] = []
     for reviewer, specs in sorted(failures.items()):
@@ -70,6 +84,7 @@ def recurring_reviewer_failures(
                 occurrences=len(features),
                 features=features,
                 sufficient=len(features) >= min_features,
+                notes=tuple(notes.get(reviewer, ())),
             )
         )
     return patterns

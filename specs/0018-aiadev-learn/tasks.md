@@ -67,7 +67,7 @@
 
 ### T004 — Motor: prosa de reviewer fora do padrão por default (Artigo VI)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `src/aiadev/learn.py`
