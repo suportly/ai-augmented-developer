@@ -1,0 +1,69 @@
+"""Core engine for ``aiadev learn`` (spec 0018).
+
+Read-only. Mines the pipeline audit trail for **recurring failure patterns**
+and reuses the public primitives in :mod:`aiadev.metrics` (which own the
+``.review-log.jsonl`` grammar) — it never re-parses the trail itself and
+never calls the network or ``subprocess``.
+
+Like :mod:`aiadev.metrics`, this module is intentionally small: a frozen
+``Pattern`` dataclass holds one detected pattern, and the rest are free
+functions that take injected data and return patterns. The CLI layer
+(:mod:`aiadev.commands.learn`) walks the workspace and formats output.
+"""
+from __future__ import annotations
+
+import dataclasses
+from typing import Mapping
+
+from . import metrics as _metrics
+
+
+@dataclasses.dataclass(frozen=True)
+class Pattern:
+    """One recurring failure pattern with its evidence.
+
+    ``subject`` is the reviewer name (for ``reviewer-recurrence``) or the
+    task id (for ``task-rework``). ``features`` are the spec ids that
+    evidence the pattern. ``occurrences`` is how many features/rounds it
+    was seen in.
+    """
+
+    kind: str
+    subject: str
+    occurrences: int
+    features: tuple[str, ...]
+
+
+def recurring_reviewer_failures(
+    per_spec_entries: Mapping[str, list[dict]],
+) -> list[Pattern]:
+    """Reviewers that failed the **first pass** across multiple features.
+
+    A reviewer "failed first pass" in a feature when, for that feature's
+    review log, its first-pass approved count is below its total (i.e. at
+    least one first attempt was not ``APPROVED``) — computed via
+    :func:`aiadev.metrics.first_pass_rate_by_reviewer`. The trail carries no
+    "category" of rejection, so the signal is per reviewer.
+
+    Returns one ``Pattern`` per reviewer that failed first pass in ≥ 1
+    feature, sorted by reviewer name.
+    """
+    failures: dict[str, list[str]] = {}
+    for spec_id, entries in per_spec_entries.items():
+        rates = _metrics.first_pass_rate_by_reviewer(entries)
+        for reviewer, (approved, total) in rates.items():
+            if approved < total:
+                failures.setdefault(reviewer, []).append(spec_id)
+
+    patterns: list[Pattern] = []
+    for reviewer, specs in sorted(failures.items()):
+        features = tuple(sorted(specs))
+        patterns.append(
+            Pattern(
+                kind="reviewer-recurrence",
+                subject=reviewer,
+                occurrences=len(features),
+                features=features,
+            )
+        )
+    return patterns

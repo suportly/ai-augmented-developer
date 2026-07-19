@@ -22,7 +22,7 @@
 
 ### T001 — Motor: recorrência de reprovação por reviewer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/learn.py`
