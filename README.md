@@ -305,7 +305,7 @@ Stack-specific skills live under `presets/<preset>/skills/` and load only when t
 - **deploy** — Cloud Run + EAS deployment runbooks.
 - **run-tests** — pytest backend + Jest frontend entry point.
 
-A minimal `lean` preset is also available for projects with an exotic stack. See `presets/catalog.json` for the full list.
+A minimal `lean` preset is also available for projects with an exotic stack. There is also an experimental, opt-in `knowledge-graph` preset (spec 0017) that declares an optional knowledge-graph context provider so the `analyze` skill can ground its drift gaps in cited graph facts (`arquivo:símbolo` with a confidence label) instead of inference alone; it ships nothing mandatory and `analyze` degrades to its provider-free behaviour when no provider is configured. See `presets/catalog.json` for the full list.
 
 ### Commands
 

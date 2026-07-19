@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0017 — knowledge-graph-context-provider**. Adapts ideas from
+[`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify) (see
+`CREDITS.md`) to let the `analyze` skill ground its drift gaps in facts from
+an **optional** knowledge-graph context provider instead of inference alone.
+Introduces a generic provider contract (`impact`/`drift`/`provenance` queries
+with an aiadev-canonical `explicit`/`inferred`/`ambiguous` confidence
+vocabulary mapped from the provider's own taxonomy) at
+`specs/0017-knowledge-graph-context-provider/contracts/graph-provider.schema.json`,
+so graphify is one reference implementation behind an Article V boundary — not
+a hardcoded dependency. The provider ships via an **opt-in, experimental
+`knowledge-graph` preset** (its `mcps.yaml` declares the server and its
+`rules/graph-facts.md` documents the citation rules), so no existing preset
+gains a dependency; when no provider is configured `analyze` behaves exactly
+as before (graceful degradation, Article VI privacy: local by default, LLM
+backend opt-in). v1 wires the provider into `analyze` only; `plan`/review
+blast-radius is a documented fast-follow.
+
 ## [0.21.0] - 2026-07-08
 
 Spec **0016 — agent-skills-interop**. In December 2025 the Agent
