@@ -118,3 +118,29 @@ def test_bodies_excluded_by_default() -> None:
     shown = _learn.recurring_reviewer_failures(per_spec, show_bodies=True)
     p2 = next(p for p in shown if p.subject == "plan-document-reviewer")
     assert "secret prose" in p2.notes
+
+
+# --- T009: each sufficient pattern carries a reviewable proposal -------------
+
+
+def test_pattern_carries_proposal_and_target() -> None:
+    per_spec = {
+        "0001": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+        "0002": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+    }
+    patterns = _learn.detect_all(per_spec)
+    p = next(p for p in patterns if p.subject == "plan-document-reviewer")
+    assert p.proposal is not None
+    assert p.proposal.target_file.startswith("rules/")
+    assert "constitution" not in p.proposal.target_file  # cl-3: never the constitution
+    assert p.proposal.snippet.strip()
+
+
+def test_insufficient_pattern_has_no_proposal() -> None:
+    per_spec = {
+        "0001": _spec_where_reviewer_fails_first_pass("plan-document-reviewer"),
+    }
+    patterns = _learn.detect_all(per_spec, min_features=2)
+    p = next(p for p in patterns if p.subject == "plan-document-reviewer")
+    assert p.sufficient is False
+    assert p.proposal is None

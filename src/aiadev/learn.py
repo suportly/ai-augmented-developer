@@ -32,6 +32,18 @@ def _entry_date(entry: dict) -> datetime.date | None:
 
 
 @dataclasses.dataclass(frozen=True)
+class Proposal:
+    """A reviewable guidance edit suggested for a pattern.
+
+    ``target_file`` is always under ``rules/`` — never ``constitution.md``
+    (cl-3); the constitution follows its own amendment process.
+    """
+
+    snippet: str
+    target_file: str
+
+
+@dataclasses.dataclass(frozen=True)
 class Pattern:
     """One recurring failure pattern with its evidence.
 
@@ -50,6 +62,8 @@ class Pattern:
     # opts in with ``show_bodies=True`` — kept out of the default output per
     # Article VI (mirrors ``metrics --show-bodies``).
     notes: tuple[str, ...] = ()
+    # A reviewable guidance edit, attached only to sufficient patterns.
+    proposal: "Proposal | None" = None
 
 
 def recurring_reviewer_failures(
@@ -176,7 +190,37 @@ def detect_all(
         ),
         *recurring_task_rework(per_spec_entries),
     ]
+    patterns = [
+        dataclasses.replace(p, proposal=propose_guidance(p)) if p.sufficient else p
+        for p in patterns
+    ]
     patterns.sort(
         key=lambda p: (not p.sufficient, -p.occurrences, p.kind, p.subject)
     )
     return patterns
+
+
+def propose_guidance(pattern: Pattern) -> Proposal:
+    """Build a reviewable guidance snippet + target rule file for a pattern.
+
+    The target is always a rule under ``rules/`` (cl-3: never the
+    constitution). The snippet is a starting point for a human to accept,
+    edit, or reject — not final guidance.
+    """
+    evidence = ", ".join(pattern.features)
+    if pattern.kind == "reviewer-recurrence":
+        snippet = (
+            f"The `{pattern.subject}` failed the first review pass in "
+            f"{pattern.occurrences} features ({evidence}). Add an upstream "
+            f"checklist item so the recurring cause is addressed before "
+            f"review."
+        )
+        target = "rules/review-recurrence.md"
+    else:  # task-rework
+        snippet = (
+            f"Task `{pattern.subject}` needed {pattern.occurrences} review "
+            f"rounds ({evidence}). Capture the pattern that caused the rework "
+            f"as a rule so future tasks avoid it."
+        )
+        target = "rules/task-rework.md"
+    return Proposal(snippet=snippet, target_file=target)

@@ -143,7 +143,7 @@
 
 ### T009 — Motor: proposta de guia por padrão (trecho + arquivo-alvo)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - modify: `src/aiadev/learn.py`
