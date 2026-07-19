@@ -9,6 +9,7 @@ from .commands.extension import extension_command
 from .commands.init import init_command
 from .commands.install import install_command
 from .commands.lang import lang_command
+from .commands.learn import learn_command
 from .commands.manifests import manifests_command
 from .commands.metrics import metrics_command
 from .commands.preflight import preflight_command
@@ -32,6 +33,7 @@ main.add_command(extension_command)
 main.add_command(preflight_command)
 main.add_command(metrics_command)
 main.add_command(manifests_command)
+main.add_command(learn_command)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -13,6 +13,7 @@ functions that take injected data and return patterns. The CLI layer
 from __future__ import annotations
 
 import dataclasses
+import pathlib
 from typing import Mapping
 
 from . import metrics as _metrics
@@ -112,4 +113,47 @@ def recurring_task_rework(
                 )
             )
     patterns.sort(key=lambda p: (-p.occurrences, p.subject))
+    return patterns
+
+
+def collect_per_spec_entries(
+    workspace: pathlib.Path,
+) -> dict[str, list[dict]]:
+    """Read every ``specs/*/.review-log.jsonl`` under ``workspace``.
+
+    Returns ``{spec_dir_name: entries}`` in sorted dir order. Read-only;
+    reuses :func:`aiadev.metrics.read_review_log` for the JSONL grammar. Spec
+    dirs without a log file are skipped.
+    """
+    per_spec: dict[str, list[dict]] = {}
+    specs_dir = workspace / "specs"
+    if not specs_dir.is_dir():
+        return per_spec
+    for spec_dir in sorted(p for p in specs_dir.iterdir() if p.is_dir()):
+        entries = _metrics.read_review_log(spec_dir / ".review-log.jsonl")
+        if entries:
+            per_spec[spec_dir.name] = entries
+    return per_spec
+
+
+def detect_all(
+    per_spec_entries: Mapping[str, list[dict]],
+    *,
+    min_features: int = 2,
+    show_bodies: bool = False,
+) -> list[Pattern]:
+    """Run every detector and return patterns ranked for reporting.
+
+    Ranking: sufficient patterns first, then by occurrences descending, then
+    kind, then subject — so the most-evidenced actionable pattern is on top.
+    """
+    patterns = [
+        *recurring_reviewer_failures(
+            per_spec_entries, min_features=min_features, show_bodies=show_bodies
+        ),
+        *recurring_task_rework(per_spec_entries),
+    ]
+    patterns.sort(
+        key=lambda p: (not p.sufficient, -p.occurrences, p.kind, p.subject)
+    )
     return patterns

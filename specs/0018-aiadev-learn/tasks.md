@@ -82,7 +82,7 @@
 
 ### T005 — Comando `aiadev learn` com saída texto ranqueada
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `src/aiadev/commands/learn.py`
