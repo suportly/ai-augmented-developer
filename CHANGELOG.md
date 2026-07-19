@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0018 — aiadev-learn**. Adapts the idea behind
+[`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom)'s
+`headroom learn` (see `CREDITS.md`): a new `aiadev learn` subcommand mines the
+pipeline's own audit trail (`.review-log.jsonl`) for **recurring failure
+patterns** — the same reviewer failing first pass across features, tasks that
+keep needing rework — reusing the `aiadev metrics` primitives. Each
+sufficiently-evidenced pattern carries a reviewable guidance proposal; a thin
+trail is reported as "insufficient evidence" rather than asserted. The command
+is **read-only by default**, local, and makes no network calls; reviewer prose
+(the `note` field) stays out of output unless `--show-bodies` is passed
+(Article VI). `--write` renders proposals to `specs/_learnings.md` only — never
+the live guide files and never `constitution.md` (which keeps its amendment
+process). Output has a stable JSON schema for CI (`--format json`) and a
+`--since` window (default 90 days) mirroring `aiadev metrics`.
+
 Spec **0017 — knowledge-graph-context-provider**. Adapts ideas from
 [`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify) (see
 `CREDITS.md`) to let the `analyze` skill ground its drift gaps in facts from

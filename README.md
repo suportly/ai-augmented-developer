@@ -186,6 +186,29 @@ reviewers fica fora da saída padrão (Article VI) — use
 
 Detalhes: [docs/metrics.md](docs/metrics.md).
 
+## Turning the audit trail into durable guidance with `aiadev learn`
+
+Where `aiadev metrics` *aggregates* the trail, `aiadev learn` *mines* it for
+**recurring failure patterns** — the same reviewer failing first pass across
+features, tasks that keep needing rework — and proposes reviewable guidance
+edits so the team stops re-learning the same lesson.
+
+```bash
+# Ranked report over the last 90 days (default window)
+aiadev learn
+
+# Stable JSON for CI (fixed schema, no execution timestamp)
+aiadev learn --format json --since 2026-01-01
+
+# Write reviewable proposals to specs/_learnings.md (never the live guide files)
+aiadev learn --write
+```
+
+Read-only by default, local, no network. Reviewer free-text prose stays out of
+the output unless you pass `--show-bodies` (Article VI). Nothing is applied
+automatically — proposals land in `specs/_learnings.md` for a human to accept,
+edit, or reject. Details: [docs/learn.md](docs/learn.md).
+
 ## Keeping plugin manifests in sync with `aiadev manifests`
 
 `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and

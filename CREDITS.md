@@ -25,6 +25,18 @@ not bundle or copy graphify; it is one reference implementation behind the
 provider contract in `specs/0017-.../contracts/graph-provider.schema.json`.
 License per the upstream repository at time of adaptation.
 
+### [headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom)
+
+Feature `0018-aiadev-learn` adapts the idea behind headroom's `headroom
+learn` command — mining an agent's own failed sessions and turning them into
+durable local guidance. We apply the *shape* of that loop to the aiadev
+pipeline: `aiadev learn` mines the structured audit trail
+(`.review-log.jsonl`, task rework, clarification churn) for recurring failure
+patterns and proposes reviewable guidance edits. We do not bundle or copy
+headroom (which is a broader context-compression layer); we borrow the
+failure-mining-into-guidance concept. License per the upstream repository at
+time of adaptation.
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).

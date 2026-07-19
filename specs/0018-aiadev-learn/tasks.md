@@ -173,7 +173,7 @@
 
 ### T011 — Docs, README e atribuição (Artigo VII)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - create: `docs/learn.md`
