@@ -20,7 +20,7 @@
 
 ### T001 — Fake LSP conforme ao mesmo schema do 0017
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `tests/fixtures/lsp_provider_fake/__init__.py`
