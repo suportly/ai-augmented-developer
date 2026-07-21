@@ -29,3 +29,28 @@ def test_review_has_optional_impacted_subsystems() -> None:
     assert "impacted subsystems" in lower
     assert "`impact`" in body
     assert "graceful degradation" in lower or "degradação graciosa" in lower
+
+
+# --- T003: learn proposal can target a checklist category -------------------
+
+
+def test_learn_proposal_can_target_checklist_category() -> None:
+    import dataclasses
+
+    from aiadev import learn
+    from aiadev.commands.learn import _render_learnings
+
+    mapped = learn.Pattern(
+        kind="reviewer-recurrence", subject="code-reviewer",
+        occurrences=2, features=("0001", "0002"), sufficient=True,
+    )
+    prop = learn.propose_guidance(mapped)
+    assert prop.target_file.startswith("checklist:")  # S2.1
+
+    # S2.3: an unmapped reviewer keeps the rules/ target (no regression).
+    unmapped = dataclasses.replace(mapped, subject="plan-document-reviewer")
+    assert learn.propose_guidance(unmapped).target_file.startswith("rules/")
+
+    # S2.2: the checklist target shows up in the --write proposals artifact.
+    rendered = _render_learnings([dataclasses.replace(mapped, proposal=prop)])
+    assert "checklist:" in rendered

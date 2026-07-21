@@ -50,7 +50,7 @@
 
 ### T003 — `learn`: proposta pode apontar categoria de checklist (fallback rules/)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/learn.py`
