@@ -37,6 +37,19 @@ headroom (which is a broader context-compression layer); we borrow the
 failure-mining-into-guidance concept. License per the upstream repository at
 time of adaptation.
 
+### [Piebald-AI/claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps)
+
+Feature `0019-lsp-graph-provider` adapts the idea behind claude-code-lsps —
+giving an AI coding agent deterministic, always-fresh code intelligence via
+Language Server Protocol (`references`, `call-hierarchy`, `definition`,
+workspace symbols) across 40+ languages. We use it to prove the spec-0017
+knowledge-graph provider contract is provider-agnostic: an LSP-backed provider
+satisfies the same `impact`/`drift`/`provenance` queries (see
+`specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md`). We do not
+bundle or copy claude-code-lsps (a Claude Code plugin marketplace of language
+servers); we borrow the LSP-as-code-intelligence idea. License per the upstream
+repository at time of adaptation.
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).

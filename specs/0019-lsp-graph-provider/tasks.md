@@ -95,7 +95,7 @@
 
 ### T006 — Atribuição + reescrita do waiver do Artigo III do 0017
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `CREDITS.md`

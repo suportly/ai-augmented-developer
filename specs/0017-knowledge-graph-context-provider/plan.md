@@ -103,7 +103,9 @@ specs/0017-knowledge-graph-context-provider/contracts/ (follow-up) # contrato de
 
 | Article waived | Reason | Alternatives considered | Reviewer |
 |---|---|---|---|
-| III. Simplicity | O contrato de provider introduz uma indireção com um único consumidor hoje (`analyze`); é **forçado pelo Artigo V**, que exige interface em torno de serviço externo com fronteira de rede | (a) acoplar `analyze` direto ao graphify — rejeitado por ferir o Artigo V; (b) adiar o contrato até o segundo consumidor — rejeitado porque a v1 já cruza a fronteira de rede | Pendente (aprovador humano) |
+| III. Simplicity | O contrato de provider introduz uma indireção; é **forçado pelo Artigo V**, que exige interface em torno de serviço externo com fronteira de rede | (a) acoplar `analyze` direto ao graphify — rejeitado por ferir o Artigo V; (b) adiar o contrato até o segundo consumidor — rejeitado porque a v1 já cruza a fronteira de rede | Pendente (aprovador humano) |
+
+> **Atualização (spec 0019):** o waiver está **enfraquecido** — o contrato deixou de ter uma única implementação. O `0019-lsp-graph-provider` adicionou uma **segunda implementação de referência** (um provider LSP conforme ao mesmo `graph-provider.schema.json`), então a indireção agora tem 2 implementações, não uma. A justificativa via Artigo V permanece, mas a preocupação de "abstração para um único caller" já não se aplica.
 
 ## Hand-off to `tasks`
 
