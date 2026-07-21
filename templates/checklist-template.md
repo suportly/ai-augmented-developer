@@ -57,6 +57,20 @@
 - No hard-coded currency, date, or number formats in UI.
 - RTL layouts verified if supported.
 
+### Token economy (default items)
+
+> Lens for context bloat — the tokens the agent reads, not just what a
+> reviewer writes. Reviewer-output verbosity is already governed by
+> `terse-mode` (spec 0009); this category covers **tool output**. Optional
+> external compressors and how to wire them: see
+> [`docs/token-economy.md`](../docs/token-economy.md).
+
+- Noisy tool output (test logs, `git status`, build) is not dumped wholesale into context; it is filtered or summarized.
+- Long command output is truncated or paginated, not pasted in full — no unbounded logs in context.
+- Repeated/near-duplicate output is de-duplicated rather than repeated verbatim.
+- Compression opportunities on high-volume commands are identified (and, if a compressor is wired, applied).
+- Reviewer output follows `terse-mode` (spec 0009) — this item only references that rule; it does not restate it.
+
 ## Failed items
 
 <!-- Copy rows from the table above that are FAIL. For each, describe the

@@ -20,7 +20,7 @@
 
 ### T001 — Itens default `Token economy` no template (referencia terse-mode)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `templates/checklist-template.md`
