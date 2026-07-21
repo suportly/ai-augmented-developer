@@ -4,7 +4,7 @@
 
 **Branch:** `claude/graphify-aiadev-analysis-oiggl4`
 **Created:** 2026-07-20
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0020 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -72,11 +72,11 @@ As a dev, I want um doc que explique como ligar um compressor externo so that eu
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Escopo da v1: só a categoria de checklist, ou também o doc de integração opcional (rtk/headroom)? Recomendação: as duas — a categoria é a lente, o doc é o caminho.]
-- [NEEDS CLARIFICATION:cl-2 A categoria `token-economy` é um **default do framework** (todos os consumidores ganham) ou fica atrás de um preset? Recomendação: default do framework, como as outras categorias.]
-- [NEEDS CLARIFICATION:cl-3 Como a categoria se relaciona com o `terse-mode` (0009): só referencia, ou também absorve alguns itens? Recomendação: só referencia; escopos distintos (saída de ferramenta vs saída de reviewer).]
-- [NEEDS CLARIFICATION:cl-4 O doc de integração ganha um exemplo concreto de hook `PreToolUse` (comentado), ou fica descritivo na v1? Recomendação: descritivo na v1; exemplo de hook é fast-follow.]
-- [NEEDS CLARIFICATION:cl-5 Onde vive o doc de integração: `docs/token-economy.md` ou dentro do próprio arquivo da categoria? Recomendação: `docs/token-economy.md`, linkado pela categoria.]
+- **cl-1 (escopo v1):** As **duas** coisas — a categoria de checklist (a lente) **e** o doc de integração opcional (o caminho).
+- **cl-2 (default/preset):** A categoria `token-economy` é um **default do framework**, como as outras categorias.
+- **cl-3 (vs terse-mode):** A categoria **só referencia** o `terse-mode` (0009); escopos distintos (saída de ferramenta vs saída de reviewer), sem absorver itens.
+- **cl-4 (hook no doc):** O doc fica **descritivo** na v1; um exemplo concreto de hook `PreToolUse` comentado é fast-follow.
+- **cl-5 (onde vive o doc):** Em **`docs/token-economy.md`**, linkado pela categoria.
 
 <!-- section: Data touched -->
 ## Data touched
