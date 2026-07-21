@@ -65,7 +65,7 @@
 
 ### T004 — Doc: tabela de mapeamento de confiança
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md`

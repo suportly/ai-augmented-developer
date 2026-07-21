@@ -22,3 +22,20 @@ implementation, an LSP-backed provider is another. Idea from
 
 Every fact still cites a verifiable `path:symbol`, exactly as the contract
 requires, so a reader can check it against the code even if the index is stale.
+
+## Confidence mapping
+
+The contract's aiadev-canonical confidence vocabulary
+(`presets/knowledge-graph/rules/graph-facts.md`) maps onto LSP resolution
+outcomes:
+
+| LSP resolution outcome | aiadev confidence |
+|---|---|
+| Definition/reference **uniquely resolved** by the language server | `explicit` |
+| Only a **textual / heuristic** match (server could not resolve) | `inferred` |
+| **Multiple candidate** definitions (overloads, ambiguous imports) | `ambiguous` |
+
+An outcome the provider cannot classify maps to `ambiguous` (fail safe, never
+`explicit`) — the same discipline `graph-facts.md` applies to unknown provider
+labels.
+
