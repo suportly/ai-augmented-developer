@@ -65,7 +65,7 @@
 
 ### T004 — Bloco comentado de exemplo LSP no `mcps.yaml`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `presets/knowledge-graph/mcps.yaml`

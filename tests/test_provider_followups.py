@@ -54,3 +54,25 @@ def test_learn_proposal_can_target_checklist_category() -> None:
     # S2.2: the checklist target shows up in the --write proposals artifact.
     rendered = _render_learnings([dataclasses.replace(mapped, proposal=prop)])
     assert "checklist:" in rendered
+
+
+# --- T004: commented LSP example in the preset mcps.yaml --------------------
+
+
+def test_mcps_has_commented_lsp_example() -> None:
+    import json
+
+    import yaml
+    from jsonschema import Draft202012Validator
+
+    body = MCPS.read_text(encoding="utf-8")
+    # a commented example mentioning an LSP provider exists
+    assert any(
+        line.lstrip().startswith("#") and "lsp" in line.lower()
+        for line in body.splitlines()
+    )
+    # parse stays valid against the schema, and the ACTIVE server is unchanged
+    data = yaml.safe_load(body)
+    schema = json.loads((ROOT / "schemas" / "mcps.schema.json").read_text())
+    Draft202012Validator(schema).validate(data)
+    assert set(data["servers"]) == {"graphify"}  # commented block is inert
