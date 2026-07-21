@@ -50,7 +50,7 @@
 
 ### T003 — `docs/token-economy.md` (integração externa + Non-goal)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `docs/token-economy.md`
