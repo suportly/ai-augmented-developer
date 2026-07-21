@@ -80,7 +80,7 @@
 
 ### T005 — Preset README menciona LSP como provider alternativo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `presets/knowledge-graph/README.md`

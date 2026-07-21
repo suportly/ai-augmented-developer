@@ -17,6 +17,19 @@ implementation behind the provider contract
 (`specs/0017-.../contracts/graph-provider.schema.json`). Any provider that
 satisfies that contract can be substituted.
 
+## Alternative provider: LSP
+
+The contract is provider-agnostic. Besides graphify, a **Language Server
+Protocol (LSP)** backend can satisfy it — `textDocument/references` +
+`callHierarchy` for `impact`, document/workspace symbols for `drift`, and
+`textDocument/definition` for `provenance` — giving deterministic, always-fresh
+code intelligence across 40+ languages without a graph build (idea from
+`Piebald-AI/claude-code-lsps`). graphify stays the reference implementation;
+see the mapping and confidence table in
+[`specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md`](../../specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md).
+A runnable LSP adapter is out of scope for now — the doc proves conformance and
+documents the mapping.
+
 ## Enabling it (on demand)
 
 ```bash
