@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0019 — lsp-graph-provider**. Adapts the idea behind
+[`Piebald-AI/claude-code-lsps`](https://github.com/Piebald-AI/claude-code-lsps)
+(see `CREDITS.md`) to **prove the spec-0017 knowledge-graph provider contract
+is provider-agnostic**: a second conformance fake maps Language Server Protocol
+operations (`references`/`callHierarchy` → `impact`, document/workspace symbols
+→ `drift`, `textDocument/definition` → `provenance`) onto the same
+`graph-provider.schema.json`, and a mapping doc
+(`specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md`) documents
+the LSP→contract mapping plus the confidence taxonomy (resolved → `explicit`,
+textual → `inferred`, multiple candidates → `ambiguous`). The
+`knowledge-graph` preset README now names LSP as an alternative provider
+(graphify stays the reference). Because the contract gains a second reference
+implementation, the **0017 Article III waiver is annotated as weakened** (no
+longer a single-caller abstraction). No runnable LSP adapter is in scope
+(Article III) — this is a conformance proof plus documentation.
+
 Spec **0018 — aiadev-learn**. Adapts the idea behind
 [`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom)'s
 `headroom learn` (see `CREDITS.md`): a new `aiadev learn` subcommand mines the
