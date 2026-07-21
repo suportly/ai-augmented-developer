@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0020 — token-economy-checklist**. Adapts the token-economy idea behind
+[`rtk-ai/rtk`](https://github.com/rtk-ai/rtk) and
+[`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom) (see
+`CREDITS.md`): a new **`token-economy` checklist category** (default items in
+`templates/checklist-template.md`, registered in `skills/checklist/SKILL.md`)
+gives a review lens for context bloat from **tool output** — orthogonal to
+`terse-mode` (0009), which it references rather than duplicates. A new
+`docs/token-economy.md` documents the **optional** path to wire an external
+compressor (`rtk`/`headroom`) via a `PreToolUse` hook or MCP, with an explicit
+Non-goal: the framework implements no compressor and adds no dependency
+(Article III). A ready-made hook example / compressor preset is a documented
+fast-follow.
+
 Spec **0019 — lsp-graph-provider**. Adapts the idea behind
 [`Piebald-AI/claude-code-lsps`](https://github.com/Piebald-AI/claude-code-lsps)
 (see `CREDITS.md`) to **prove the spec-0017 knowledge-graph provider contract
