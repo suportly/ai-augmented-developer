@@ -56,6 +56,20 @@ Create `specs/YYYY-MM-DD-<feature>/review-context.md`:
 - Manual verification: [what was manually tested]
 ```
 
+## Impacted subsystems (optional — graph provider)
+
+When a knowledge-graph context provider is configured (the optional
+`knowledge-graph` preset, spec 0017), add an **Impacted subsystems** section to
+the Review Context Document: query the provider's `impact` operation for the
+changed files in the diff and list the subsystems they touch, citing each edge
+as `path:symbol` with its confidence label per `rules/graph-facts.md`. This
+gives the reviewer the blast-radius up front.
+
+**Graceful degradation.** The provider is optional. When no provider is
+configured — or it is unavailable at runtime — omit the Impacted subsystems
+section and prepare the review context exactly as before. Never emit an error
+because a provider is absent.
+
 ## Dispatching the Reviewer
 
 Use the `code-reviewer` agent with the review context document.

@@ -35,7 +35,7 @@
 
 ### T002 — `requesting-code-review`: subsistemas impactados + degradação
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `skills/requesting-code-review/SKILL.md`
