@@ -62,6 +62,10 @@ def test_lsp_facts_carry_confidence_from_resolution() -> None:
     for edge in edges:
         assert edge["confidence"] in CONFIDENCE_VALUES
 
-    # An unresolved / textual match degrades to inferred or ambiguous.
+    # An unresolved / textual match degrades to inferred.
     unresolved = lsp.provenance(symbol="src/aiadev/unknown.py:mystery", resolved=False)
-    assert unresolved["confidence"] in ("inferred", "ambiguous")
+    assert unresolved["confidence"] == "inferred"
+
+    # Multiple candidate definitions ⇒ ambiguous.
+    ambiguous = lsp.provenance(symbol="src/aiadev/dup.py:overloaded", candidates=2)
+    assert ambiguous["confidence"] == "ambiguous"

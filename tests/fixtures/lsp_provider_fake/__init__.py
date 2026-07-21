@@ -65,22 +65,24 @@ def drift(tasks: list[str], diff_paths: list[str]) -> dict[str, Any]:
     }
 
 
-def provenance(symbol: str, *, resolved: bool = True) -> dict[str, Any]:
+def provenance(symbol: str, *, resolved: bool = True, candidates: int = 1) -> dict[str, Any]:
     """Confidence + LSP-native label behind a single fact.
 
-    ``resolved`` models whether ``textDocument/definition`` uniquely resolved
-    the symbol: resolved ⇒ ``explicit``; otherwise ⇒ ``inferred`` (textual).
+    Models ``textDocument/definition``:
+
+    - uniquely resolved (``resolved`` and ``candidates == 1``) ⇒ ``explicit``;
+    - multiple candidate definitions (``candidates > 1``) ⇒ ``ambiguous``;
+    - not resolved (textual match only) ⇒ ``inferred``.
     """
-    if resolved:
-        return {
-            "symbol": symbol,
-            "subsystem": "cli",
-            "confidence": "explicit",
-            "provider_label": "lsp:resolved-definition",
-        }
+    if resolved and candidates == 1:
+        confidence, label = "explicit", "lsp:resolved-definition"
+    elif candidates > 1:
+        confidence, label = "ambiguous", "lsp:multiple-candidates"
+    else:
+        confidence, label = "inferred", "lsp:textual-match"
     return {
         "symbol": symbol,
         "subsystem": "cli",
-        "confidence": "inferred",
-        "provider_label": "lsp:textual-match",
+        "confidence": confidence,
+        "provider_label": label,
     }

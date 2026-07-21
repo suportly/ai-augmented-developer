@@ -35,7 +35,7 @@
 
 ### T002 — Rótulos de confiança do LSP (resolvido → explicit)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `tests/fixtures/lsp_provider_fake/__init__.py`
