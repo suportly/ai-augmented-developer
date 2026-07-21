@@ -50,6 +50,19 @@ bundle or copy claude-code-lsps (a Claude Code plugin marketplace of language
 servers); we borrow the LSP-as-code-intelligence idea. License per the upstream
 repository at time of adaptation.
 
+### [rtk-ai/rtk](https://github.com/rtk-ai/rtk) and [headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom)
+
+Feature `0020-token-economy-checklist` adapts the token-economy idea behind
+these two tools — `rtk` filters/compresses command output before it reaches the
+model (via a `PreToolUse` hook), and `headroom` is a content-aware compression
+layer (library / proxy / MCP). We borrow the *idea* (treat context bloat from
+tool output as a first-class concern) as a new `token-economy` checklist
+category plus a documented **optional** integration path
+(`docs/token-economy.md`). We do **not** bundle, copy, or reimplement either
+tool — reimplementing a compressor would violate Article III; the framework
+stays compressor-agnostic. Licenses per the upstream repositories at time of
+adaptation (`rtk`: Apache-2.0).
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).

@@ -66,7 +66,7 @@
 
 ### T004 — Atribuição a rtk e headroom (Artigo VII)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `CREDITS.md`
