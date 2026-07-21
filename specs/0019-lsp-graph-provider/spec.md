@@ -4,7 +4,7 @@
 
 **Branch:** `claude/graphify-aiadev-analysis-oiggl4`
 **Created:** 2026-07-20
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0019 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -46,7 +46,7 @@ O contrato de provider de knowledge-graph (spec 0017) foi desenhado para ser gen
 - Construir um adaptador LSP→MCP executável de verdade (um servidor real). O aiadev **prova conformidade e documenta**, não implementa o provider — Artigo III.
 - Empacotar ou distribuir language servers (é o que o `Piebald-AI/claude-code-lsps` já faz).
 - Ligar o LSP no `plan`/review (isso é o fast-follow Story 2 do 0017).
-- Mudar o contrato do 0017 (só provar que ele já serve o LSP; se faltar algo, vira `[NEEDS CLARIFICATION]`).
+- Mudar o contrato do 0017 (só provar que ele já serve o LSP; se faltar algo, vira um marcador de clarificação, não uma mudança silenciosa).
 
 <!-- section: User stories -->
 ## User stories
@@ -74,11 +74,11 @@ As a autor de provider, I want um documento que mapeia operações LSP para as 3
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Escopo da v1: só o fake de conformidade + doc de mapeamento (prova + guia), ou também um adaptador LSP→MCP executável? Recomendação: fake + doc; adaptador executável fica fora (Artigo III).]
-- [NEEDS CLARIFICATION:cl-2 Onde vive o doc de mapeamento: em `specs/0019-*/contracts/`, na pasta de contratos do 0017, ou no preset? Recomendação: `specs/0019-*/contracts/` + link no README do preset.]
-- [NEEDS CLARIFICATION:cl-3 O `mcps.yaml` do preset ganha um bloco (comentado) de exemplo LSP, ou LSP fica só documentado no README na v1?]
-- [NEEDS CLARIFICATION:cl-4 Mapeamento de confiança: "resolvido pelo LSP → `explicit`; match textual/heurístico → `inferred`; múltiplos candidatos → `ambiguous`" — confirmar essa taxonomia.]
-- [NEEDS CLARIFICATION:cl-5 Reescrever o waiver do Artigo III diretamente no `plan.md` do 0017 (já mergeado), ou registrar a atualização só aqui e referenciar? Recomendação: nota aqui + edição pontual no plano do 0017.]
+- **cl-1 (escopo v1):** Só o **fake de conformidade + doc de mapeamento** (prova + guia). Adaptador LSP→MCP executável fica fora (Artigo III / Non-goal).
+- **cl-2 (onde vive o doc):** Em **`specs/0019-*/contracts/`**, com um link no README do preset `knowledge-graph`.
+- **cl-3 (mcps.yaml):** LSP fica **só documentado no README** na v1; bloco comentado de exemplo no `mcps.yaml` é fast-follow.
+- **cl-4 (confiança):** Confirmada: **resolvido pelo LSP → `explicit`; match textual/heurístico → `inferred`; múltiplos candidatos → `ambiguous`**, reusando o vocabulário de `graph-facts.md`.
+- **cl-5 (waiver do 0017):** **Nota aqui + edição pontual** na Complexity Tracking do `plan.md` do 0017 (refletindo 2 implementações de referência).
 
 <!-- section: Data touched -->
 ## Data touched
@@ -93,7 +93,7 @@ As a autor de provider, I want um documento que mapeia operações LSP para as 3
 <!-- section: Open risks -->
 ## Open risks
 
-- O contrato do 0017 pode não cobrir alguma nuance do LSP (ex.: hierarquia de chamadas com profundidade) — se aparecer, é `[NEEDS CLARIFICATION]` e possivelmente um follow-up no contrato, não uma mudança silenciosa.
+- O contrato do 0017 pode não cobrir alguma nuance do LSP (ex.: hierarquia de chamadas com profundidade) — se aparecer, vira um marcador de clarificação e possivelmente um follow-up no contrato, não uma mudança silenciosa.
 - Risco de o doc de mapeamento sugerir um adaptador executável e induzir scope-creep (Artigo III) — o Non-goal deve ser explícito no doc.
 
 <!-- section: Traceability -->
