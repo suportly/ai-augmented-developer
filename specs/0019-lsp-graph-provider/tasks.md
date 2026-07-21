@@ -50,7 +50,7 @@
 
 ### T003 — Doc de mapeamento LSP→contrato (queries)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md`
