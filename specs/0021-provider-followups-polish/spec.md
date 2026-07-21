@@ -4,7 +4,7 @@
 
 **Branch:** `claude/graphify-aiadev-analysis-oiggl4`
 **Created:** 2026-07-20
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0021 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -84,9 +84,9 @@ As a consumidor, I want exemplos comentados de LSP e de hook so that eu ligue as
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Story 1 cobre `plan` **e** review na v1, ou só `plan` primeiro? Recomendação: os dois — são simétricos e pequenos.]
-- [NEEDS CLARIFICATION:cl-2 Mapeamento learn→categoria de checklist: um mapa fixo por tipo de reviewer (ex.: code-reviewer→security), ou a proposta só sugere "considere uma categoria" sem fixar? Recomendação: mapa simples e conservador, com fallback para `rules/`.]
-- [NEEDS CLARIFICATION:cl-3 Os exemplos de config são estritamente **comentados/inertes** (não mudam parse/schema)? Recomendação: sim — comentados, para não impor server/hook nem quebrar validação.]
+- **cl-1 (Story 1):** A v1 cobre **`plan` e review** — simétricos e pequenos, reusando o mesmo vocabulário/cláusula de degradação do `analyze`.
+- **cl-2 (learn→checklist):** Um **mapa fixo e conservador** por tipo de reviewer (ex.: `code-reviewer`→`security`), com **fallback para `rules/`** quando não há mapeamento.
+- **cl-3 (exemplos de config):** **Estritamente comentados/inertes** — não mudam parse/schema nem impõem server/hook; a validação segue passando.
 
 <!-- section: Data touched -->
 ## Data touched
