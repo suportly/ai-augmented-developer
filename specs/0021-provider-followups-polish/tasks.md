@@ -20,7 +20,7 @@
 
 ### T001 — `plan`: seção opcional de blast-radius + degradação
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `skills/plan/SKILL.md`
