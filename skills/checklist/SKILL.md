@@ -1,12 +1,12 @@
 ---
 name: checklist
-description: Run a category-specific quality pass (security / performance / accessibility / i18n / privacy / observability) against the current plan and code.
+description: Run a category-specific quality pass (security / performance / accessibility / i18n / privacy / observability / token-economy) against the current plan and code.
 metadata:
   aiadev:
     version: 0.2.0
     inputs:
     - type: text
-      description: Category name (security, performance, accessibility, internationalization, privacy, observability, or a preset-defined category).
+      description: Category name (security, performance, accessibility, internationalization, privacy, observability, token-economy, or a preset-defined category).
     - type: dir
       path: specs/<branch>/
     outputs:

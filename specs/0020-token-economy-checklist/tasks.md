@@ -35,7 +35,7 @@
 
 ### T002 — Registrar a categoria em `skills/checklist/SKILL.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `skills/checklist/SKILL.md`
