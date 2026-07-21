@@ -76,3 +76,16 @@ def test_mcps_has_commented_lsp_example() -> None:
     schema = json.loads((ROOT / "schemas" / "mcps.schema.json").read_text())
     Draft202012Validator(schema).validate(data)
     assert set(data["servers"]) == {"graphify"}  # commented block is inert
+
+
+# --- T005: PreToolUse hook example in the token-economy doc -----------------
+
+
+def test_token_economy_doc_has_hook_example() -> None:
+    body = DOC.read_text(encoding="utf-8")
+    lower = body.lower()
+    assert "pretooluse" in lower
+    # a concrete example: a fenced code block that mentions the hook
+    assert "```" in body and "hooks" in lower
+    # Non-goal preserved (framework implements no compressor/hook)
+    assert "non-goal" in lower or "fora de escopo" in lower

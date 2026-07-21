@@ -80,7 +80,7 @@
 
 ### T005 — Exemplo comentado de hook `PreToolUse` no doc de token-economy
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `docs/token-economy.md`
