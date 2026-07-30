@@ -35,8 +35,15 @@ def _entry_date(entry: dict) -> datetime.date | None:
 class Proposal:
     """A reviewable guidance edit suggested for a pattern.
 
-    ``target_file`` is always under ``rules/`` — never ``constitution.md``
-    (cl-3); the constitution follows its own amendment process.
+    ``target_file`` is one of two forms:
+
+    * ``rules/<file>.md`` — a rule file to promote the snippet into;
+    * ``checklist:<category>`` — a checklist category whose lens covers the
+      pattern (spec 0021); a logical target, not a path on disk.
+
+    Never ``constitution.md`` (cl-3); the constitution follows its own
+    amendment process. Nothing is applied automatically either way — the
+    target is a proposal for a human to act on.
     """
 
     snippet: str

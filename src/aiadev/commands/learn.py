@@ -65,7 +65,7 @@ def _render_learnings(patterns: list[_learn.Pattern]) -> str:
         lines.append(f"## [{p.kind}] {p.subject}")
         lines.append("")
         lines.append(f"- **Evidência:** {p.occurrences} features — {', '.join(p.features)}")
-        lines.append(f"- **Arquivo-alvo proposto:** `{p.proposal.target_file}`")
+        lines.append(f"- **Alvo proposto:** `{p.proposal.target_file}`")
         lines.append(f"- **Sugestão:** {p.proposal.snippet}")
         lines.append("")
     return "\n".join(lines)

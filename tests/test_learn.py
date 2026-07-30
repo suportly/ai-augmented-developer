@@ -143,8 +143,12 @@ def test_pattern_carries_proposal_and_target() -> None:
     patterns = _learn.detect_all(per_spec)
     p = next(p for p in patterns if p.subject == "plan-document-reviewer")
     assert p.proposal is not None
-    assert p.proposal.target_file.startswith("rules/")
-    assert "constitution" not in p.proposal.target_file  # cl-3: never the constitution
+    # A target is either a rule file or a checklist category (spec 0021);
+    # asserting the union keeps this test honest if the reviewer→category
+    # map grows to cover this reviewer.
+    target = p.proposal.target_file
+    assert target.startswith("rules/") or target.startswith("checklist:")
+    assert "constitution" not in target  # cl-3: never the constitution
     assert p.proposal.snippet.strip()
 
 
