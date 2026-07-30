@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-07-30
+
 Spec **0021 — provider-followups-polish**. Closes the four small fast-follows
 deferred by 0017–0020: (1) `plan` and `requesting-code-review` gain an
 **optional blast-radius** section via the provider `impact` query, mirroring
@@ -876,7 +878,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.21.0...v0.22.0
 [0.8.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.5.0...v0.6.0

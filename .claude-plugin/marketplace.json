@@ -9,7 +9,7 @@
     {
       "name": "ai-augmented-developer",
       "description": "CLI for the AI-Augmented Developer framework: validates skills, scaffolds feature specs, installs presets.",
-      "version": "0.21.0",
+      "version": "0.22.0",
       "source": "./",
       "author": {
         "name": "alairjt",
@@ -19,13 +19,13 @@
     {
       "name": "lean",
       "description": "Framework-only preset: pipeline skills + constitution, no stack opinions.",
-      "version": "0.21.0",
+      "version": "0.22.0",
       "source": "./presets/lean"
     },
     {
       "name": "django-drf-react",
       "description": "Django 5.2 + DRF + React 18 + TypeScript + Celery + Cloud Run.",
-      "version": "0.21.0",
+      "version": "0.22.0",
       "source": "./presets/django-drf-react"
     }
   ]
