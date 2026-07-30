@@ -42,8 +42,30 @@ framework:
 Whichever you pick: the compressor runs locally, and the decision to send any
 output to a remote backend is the consumer's.
 
-## Fast-follow
+## Example: a `PreToolUse` hook
 
-A ready-made, commented `PreToolUse` hook example (and/or an opt-in preset that
-declares a compressor MCP) is a documented follow-up — this v1 is descriptive
-so the framework stays compressor-agnostic.
+A `PreToolUse` hook (in your project's `.claude/settings.json`) can route a
+command's output through a compressor before it reaches context. This is an
+**illustrative** example — the framework ships no such hook; you install the
+compressor and add the hook yourself (see the Non-goal above).
+
+```jsonc
+// .claude/settings.json (consumer-owned; example only)
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "rtk hook pretooluse" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+With `rtk` installed, this rewrites noisy commands (e.g. `git status`) through
+`rtk` transparently. A `headroom` proxy/MCP is the alternative for content-aware
+compression. Either way the compressor runs locally and stays consumer-wired —
+the framework only documents the shape.

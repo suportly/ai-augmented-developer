@@ -61,6 +61,21 @@ Write the implementation plan from a clean `spec.md`. The plan says **how** the 
 - Do not write code in the plan. Pseudo-code is allowed only when needed to clarify an ADR.
 - Do not enumerate tasks here. `tasks.md` is the only source of truth for the task list.
 
+## Graph provider blast-radius (optional)
+
+When a knowledge-graph context provider is configured (the optional
+`knowledge-graph` preset, spec 0017), add an **Affected surfaces /
+blast-radius** section to `plan.md`: query the provider's `impact` operation
+for the paths the plan will change, and list the subsystems they touch, citing
+each edge as `path:symbol` with its confidence label per `rules/graph-facts.md`
+(`explicit` / `inferred` / `ambiguous`; an `inferred`/`ambiguous` edge is a
+signal to verify, not a certainty).
+
+**Graceful degradation.** The provider is optional. When no provider is
+configured — or it is configured but unavailable at runtime — omit the
+blast-radius section with a short note and produce the rest of the plan exactly
+as before. Never emit an error because a provider is absent.
+
 ## Hand-off
 
 - Plan approved, Constitution Check clean → invoke `tasks`.

@@ -212,6 +212,14 @@ def detect_all(
     return patterns
 
 
+# Conservative, hand-picked map from reviewer type to the checklist category
+# whose lens most often catches that reviewer's recurring failures. Unlisted
+# reviewers fall back to a rule file (spec 0021, cl-2).
+_REVIEWER_CHECKLIST_CATEGORY = {
+    "code-reviewer": "security",
+}
+
+
 def propose_guidance(pattern: Pattern) -> Proposal:
     """Build a reviewable guidance snippet + target rule file for a pattern.
 
@@ -227,7 +235,13 @@ def propose_guidance(pattern: Pattern) -> Proposal:
             f"checklist item so the recurring cause is addressed before "
             f"review."
         )
-        target = "rules/review-recurrence.md"
+        # Conservative reviewer → checklist-category map. A recurring reviewer
+        # failure is often best captured as a checklist item in a specific
+        # category; unmapped reviewers fall back to a rule file (no
+        # regression). The target `checklist:<category>` is a proposal for a
+        # human to act on — nothing is applied automatically.
+        category = _REVIEWER_CHECKLIST_CATEGORY.get(pattern.subject)
+        target = f"checklist:{category}" if category else "rules/review-recurrence.md"
     else:  # task-rework
         snippet = (
             f"Task `{pattern.subject}` needed rework in {pattern.occurrences} "

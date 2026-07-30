@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Spec **0021 — provider-followups-polish**. Closes the four small fast-follows
+deferred by 0017–0020: (1) `plan` and `requesting-code-review` gain an
+**optional blast-radius** section via the provider `impact` query, mirroring
+the `analyze` step with the same graceful-degradation clause; (2) `aiadev learn`
+proposals can target a **checklist category** through a conservative
+reviewer→category map (`code-reviewer`→`security`), falling back to a `rules/`
+file for unmapped reviewers (no regression); (3) the `knowledge-graph` preset
+`mcps.yaml` gains a **commented, inert** LSP-provider example (parse stays
+valid, active server unchanged); (4) `docs/token-economy.md` gains an
+illustrative `PreToolUse` hook example, with the Non-goal preserved. All
+additive/optional; no new dependency.
+
 Spec **0020 — token-economy-checklist**. Adapts the token-economy idea behind
 [`rtk-ai/rtk`](https://github.com/rtk-ai/rtk) and
 [`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom) (see

@@ -18,3 +18,14 @@ servers:
   graphify:
     command: "graphify"
     args: ["--mcp"]
+
+# Alternative provider: an LSP-backed server (spec 0019). The graph-provider
+# contract is provider-agnostic — an LSP backend can satisfy the same
+# impact/drift/provenance queries. This block is a COMMENTED example: uncomment
+# and adapt it to your language server / adapter to use LSP instead of (or
+# alongside) graphify. See
+# specs/0019-lsp-graph-provider/contracts/lsp-provider-mapping.md.
+#
+#   graphify-lsp:
+#     command: "your-lsp-graph-adapter"
+#     args: ["--mcp"]
