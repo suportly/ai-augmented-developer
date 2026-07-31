@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-07-31
+
+### Fixed
+
+- `aiadev learn`: align the `Proposal.target_file` contract with the
+  `checklist:<category>` target introduced in 0021. The docstring still
+  claimed the target is "always under `rules/`"; the regression test asserted
+  `startswith("rules/")` and only passed because its reviewer happened to be
+  unmapped — extending `_REVIEWER_CHECKLIST_CATEGORY` would have broken it for
+  an unrelated reason; and the `--write` artifact labelled a category as
+  "Arquivo-alvo" (target *file*), which `checklist:security` is not.
+  Documentation, test assertion, and one output label only — **no behaviour
+  change**. The cl-3 invariant (never `constitution.md`) is unchanged and
+  still asserted. (#43)
+
 ## [0.22.0] - 2026-07-30
 
 Spec **0021 — provider-followups-polish**. Closes the four small fast-follows
@@ -878,7 +893,8 @@ Initial public release.
 - Multi-platform install support via `.claude-plugin/`, `.cursor-plugin/`, `.codex/`, `.opencode/`, `gemini-extension.json`.
 - `LICENSE` (MIT), `.gitignore`, `README.md`.
 
-[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/suportly/ai-augmented-developer/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/suportly/ai-augmented-developer/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.21.0...v0.22.0
 [0.8.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/suportly/ai-augmented-developer/compare/v0.6.0...v0.7.0
