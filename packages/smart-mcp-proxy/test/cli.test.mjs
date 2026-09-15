@@ -58,3 +58,12 @@ test("the command echo on the first line is truncated", () => {
   assert.ok(first.length < 110, `first line is ${first.length} chars`);
   assert.ok(first.endsWith("…"));
 });
+
+test("the size guard counts the CLI's own echo and status lines", () => {
+  // 447 chars: the condense() envelope alone (~330) is smaller than the output,
+  // but with the echo + status lines the CLI would print more than it received.
+  const r = run(["--b64", b64("for i in $(seq 1 38); do echo \"row $i xxxx\"; done")]);
+  assert.equal(r.status, 0);
+  assert.ok(!r.stdout.includes("[smart-bash]"), r.stdout.slice(0, 160));
+  assert.equal(r.stdout.split("\n").length, 39);
+});

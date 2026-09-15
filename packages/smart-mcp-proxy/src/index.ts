@@ -75,7 +75,7 @@ server.tool(
       return { isError, content: [{ type: "text", text: `${headTail(output, RAW_RETURN_CAP)}\n${status}` }] };
     }
 
-    const c = await condense(command, output, status, rawCache);
+    const c = await condense(command, output, status, rawCache, status.length + 2);
     const text = c.mode === "verbatim" ? (output ? `${output}\n${status}` : status) : `${c.text}\n\n${status}`;
     return { isError, content: [{ type: "text", text }] };
   },

@@ -40,14 +40,16 @@ async function main(): Promise<number> {
     if (result.stderr) process.stderr.write(result.stderr);
     return exitCodeFor(result);
   }
-  const c = await condense(command, output, statusLine(result));
+  const status = statusLine(result);
+  const echo = `[smart-bash] $ ${shortCommand(command)}`;
+  const c = await condense(command, output, status, undefined, echo.length + status.length + 3);
   if (c.mode === "verbatim") {
     // Condensing would not have saved anything (output barely over the budget).
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
     return exitCodeFor(result);
   }
-  process.stdout.write(`[smart-bash] $ ${shortCommand(command)}\n${c.text}\n${statusLine(result)}\n`);
+  process.stdout.write(`${echo}\n${c.text}\n${status}\n`);
   return exitCodeFor(result);
 }
 

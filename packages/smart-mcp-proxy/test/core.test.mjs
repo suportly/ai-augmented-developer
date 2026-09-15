@@ -124,3 +124,12 @@ test("condense returns verbatim when the envelope would not be smaller than the 
   assert.equal(c.mode, "verbatim");
   assert.equal(c.text, output);
 });
+
+test("condense counts the caller's overhead in the size guard", async () => {
+  const output = Array.from({ length: 12 }, (_, i) => `row ${i} ${"y".repeat(30)}`).join("\n");
+  assert.ok(output.length > core.CONFIG.maxChars);
+  const without = await core.condense("cmd", output, "[exit code: 0]");
+  const withOverhead = await core.condense("cmd", output, "[exit code: 0]", undefined, 500);
+  assert.equal(without.mode, "fallback");
+  assert.equal(withOverhead.mode, "verbatim");
+});
