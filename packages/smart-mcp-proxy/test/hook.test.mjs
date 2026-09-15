@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const hookJs = join(here, "..", "dist", "hook.js");
-const { rewrite, render } = await import("../dist/hook.js");
+const { rewrite, isContentDump, render } = await import("../dist/hook.js");
 
 function runHook(stdin, args = []) {
   return spawnSync(process.execPath, [hookJs, ...args], { input: stdin, encoding: "utf8" });
@@ -23,6 +23,30 @@ test("rewrite leaves non-Bash tools, empty and background commands alone", () =>
   assert.equal(rewrite({ tool_name: "Read", tool_input: { command: "x" } }, "smart-bash"), null);
   assert.equal(rewrite({ tool_name: "Bash", tool_input: { command: "  " } }, "smart-bash"), null);
   assert.equal(rewrite({ tool_name: "Bash", tool_input: { command: "npm test", run_in_background: true } }, "smart-bash"), null);
+});
+
+test("rewrite passes content dumps through untouched (cat/head/sed/jq chains)", () => {
+  const bash = (command) => rewrite({ tool_name: "Bash", tool_input: { command } }, "smart-bash");
+  assert.equal(bash("cat specs/0167-copilot-teaching-via-plays/tasks.md"), null);
+  assert.equal(bash("cd MayCRMWeb && cat package.json; head -40 src/App.tsx | nl"), null);
+  assert.equal(bash("FOO=1 sed -n '10,60p' plan.md"), null);
+  assert.equal(bash("/bin/cat big.log"), null);
+  // Anything that produces rather than dumps is still routed.
+  assert.match(bash("cat a.log | grep -c ERROR"), /^smart-bash --b64 /);
+  assert.match(bash("pytest -q"), /^smart-bash --b64 /);
+  assert.match(bash("cd api && npm test"), /^smart-bash --b64 /);
+});
+
+test("SMART_BASH_PASSTHROUGH extends the pass-through list", () => {
+  const prev = process.env.SMART_BASH_PASSTHROUGH;
+  process.env.SMART_BASH_PASSTHROUGH = "rg, grep";
+  try {
+    assert.equal(rewrite({ tool_name: "Bash", tool_input: { command: "grep -rn teach src | head" } }, "smart-bash"), null);
+    assert.equal(isContentDump("rg -n foo"), true);
+    assert.equal(isContentDump("pytest"), false);
+  } finally {
+    if (prev === undefined) delete process.env.SMART_BASH_PASSTHROUGH; else process.env.SMART_BASH_PASSTHROUGH = prev;
+  }
 });
 
 test("rewrite is idempotent", () => {
@@ -45,7 +69,7 @@ test("render adds permissionDecision allow only when asked (Codex)", () => {
 });
 
 test("process: --allow flag sets permissionDecision allow (Codex mode)", () => {
-  const payload = JSON.stringify({ hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "ls" } });
+  const payload = JSON.stringify({ hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "npm test" } });
   assert.equal(JSON.parse(runHook(payload).stdout).hookSpecificOutput.permissionDecision, undefined);
   assert.equal(JSON.parse(runHook(payload, ["--allow"]).stdout).hookSpecificOutput.permissionDecision, "allow");
 });
@@ -72,7 +96,7 @@ test("process: runs when invoked through a symlink (npm global bin)", async () =
   const link = join(dir, "smart-bash-hook");
   symlinkSync(hookJs, link);
   const r = spawnSync(process.execPath, [link], {
-    input: JSON.stringify({ tool_name: "Bash", tool_input: { command: "ls" } }),
+    input: JSON.stringify({ tool_name: "Bash", tool_input: { command: "npm test" } }),
     encoding: "utf8",
   });
   assert.equal(r.status, 0);

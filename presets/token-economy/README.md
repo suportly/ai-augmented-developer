@@ -64,7 +64,9 @@ as the command.
 What the hook does: for every Bash call it rewrites `command` to
 `smart-bash --b64 <command>`; the CLI runs the original command, prints short
 output byte-for-byte and condenses long output, always propagating the exit
-code. It skips background calls and is idempotent. If the hook itself fails
+code. It skips background calls and plain content dumps (`cat`, `head`,
+`sed`, `jq`… — the agent wants that content, not a summary) and is
+idempotent. If the hook itself fails
 it does nothing, so a broken install can never block the Bash tool.
 
 ## Other platforms
