@@ -21,8 +21,10 @@ Add to `.claude/settings.json` (project or `~/.claude`):
 ```
 
 Every Bash call is rewritten to `smart-bash --b64 <command>`. Short output comes
-back byte-for-byte; long output comes back condensed with the original command
-on the first line. Background calls are skipped, the rewrite is idempotent, and
+back byte-for-byte; long output comes back condensed, with a short echo of the
+command on the first line. Output that would not get smaller by condensing
+(typically just above the budget) is passed through untouched. Background calls
+are skipped, the rewrite is idempotent, and
 if the hook fails it does nothing (exit 0, no output), so it can never block
 Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not
 on `PATH`.

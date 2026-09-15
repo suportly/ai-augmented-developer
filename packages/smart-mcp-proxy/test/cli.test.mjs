@@ -41,3 +41,20 @@ test("long output is condensed (fallback path), shows the original command, keep
 test("usage error exits 64", () => {
   assert.equal(run([]).status, 64);
 });
+
+test("output just above the budget is printed verbatim, not wrapped", () => {
+  // 230 chars > 200 budget, but any envelope would be larger than the raw output.
+  const r = run(["--b64", b64("for i in $(seq 1 23); do echo \"line $i xx\"; done")]);
+  assert.equal(r.status, 0);
+  assert.ok(!r.stdout.includes("[smart-bash]"), r.stdout.slice(0, 120));
+  assert.equal(r.stdout.split("\n").length, 24);
+});
+
+test("the command echo on the first line is truncated", () => {
+  const long = "for i in $(seq 1 100); do echo \"line $i\"; done # " + "padding ".repeat(40);
+  const r = run(["--b64", b64(long)]);
+  const first = r.stdout.split("\n")[0];
+  assert.ok(first.startsWith("[smart-bash] $ for i in"));
+  assert.ok(first.length < 110, `first line is ${first.length} chars`);
+  assert.ok(first.endsWith("…"));
+});

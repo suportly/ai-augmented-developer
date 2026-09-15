@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `smart-mcp-proxy` 0.2.1: outputs just above the 2,000-char budget came back
+  *larger* than the raw output. Observed on a live session: a 2,087-char grep
+  listing was delivered as 2,278 chars, a 3,060-char one as 3,067, because the
+  envelope (full command echo, header, a summary that re-emitted the listing,
+  RAW TAIL) outgrew what it wrapped. `condense()` now returns the raw output
+  verbatim whenever the built envelope is not smaller than it, and the CLI
+  echoes at most 80 chars of the command instead of the whole chained
+  command (400+ chars of duplication per call). Covered by three new tests.
+
 ## [0.23.1] - 2026-09-15
 
 ### Fixed

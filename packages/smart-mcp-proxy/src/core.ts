@@ -356,7 +356,9 @@ export interface Condensed {
  * - otherwise the local model condenses it, and the deterministic
  *   ERROR SIGNATURES + RAW TAIL blocks are appended;
  * - a summary that is no shorter than a plain excerpt is replaced by the excerpt;
- * - if the model is unreachable, a truncated excerpt + signatures + warning.
+ * - if the model is unreachable, a truncated excerpt + signatures + warning;
+ * - whatever was built, if it is not smaller than the raw output the raw
+ *   output is returned verbatim (mode "verbatim").
  */
 export async function condense(
   command: string,
@@ -367,6 +369,23 @@ export async function condense(
   if (output.length <= CONFIG.maxChars) {
     return { mode: "verbatim", text: output };
   }
+  const envelope = await buildEnvelope(command, output, status, cache);
+  // Seen in real sessions: output just above the budget (grep listings of
+  // ~2.1k chars) came back as a 2.3k-char envelope — header, summary that
+  // re-emitted the listing, and RAW TAIL together outgrew the raw output.
+  // An envelope that saves nothing is worse than nothing: hand the output over as-is.
+  if (envelope.text.length >= output.length) {
+    return { mode: "verbatim", text: output };
+  }
+  return envelope;
+}
+
+async function buildEnvelope(
+  command: string,
+  output: string,
+  status: string,
+  cache?: RawCache,
+): Promise<Condensed> {
   const rawId = cache?.put({ command, output, status });
   const idNote = rawId ? ` raw_id=${rawId}` : "";
   const signatures = errorSignatures(output);
