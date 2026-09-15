@@ -1,0 +1,4 @@
+{"type":"user","timestamp":"2026-09-14T09:00:00.000Z","sessionId":"s2","message":{"role":"user","content":"hi"}}
+{"type":"assistant","timestamp":"2026-09-14T09:00:01.000Z","sessionId":"s2","isSidechain":true,"message":{"model":"claude-sonnet-5","usage":{"input_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":7},"content":[{"type":"tool_use","id":"tu9","name":"mcp__smart__smart_bash_execute","input":{"command":"npm test"}}]}}
+{"type":"user","timestamp":"2026-09-14T09:00:02.000Z","sessionId":"s2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu9","content":"12345"}]}}
+{"type":"user","timestamp":"2026-09-14T09:00:03.000Z","sessionId":"s2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"unknown-id","content":"xy"}]}}
