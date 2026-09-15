@@ -18,10 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `smart-bash-hook` no longer routes content dumps through the compressor.
   Seen live: `cat specs/.../tasks.md` (22,707 chars) came back as 2,061
   chars of invented lines and the agent re-read the whole file with `Read`
-  four seconds later, so the call cost 6 s and saved nothing. A command
-  whose every `;`/`&&`/`|` segment starts with `cat`, `head`, `tail`,
-  `sed`, `less`, `jq`, `ls` and the like now passes through untouched;
-  `SMART_BASH_PASSTHROUGH` extends the list. Two new tests.
+  four seconds later, so the call cost 6 s and saved nothing; a chain of
+  `sed -n` excerpts from four files ending in a `grep` lost three of the
+  four excerpts and the agent `Read` all four files. A command passes
+  through untouched when any `;`/`&&` segment ends in `cat`, `head`,
+  `tail`, `sed`, `less`, `jq` and the like, or when every segment is a
+  plain listing (`ls`, `echo`, `pwd`…); a pipeline counts by its last
+  stage. `SMART_BASH_PASSTHROUGH` extends the dump list.
 
 ## [0.23.2] - 2026-09-15
 
