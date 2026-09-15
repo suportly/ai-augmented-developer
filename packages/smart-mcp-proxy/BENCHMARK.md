@@ -209,6 +209,7 @@ O servidor passou por cinco versões durante o benchmark, cada uma corrigindo um
 | v4 | cabeçalho neutro, `raw_id` só na descrição da tool | 3 e 2 turnos | 3 turnos em 2/2 (faltava o file:line no resumo) |
 | v5 | + frame de projeto em cada assinatura (`↳ at tests/x.py:22`) | 2 turnos em 2/2 | 2 turnos em 2/2, $0,0594 |
 | v6 (0.2.1) | guarda de envelope: se o condensado não for menor que o bruto, entrega o bruto; eco do comando limitado a 80 chars | sem mudança | sem mudança |
+| v7 (0.2.1) | hook não intercepta *dumps* de conteúdo (`cat`, `head`, `sed`, `jq`…): ao vivo, `cat tasks.md` de 22.707 chars virou 2.061 chars de linhas inventadas e o agente releu o arquivo inteiro com `Read` 4 s depois | sem mudança | sem mudança |
 
 A rodada final acima usa a v5 fatorada (spec 0022: `core.ts` compartilhado por MCP, CLI e hook). A v6 veio de uso real, não do benchmark: numa sessão de trabalho com o hook ativo, 2 das 7 saídas condensadas ficaram *maiores* que o original (2.087 → 2.278 chars; 3.060 → 3.067), porque listagens de `grep` pouco acima do orçamento não têm o que resumir e o envelope (eco do comando encadeado de 400+ chars, cabeçalho, RAW TAIL) pesava mais que o conteúdo. Nas outras 5, a redução foi de 55% no agregado (29.063 → 12.957 chars), com latência mediana de 6,2 s por chamada condensada contra 2,2 s crua.
 

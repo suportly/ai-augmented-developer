@@ -23,10 +23,13 @@ Add to `.claude/settings.json` (project or `~/.claude`):
 Every Bash call is rewritten to `smart-bash --b64 <command>`. Short output comes
 back byte-for-byte; long output comes back condensed, with a short echo of the
 command on the first line. Output that would not get smaller by condensing
-(typically just above the budget) is passed through untouched. Background calls
-are skipped, the rewrite is idempotent, and
-if the hook fails it does nothing (exit 0, no output), so it can never block
-Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not
+(typically just above the budget) is passed through untouched. So are content
+dumps: a command whose every segment is `cat`, `head`, `tail`, `sed`, `less`,
+`jq`, `ls` and the like is not routed at all, because the agent asked for that
+content, not for a summary of it (extend the list with
+`SMART_BASH_PASSTHROUGH=rg,grep`). Background calls are skipped, the rewrite is
+idempotent, and if the hook fails it does nothing (exit 0, no output), so it
+can never block Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not
 on `PATH`.
 
 **Codex CLI** (hooks in `.codex/hooks.json`, same payload and matcher) applies

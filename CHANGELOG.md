@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2,067 chars of envelope (seen live right after 0.23.2). The guard now
   takes the caller's wrapper size into account, for the CLI and the MCP
   server alike. Two new tests.
+- `smart-bash-hook` no longer routes content dumps through the compressor.
+  Seen live: `cat specs/.../tasks.md` (22,707 chars) came back as 2,061
+  chars of invented lines and the agent re-read the whole file with `Read`
+  four seconds later, so the call cost 6 s and saved nothing. A command
+  whose every `;`/`&&`/`|` segment starts with `cat`, `head`, `tail`,
+  `sed`, `less`, `jq`, `ls` and the like now passes through untouched;
+  `SMART_BASH_PASSTHROUGH` extends the list. Two new tests.
 
 ## [0.23.2] - 2026-09-15
 
