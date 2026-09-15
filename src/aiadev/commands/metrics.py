@@ -26,6 +26,7 @@ import click
 
 from .. import metrics as _metrics
 from .. import metrics_format as _format
+from .. import token_metrics as _token_metrics
 
 
 # Last spec id authored BEFORE the ``.review-log.jsonl`` substrate
@@ -126,15 +127,53 @@ def _resolve_feature(workspace: pathlib.Path, slug: str) -> Optional[pathlib.Pat
         "agregado é ignorado."
     ),
 )
+@click.option(
+    "--tokens",
+    "show_tokens",
+    is_flag=True,
+    default=False,
+    help=(
+        "Relatório de tokens por sessão do Claude Code (spec 0022), lido dos "
+        "transcripts locais em ~/.claude/projects/<slug do cwd>/. Só contagens; "
+        "nunca imprime conteúdo de mensagens. Sai com 2 se não houver transcripts."
+    ),
+)
+@click.option(
+    "--transcripts-dir",
+    "transcripts_dir",
+    default=None,
+    type=click.Path(path_type=pathlib.Path),
+    help="Diretório de transcripts a usar com --tokens (default: derivado do cwd).",
+)
 def metrics_command(
     feature: Optional[str],
     since: Optional[datetime.datetime],
     output_format: str,
     show_tasks: bool,
     show_bodies: bool,
+    show_tokens: bool,
+    transcripts_dir: Optional[pathlib.Path],
 ) -> None:
     """``aiadev metrics`` entry point."""
     workspace = pathlib.Path.cwd()
+
+    if show_tokens:
+        # Spec 0022 Story 3: a separate, read-only report over Claude Code
+        # transcripts. It never touches specs/ and exits before the
+        # spec-artifact flow below.
+        target = transcripts_dir or _token_metrics.default_transcripts_dir(workspace)
+        report = _token_metrics.build_token_report(target)
+        if not report.sessions:
+            click.echo(
+                f"Nenhum transcript com uso de tokens encontrado em {target}",
+                err=False,
+            )
+            sys.exit(2)
+        if output_format == "json":
+            click.echo(_token_metrics.format_json(report), nl=False)
+        else:
+            click.echo(_token_metrics.format_text(report), nl=False)
+        return
     today = datetime.date.today()
     since_date = since.date() if since else today - datetime.timedelta(days=90)
     until_date = today
