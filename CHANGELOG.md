@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-15
+
+Spec **0022 — smart-mcp-proxy-token-economy**. A local-model compressor for
+long command output, shipped as a **separate npm package**
+(`packages/smart-mcp-proxy`, `@aiadev/smart-mcp-proxy`) so the framework core
+still implements no compressor (Article III; the Non-goal in
+`docs/token-economy.md` is preserved).
+
+### Added
+
+- **`packages/smart-mcp-proxy`** — one core, three entry points:
+  `smart-mcp-proxy` (MCP server with `smart_bash_execute` and
+  `smart_git_diff`), `smart-bash` (CLI) and `smart-bash-hook` (Claude Code
+  `PreToolUse` hook that routes the **native Bash tool** through the
+  condenser). Output over 2000 chars is condensed by a local Ollama model
+  (default `qwen2.5-coder:3b`) and always padded with deterministic blocks:
+  `ERROR SIGNATURES` (grep of error-like lines with counts and the nearest
+  project frame), `RAW TAIL` (last 8 lines verbatim) and an excerpt guard.
+  Raw output is cached per call (`raw_id`). Without Ollama everything
+  degrades to a truncated excerpt. `--allow` flag on the hook for Codex CLI
+  (which applies rewrites only with `permissionDecision: allow`).
+- **`token-economy` preset** (opt-in, experimental): declares the MCP server
+  in `mcps.yaml` and ships the hook snippets for Claude Code
+  (`hooks/claude-code-settings.snippet.json`) and Codex
+  (`hooks/codex-hooks.snippet.json`). `aiadev install` still does not write
+  `settings.json`; that merge is a documented follow-up.
+- **`aiadev metrics --tokens`** — per-session token usage (input, cache
+  creation, cache read, output) and characters returned per tool, read from
+  the local Claude Code transcripts (`~/.claude/projects/<slug>/`); counts
+  only, never message text. `--format json`, `--transcripts-dir`; exit 2
+  when no transcripts.
+- `requesting-code-review` gains an optional **Diff summary** step using
+  `smart_git_diff`, with the same graceful-degradation clause as the graph
+  provider step.
+
+### Changed
+
+- `docs/token-economy.md`: the compressor table cites the package and the
+  hook example shows the real `smart-bash-hook` snippet.
+
+### Evidence
+
+- `packages/smart-mcp-proxy/BENCHMARK.md`: headless Claude Code
+  (`claude-opus-5`) on 6 cases, three variants. Native Bash + hook returns
+  83% fewer characters and costs 44% less than native Bash alone, at 6/6
+  root-cause accuracy and 2 turns per case.
+
 ## [0.22.1] - 2026-07-31
 
 ### Fixed
