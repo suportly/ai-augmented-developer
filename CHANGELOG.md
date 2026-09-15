@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-09-15
+
+### Fixed
+
+- `smart-bash-hook` did nothing when installed through `npm install -g`: the
+  "run only when executed directly" guard compared `argv[1]` with the module
+  URL textually, and npm bin entries are symlinks, so `main()` never ran and
+  every Bash call passed through unfiltered (silently, by the hook's own
+  failure-mode design). Real paths are compared now; a symlink test covers
+  it. Direct `node dist/hook.js` invocation, used by the benchmark, was never
+  affected. (#46)
+- READMEs of the package and of the `token-economy` preset no longer suggest
+  `npm install -g @aiadev/smart-mcp-proxy`: the package is not on the npm
+  registry yet. The documented path is `npm run build && npm install -g .`
+  from the repo folder, which makes the preset's `command: "smart-mcp-proxy"`
+  and the hook snippets' `smart-bash-hook` resolve. (#46)
+
 ## [0.23.0] - 2026-09-15
 
 Spec **0022 — smart-mcp-proxy-token-economy**. A local-model compressor for
