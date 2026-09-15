@@ -4,7 +4,7 @@
 
 **Branch:** `feat/smart-mcp-proxy`
 **Created:** 2026-09-15
-**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
+**Status:** Implemented <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0022 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 

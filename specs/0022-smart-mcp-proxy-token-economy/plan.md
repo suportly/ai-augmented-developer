@@ -17,7 +17,7 @@ Fatoramos o pacote `packages/smart-mcp-proxy` em um núcleo (`core.ts`: execuç�
 ## Technical context
 
 | Field | Value |
-|---|---|
+| --- | --- |
 | Active preset | Nenhum — repositório do próprio framework aiadev |
 | Language / runtime | TypeScript/Node ≥ 18 (pacote); Python 3.10+ (métrica); Markdown (preset/docs) |
 | Primary dependencies | Pacote: `@modelcontextprotocol/sdk`, `axios`, `zod` (já presentes). Core Python: nenhuma nova |
@@ -30,7 +30,7 @@ Fatoramos o pacote `packages/smart-mcp-proxy` em um núcleo (`core.ts`: execuç�
 ## Constitution check
 
 | Article | Applies? | Status | Evidence |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | I. Spec-first | Yes | PASS | `spec.md` aprovado em 2026-09-15, zero marcadores |
 | II. Test-first | Yes | PASS | Métrica com `pytest` sobre fixture de transcript; pacote com testes `node --test` do núcleo (assinaturas, headTail, hook) antes das entradas |
 | III. Simplicity | Yes | PASS | Compressor fora do core (`packages/`); preset só declara; nenhuma abstração nova em `src/aiadev` além de um módulo de leitura |
@@ -87,7 +87,7 @@ skills/requesting-code-review/SKILL.md               (modified) # passo opcional
 src/aiadev/token_metrics.py                          (new)
 src/aiadev/commands/metrics.py                       (modified) # flag --tokens
 tests/test_token_metrics.py                          (new)
-tests/fixtures/token_metrics/sample.jsonl            (new)
+tests/fixtures/token_metrics/{s1,s2,empty}.jsonl     (new)
 ```
 
 ## Phase breakdown
@@ -114,7 +114,7 @@ tests/fixtures/token_metrics/sample.jsonl            (new)
 ## Risks and mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Hook com bug derruba todo Bash do agente | Med | High | Modo de falha "não reescrever"; testes do contrato; CLI preserva exit code |
 | Comandos interativos/longos sob o CLI | Med | Med | CLI não usa TTY; `SMART_MCP_EXEC_TIMEOUT_MS`; documentar exclusão por padrão de `run_in_background` |
 | Formato dos transcripts muda entre versões | Med | Low | Parser tolerante: campos ausentes contam zero; testes com fixture real |
@@ -123,8 +123,8 @@ tests/fixtures/token_metrics/sample.jsonl            (new)
 ## Complexity tracking
 
 | Article waived | Reason | Alternatives considered | Reviewer |
-|---|---|---|---|
-| | | | |
+| -------------- | ------ | ----------------------- | -------- |
+| —              | —      | —                       | —        |
 
 ## Hand-off to `tasks`
 

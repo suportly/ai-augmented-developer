@@ -68,7 +68,7 @@
 
 ### T004 — Preset `token-economy`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - create: `presets/token-economy/preset.yaml`
@@ -86,12 +86,12 @@
 
 ### T005 — Tool `smart_git_diff`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `packages/smart-mcp-proxy/src/index.ts`
   - modify: `packages/smart-mcp-proxy/src/core.ts`
-  - test: `packages/smart-mcp-proxy/test/diff.test.mjs`
+  - test: `packages/smart-mcp-proxy/test/core.test.mjs` (casos de diff vivem junto do núcleo)
 - **Spec scenarios:** Story 2 scenario 1, scenario 2, scenario 3
 - **Acceptance:**
   - [ ] Teste: `splitDiffByFile` separa um diff em blocos por arquivo com nomes corretos.
@@ -102,7 +102,7 @@
 
 ### T006 — Passo opcional em `requesting-code-review`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `skills/requesting-code-review/SKILL.md`
@@ -115,7 +115,7 @@
 
 ### T007 — `token_metrics.py` + `aiadev metrics --tokens`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/token_metrics.py`
@@ -132,7 +132,7 @@
 
 ### T008 — Docs e README
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004, T007
 - **Files:**
   - modify: `docs/token-economy.md`
@@ -146,7 +146,7 @@
 
 ### T009 — Benchmark com a variante hook
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `packages/smart-mcp-proxy/BENCHMARK.md`
