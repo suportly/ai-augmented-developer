@@ -92,8 +92,15 @@ accuracy (6/6). Full method, numbers and caveats in [BENCHMARK.md](./BENCHMARK.m
 cd packages/smart-mcp-proxy
 npm install
 npm run build          # or: npm test (builds, then runs the node --test suite)
+npm install -g .       # puts smart-mcp-proxy, smart-bash and smart-bash-hook on PATH
 ollama pull qwen2.5-coder:3b   # once
 ```
+
+The package is not on the npm registry yet; the global install from the
+folder is what makes the `command: "smart-mcp-proxy"` declared by the
+`token-economy` preset (and the `smart-bash-hook` command in the hook
+snippets) resolve. Without it, point the MCP `command` at
+`node /abs/path/dist/index.js` and the hook at `node /abs/path/dist/hook.js`.
 
 Inside the ai-augmented-developer framework, the opt-in `token-economy` preset
 (`aiadev install --preset token-economy`) declares the MCP server and ships the

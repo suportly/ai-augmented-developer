@@ -27,8 +27,12 @@ merely declares.
 ## Enabling it (on demand)
 
 ```bash
-# 1. the compressor (not bundled; needs Node ≥ 18)
-npm install -g @aiadev/smart-mcp-proxy      # or: cd packages/smart-mcp-proxy && npm install && npm run build
+# 1. the compressor (not bundled; needs Node ≥ 18). Not on the npm registry yet:
+#    build it from the framework repo and install the folder globally, which
+#    puts smart-mcp-proxy, smart-bash and smart-bash-hook on your PATH.
+git clone https://github.com/suportly/ai-augmented-developer.git
+cd ai-augmented-developer/packages/smart-mcp-proxy && npm install && npm run build
+npm install -g .
 ollama pull qwen2.5-coder:3b                 # any Ollama model works; set OLLAMA_MODEL
 
 # 2. the preset (declares the MCP server on every platform aiadev supports)

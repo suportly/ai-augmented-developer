@@ -24,6 +24,7 @@
  *   SMART_BASH_BIN   command used to invoke the CLI (default: node + this package's dist/cli.js)
  */
 
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -92,5 +93,15 @@ async function main(): Promise<void> {
 }
 
 // Only run when executed directly, so tests can import `rewrite` / `render`.
-const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (invokedDirectly) void main();
+// Compare real paths: npm bin entries are symlinks, so argv[1] and this
+// module's URL differ textually under a global install.
+function invokedDirectly(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (invokedDirectly()) void main();
