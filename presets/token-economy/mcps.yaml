@@ -1,0 +1,26 @@
+# Optional token-economy compressor (spec 0022).
+#
+# This preset is opt-in: enabling it declares the smart-mcp-proxy MCP server
+# so the agent gets `smart_bash_execute` (long command output condensed by a
+# local Ollama model, with deterministic ERROR SIGNATURES and RAW TAIL blocks)
+# and `smart_git_diff` (git diff --stat verbatim + one summary per file).
+# No other preset gains a dependency.
+#
+# Privacy: the model runs locally (Ollama on localhost by default). Nothing
+# leaves the machine unless you point OLLAMA_URL at a remote host yourself.
+# Without Ollama the tools still work and fall back to truncated excerpts.
+#
+# PATH: the package must be installed (`npm install -g @aiadev/smart-mcp-proxy`,
+# or `npm install && npm run build` inside packages/smart-mcp-proxy of the
+# framework repo, then point `command` at dist/index.js with node).
+#
+# The PreToolUse hook that routes the NATIVE Bash tool through the same
+# condenser is not an MCP server and lives in hooks/claude-code-settings.snippet.json.
+
+servers:
+  smart-bash:
+    command: "smart-mcp-proxy"
+    args: []
+    env:
+      OLLAMA_MODEL: "qwen2.5-coder:3b"
+      SMART_MCP_MAX_CHARS: "2000"

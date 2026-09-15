@@ -33,6 +33,14 @@
       "use_when": "You want analyze to ground its gaps in a deterministic local code graph; requires installing a provider (e.g. graphify).",
       "maintained_by": "ai-augmented-developer core",
       "stability": "experimental"
+    },
+    {
+      "name": "token-economy",
+      "path": "presets/token-economy",
+      "summary": "Opt-in compressor: smart-mcp-proxy MCP server + Claude Code PreToolUse hook that condense long command output through a local Ollama model.",
+      "use_when": "Test suites, builds or linters flood the agent's context; requires Node and a local Ollama model (degrades to truncated excerpts without it).",
+      "maintained_by": "ai-augmented-developer core",
+      "stability": "experimental"
     }
   ]
 }
