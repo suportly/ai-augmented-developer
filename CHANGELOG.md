@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.3] - 2026-09-15
+
 ### Fixed
 
 - `smart-mcp-proxy`: the envelope size guard added in 0.2.1 compared only the
