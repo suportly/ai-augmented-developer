@@ -1,10 +1,38 @@
 # smart-mcp-proxy
 
-MCP server that runs shell commands and, when the output is too long,
-condenses it with a local Ollama model before returning it to the agent.
-Cuts token cost and context pollution from noisy builds, test runs and logs.
+Runs shell commands and, when the output is too long, condenses it with a
+local Ollama model before it reaches the agent. Cuts token cost and context
+pollution from noisy builds, test runs and logs. Three entry points share one
+core:
 
-## Tool
+| Binary | What it is |
+| --- | --- |
+| `smart-mcp-proxy` | MCP server (stdio) exposing `smart_bash_execute` and `smart_git_diff`. |
+| `smart-bash` | CLI: `smart-bash -c "<cmd>"` runs the command and prints condensed output, exit code preserved. |
+| `smart-bash-hook` | Claude Code `PreToolUse` hook that routes the **native Bash tool** through `smart-bash`, so the economy is automatic. |
+
+## Hook (recommended)
+
+Add to `.claude/settings.json` (project or `~/.claude`):
+
+```json
+{ "hooks": { "PreToolUse": [ { "matcher": "Bash",
+  "hooks": [ { "type": "command", "command": "smart-bash-hook", "timeout": 10 } ] } ] } }
+```
+
+Every Bash call is rewritten to `smart-bash --b64 <command>`. Short output comes
+back byte-for-byte; long output comes back condensed with the original command
+on the first line. Background calls are skipped, the rewrite is idempotent, and
+if the hook fails it does nothing (exit 0, no output), so it can never block
+Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not
+on `PATH`.
+
+## Tools
+
+`smart_git_diff` — `range` (default `HEAD`; `--staged` for the index), optional
+`paths`, `cwd`. Returns `git diff --stat` verbatim, then 1-3 bullets per file
+from the local model. Files beyond the input budget (24k chars) are listed
+without a summary; without Ollama, all of them are.
 
 `smart_bash_execute`
 
@@ -57,9 +85,13 @@ accuracy (6/6). Full method, numbers and caveats in [BENCHMARK.md](./BENCHMARK.m
 ```bash
 cd packages/smart-mcp-proxy
 npm install
-npm run build
+npm run build          # or: npm test (builds, then runs the node --test suite)
 ollama pull qwen2.5-coder:3b   # once
 ```
+
+Inside the ai-augmented-developer framework, the opt-in `token-economy` preset
+(`aiadev install --preset token-economy`) declares the MCP server and ships the
+hook snippet; `aiadev metrics --tokens` measures the effect per session.
 
 ## Configuration
 

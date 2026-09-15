@@ -21,9 +21,10 @@ context, using an **external** compressor.
 ## External compressors
 
 | Tool | Shape | Notes |
-|---|---|---|
+| --- | --- | --- |
 | [`rtk-ai/rtk`](https://github.com/rtk-ai/rtk) | Single Rust binary that filters/compresses command output (`git status`, `pytest`, `docker ps`, …). | Ships a `PreToolUse` hook that auto-rewrites commands (e.g. `git status` → `rtk git status`), so adoption is transparent. |
 | [`headroomlabs-ai/headroom`](https://github.com/headroomlabs-ai/headroom) | Content-aware compression layer (JSON / code / prose), runnable as a library, HTTP proxy, or MCP server; reversible (originals cached). | Wraps an agent or runs as a proxy/MCP the agent reads through. |
+| [`@aiadev/smart-mcp-proxy`](../packages/smart-mcp-proxy/) (this repo, separate npm package) | MCP server + `smart-bash` CLI + `smart-bash-hook` PreToolUse hook. Output over 2000 chars is condensed by a **local Ollama model** to root errors and final results, with deterministic `ERROR SIGNATURES` and `RAW TAIL` blocks appended; degrades to truncated excerpts without Ollama. | Declared by the opt-in [`token-economy` preset](../presets/token-economy/). Benchmarked headless against native Bash: 85% fewer chars, 44% lower cost, same accuracy ([BENCHMARK.md](../packages/smart-mcp-proxy/BENCHMARK.md)). Lives outside `src/aiadev`, so the Non-goal above still holds. |
 
 ## How to wire one (mechanism)
 
@@ -69,3 +70,31 @@ With `rtk` installed, this rewrites noisy commands (e.g. `git status`) through
 `rtk` transparently. A `headroom` proxy/MCP is the alternative for content-aware
 compression. Either way the compressor runs locally and stays consumer-wired —
 the framework only documents the shape.
+
+The same shape works with `smart-bash-hook` from `@aiadev/smart-mcp-proxy`
+(spec 0022). The ready-to-paste snippet ships with the `token-economy` preset
+at `presets/token-economy/hooks/claude-code-settings.snippet.json`:
+
+```jsonc
+// .claude/settings.json (consumer-owned; copy from the preset)
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "smart-bash-hook", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The hook rewrites every Bash `command` to `smart-bash --b64 <command>`; the CLI
+runs the original command, prints short output byte-for-byte and condenses long
+output, always propagating the exit code. `aiadev install` still does not write
+`settings.json` — that merge is a follow-up of spec 0022 — so this remains one
+manual step. To see whether it pays in your project, compare
+`aiadev metrics --tokens` (tokens per session, characters returned per tool,
+read from the local Claude Code transcripts) before and after enabling it.
