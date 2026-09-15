@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `smart-mcp-proxy`: the envelope size guard added in 0.2.1 compared only the
+  body built by `condense()`; the CLI then prepended the command echo and
+  appended the status line, so a 2,067-char output was still delivered as
+  2,067 chars of envelope (seen live right after 0.23.2). The guard now
+  takes the caller's wrapper size into account, for the CLI and the MCP
+  server alike. Two new tests.
+
 ## [0.23.2] - 2026-09-15
 
 ### Fixed

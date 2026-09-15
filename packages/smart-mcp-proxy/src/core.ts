@@ -357,14 +357,16 @@ export interface Condensed {
  *   ERROR SIGNATURES + RAW TAIL blocks are appended;
  * - a summary that is no shorter than a plain excerpt is replaced by the excerpt;
  * - if the model is unreachable, a truncated excerpt + signatures + warning;
- * - whatever was built, if it is not smaller than the raw output the raw
- *   output is returned verbatim (mode "verbatim").
+ * - whatever was built, if it (plus the caller's `overhead`) is not smaller
+ *   than the raw output, the raw output is returned verbatim (mode "verbatim").
  */
 export async function condense(
   command: string,
   output: string,
   status: string,
   cache?: RawCache,
+  /** Chars the caller will add around `text` (command echo, status line); counted by the size guard. */
+  overhead = 0,
 ): Promise<Condensed> {
   if (output.length <= CONFIG.maxChars) {
     return { mode: "verbatim", text: output };
@@ -374,7 +376,7 @@ export async function condense(
   // ~2.1k chars) came back as a 2.3k-char envelope — header, summary that
   // re-emitted the listing, and RAW TAIL together outgrew the raw output.
   // An envelope that saves nothing is worse than nothing: hand the output over as-is.
-  if (envelope.text.length >= output.length) {
+  if (envelope.text.length + overhead >= output.length) {
     return { mode: "verbatim", text: output };
   }
   return envelope;
