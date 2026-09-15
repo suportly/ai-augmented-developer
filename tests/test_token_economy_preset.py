@@ -41,6 +41,20 @@ def test_hook_snippet_is_a_valid_pretooluse_hook_on_bash() -> None:
     assert "smart-bash-hook" in hook["command"]
 
 
+CODEX_SNIPPET = PRESET / "hooks" / "codex-hooks.snippet.json"
+
+
+def test_codex_hook_snippet_passes_allow_and_matches_bash() -> None:
+    """Codex applies updatedInput only with permissionDecision allow (hence --allow)."""
+    data = json.loads(CODEX_SNIPPET.read_text(encoding="utf-8"))
+    pre = data["hooks"]["PreToolUse"]
+    assert pre[0]["matcher"] == "^Bash$"
+    assert pre[0]["hooks"][0]["command"] == "smart-bash-hook --allow"
+    # The Claude Code snippet must NOT carry --allow: it would skip the permission prompt.
+    claude = json.loads(SNIPPET.read_text(encoding="utf-8"))
+    assert "--allow" not in claude["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+
+
 def test_readme_documents_optin_hook_off_switch_and_privacy() -> None:
     body = README.read_text(encoding="utf-8").lower()
     assert "opt-in" in body
@@ -48,6 +62,7 @@ def test_readme_documents_optin_hook_off_switch_and_privacy() -> None:
     assert "turning it off" in body
     assert "privac" in body and "local" in body
     assert "metrics --tokens" in body
+    assert "codex" in body and "--allow" in body
 
 
 def test_catalog_registers_optin_preset() -> None:

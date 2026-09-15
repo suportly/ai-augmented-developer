@@ -63,6 +63,30 @@ output byte-for-byte and condenses long output, always propagating the exit
 code. It skips background calls and is idempotent. If the hook itself fails
 it does nothing, so a broken install can never block the Bash tool.
 
+## Other platforms
+
+The MCP server is platform-neutral: `aiadev install` translates `mcps.yaml`
+into each platform's native config (Claude Code `.mcp.json`, Cursor
+`.cursor/mcp.json`, Gemini CLI `.gemini/settings.json`, Codex
+`.codex/config.toml`, OpenCode `opencode.json`), so `smart_bash_execute` and
+`smart_git_diff` are available everywhere. The **automatic** path (the hook on
+the native shell tool) depends on the platform having a rewriting hook:
+
+| Platform | MCP tools | Native-shell hook |
+| --- | --- | --- |
+| Claude Code | yes | yes — `hooks/claude-code-settings.snippet.json` |
+| Codex CLI (≥ 0.114, hooks on by default) | yes | yes — `hooks/codex-hooks.snippet.json` into `.codex/hooks.json`; **must** pass `--allow` |
+| Cursor, Gemini CLI, OpenCode | yes | no rewriting hook today; ask the agent to prefer `smart_bash_execute` for noisy commands (AGENTS.md rule) |
+
+Codex uses the same `PreToolUse` payload (`tool_name: "Bash"`,
+`tool_input.command`) and the same `updatedInput` output, but only applies a
+rewrite when the hook also returns `permissionDecision: "allow"`. That is what
+`--allow` adds. Do **not** pass `--allow` under Claude Code unless you intend to
+auto-approve every Bash call: there, `allow` skips the permission prompt. The
+Codex hook was written against the Codex hooks reference and unit-tested for
+its output shape; it has not yet been exercised against a live Codex session,
+so treat it as beta and check `codex --version` supports hooks.
+
 ## Turning it off
 
 - Remove the `PreToolUse` block from `settings.json` — the native Bash tool is

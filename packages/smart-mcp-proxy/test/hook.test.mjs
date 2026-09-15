@@ -10,8 +10,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const hookJs = join(here, "..", "dist", "hook.js");
 const { rewrite, render } = await import("../dist/hook.js");
 
-function runHook(stdin) {
-  return spawnSync(process.execPath, [hookJs], { input: stdin, encoding: "utf8" });
+function runHook(stdin, args = []) {
+  return spawnSync(process.execPath, [hookJs, ...args], { input: stdin, encoding: "utf8" });
 }
 
 test("rewrite routes a Bash command through the CLI with base64", () => {
@@ -32,10 +32,22 @@ test("rewrite is idempotent", () => {
   assert.equal(rewrite({ tool_name: "Bash", tool_input: { command: viaNode } }, "smart-bash"), null);
 });
 
-test("render produces the PreToolUse updatedInput shape", () => {
+test("render produces the PreToolUse updatedInput shape, without a permission decision by default", () => {
   assert.deepEqual(render("cmd"), {
     hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { command: "cmd" } },
   });
+});
+
+test("render adds permissionDecision allow only when asked (Codex)", () => {
+  assert.deepEqual(render("cmd", true), {
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: { command: "cmd" } },
+  });
+});
+
+test("process: --allow flag sets permissionDecision allow (Codex mode)", () => {
+  const payload = JSON.stringify({ hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "ls" } });
+  assert.equal(JSON.parse(runHook(payload).stdout).hookSpecificOutput.permissionDecision, undefined);
+  assert.equal(JSON.parse(runHook(payload, ["--allow"]).stdout).hookSpecificOutput.permissionDecision, "allow");
 });
 
 test("process: Bash payload on stdin yields JSON with the rewritten command", () => {

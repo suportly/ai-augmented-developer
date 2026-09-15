@@ -27,6 +27,12 @@ if the hook fails it does nothing (exit 0, no output), so it can never block
 Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not
 on `PATH`.
 
+**Codex CLI** (hooks in `.codex/hooks.json`, same payload and matcher) applies
+a rewrite only together with `permissionDecision: "allow"`, so register it as
+`smart-bash-hook --allow`. Never add `--allow` under Claude Code unless you
+want every Bash call auto-approved. Not yet exercised against a live Codex
+session; unit-tested for the output shape only.
+
 ## Tools
 
 `smart_git_diff` — `range` (default `HEAD`; `--staged` for the index), optional

@@ -14,6 +14,12 @@
  *   { "hooks": { "PreToolUse": [ { "matcher": "Bash",
  *       "hooks": [ { "type": "command", "command": "smart-bash-hook", "timeout": 5 } ] } ] } }
  *
+ * Codex CLI (.codex/hooks.json) uses the same payload and matcher, but only
+ * applies `updatedInput` when the hook also returns `permissionDecision:
+ * "allow"`. Pass `--allow` there. Do NOT pass it under Claude Code unless
+ * you intend to auto-approve every Bash call: "allow" skips the permission
+ * prompt.
+ *
  * Environment:
  *   SMART_BASH_BIN   command used to invoke the CLI (default: node + this package's dist/cli.js)
  */
@@ -29,6 +35,7 @@ interface HookInput {
 interface HookOutput {
   hookSpecificOutput: {
     hookEventName: "PreToolUse";
+    permissionDecision?: "allow";
     updatedInput: { command: string };
   };
 }
@@ -50,8 +57,18 @@ export function rewrite(input: HookInput, bin: string = process.env.SMART_BASH_B
   return `${bin} --b64 ${b64}`;
 }
 
-export function render(command: string): HookOutput {
-  return { hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { command } } };
+/**
+ * @param allow  also return `permissionDecision: "allow"` (required by Codex CLI
+ *               for a rewrite to apply; under Claude Code it auto-approves the call).
+ */
+export function render(command: string, allow = false): HookOutput {
+  return {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      ...(allow ? { permissionDecision: "allow" as const } : {}),
+      updatedInput: { command },
+    },
+  };
 }
 
 async function readStdin(): Promise<string> {
@@ -65,7 +82,8 @@ async function main(): Promise<void> {
     const raw = await readStdin();
     const input = JSON.parse(raw) as HookInput;
     const rewritten = rewrite(input);
-    if (rewritten) process.stdout.write(JSON.stringify(render(rewritten)));
+    const allow = process.argv.includes("--allow");
+    if (rewritten) process.stdout.write(JSON.stringify(render(rewritten, allow)));
   } catch (error) {
     // Failure mode: leave the tool call untouched.
     process.stderr.write(`[smart-bash-hook] ignored: ${error instanceof Error ? error.message : String(error)}\n`);
