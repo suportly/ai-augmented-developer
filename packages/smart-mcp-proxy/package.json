@@ -1,6 +1,6 @@
 {
   "name": "@aiadev/smart-mcp-proxy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server, CLI and Claude Code PreToolUse hook that condense long command output through a local Ollama model before it reaches the agent.",
   "license": "MIT",
   "type": "module",

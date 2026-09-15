@@ -115,3 +115,12 @@ test("summarizeDiff lists every file as skipped when the model is unreachable", 
   const rendered = core.renderDiffSummary("HEAD", s);
   assert.match(rendered, /NOT SUMMARIZED \(2/);
 });
+
+test("condense returns verbatim when the envelope would not be smaller than the output", async () => {
+  // Output just above the budget: header + excerpt + signatures would exceed it.
+  const output = Array.from({ length: 60 }, (_, i) => `line ${i} ${"x".repeat(30)}`).join("\n").slice(0, core.CONFIG.maxChars + 40);
+  assert.ok(output.length > core.CONFIG.maxChars);
+  const c = await core.condense("grep -n foo", output, "[exit code: 0]");
+  assert.equal(c.mode, "verbatim");
+  assert.equal(c.text, output);
+});

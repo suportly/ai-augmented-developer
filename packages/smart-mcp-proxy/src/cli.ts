@@ -9,8 +9,10 @@
  *
  * Short output (≤ SMART_MCP_MAX_CHARS) is printed byte-for-byte: stdout to
  * stdout, stderr to stderr. Long output is condensed through core.ts and
- * printed to stdout with the original command on the first line. The exit
- * code of the original command is always propagated.
+ * printed to stdout with a truncated echo of the command on the first line;
+ * if the condensed envelope would not be smaller than the raw output, the
+ * raw output is printed byte-for-byte instead. The exit code of the
+ * original command is always propagated.
  */
 
 import { CONFIG, combineOutput, condense, exitCodeFor, runCommand, statusLine } from "./core.js";
@@ -39,8 +41,25 @@ async function main(): Promise<number> {
     return exitCodeFor(result);
   }
   const c = await condense(command, output, statusLine(result));
-  process.stdout.write(`[smart-bash] $ ${command}\n${c.text}\n${statusLine(result)}\n`);
+  if (c.mode === "verbatim") {
+    // Condensing would not have saved anything (output barely over the budget).
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    return exitCodeFor(result);
+  }
+  process.stdout.write(`[smart-bash] $ ${shortCommand(command)}\n${c.text}\n${statusLine(result)}\n`);
   return exitCodeFor(result);
+}
+
+/**
+ * The agent already knows the command it issued; echoing all of it (chained
+ * commands run to 400+ chars) was pure duplication inside the context window.
+ * Keep enough to orient, not the whole thing.
+ */
+const ECHO_CAP = 80;
+function shortCommand(command: string): string {
+  const one = command.replace(/\s+/g, " ").trim();
+  return one.length > ECHO_CAP ? `${one.slice(0, ECHO_CAP)}…` : one;
 }
 
 main().then(
