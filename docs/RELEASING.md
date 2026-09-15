@@ -209,7 +209,7 @@ tags; a manual `smart-mcp-proxy-v*` tag push re-cuts a release.
 
 ### One-time setup
 
-1. On [npmjs.com](https://www.npmjs.com/) make sure you own the `aiadev`
+1. On npmjs.com make sure you own the `aiadev`
    scope: either create the **organization** `aiadev` (free for public
    packages) or rename the package in `packages/smart-mcp-proxy/package.json`
    to a scope you own (`@<your-user>/smart-mcp-proxy`) or to the unscoped
