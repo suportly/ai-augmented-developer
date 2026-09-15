@@ -48,34 +48,50 @@ function defaultBin(): string {
 }
 
 /**
- * Commands whose output IS the content the agent asked for (file dumps,
+ * Commands whose output IS the content the agent asked for (file excerpts,
  * listings). Condensing those loses information instead of noise: seen live,
  * `cat specs/.../tasks.md` (22,707 chars) came back as 2,061 chars of invented
- * lines and the agent re-read the whole file with Read four seconds later.
- * A command is passed through untouched when every segment of the pipeline /
- * chain starts with one of these. Extend with SMART_BASH_PASSTHROUGH (comma list).
+ * lines and the agent re-read the whole file with Read four seconds later; a
+ * chain of `sed -n` excerpts from four files ending in a `grep` lost three of
+ * the four excerpts and the agent Read all four files.
+ *
+ * Rule: split the command into pipelines (`;`, `&&`, `||`); each pipeline's
+ * output is its last stage's, skipping trailing limiters (`| head -20`).
+ * If any pipeline ends in a DUMP command the whole
+ * output carries content the agent wants → pass through. If every pipeline
+ * ends in a DUMP or NEUTRAL command (echo, ls, pwd…) → pass through too.
+ * Otherwise (something builds, tests, greps…) → route through smart-bash.
+ * Extend DUMP with SMART_BASH_PASSTHROUGH (comma list).
  */
-const PASSTHROUGH = new Set([
-  "cat", "head", "tail", "less", "more", "bat", "sed", "nl", "jq", "cut",
-  "cd", "echo", "printf", "ls", "pwd", "wc", "true",
-]);
+const DUMP = new Set(["cat", "head", "tail", "less", "more", "bat", "sed", "nl", "jq"]);
+const NEUTRAL = new Set(["cd", "echo", "printf", "ls", "pwd", "wc", "true", "cut", "sort", "uniq", "tr", "date"]);
+/** Trailing pipeline stages that only limit or reshape what came before (`grep … | head -20`). */
+const FILTER = new Set(["head", "tail", "cut", "sort", "uniq", "wc", "nl", "tr", "tee"]);
 
-function passthroughSet(): Set<string> {
+function dumpSet(): Set<string> {
   const extra = (process.env.SMART_BASH_PASSTHROUGH ?? "").split(",").map((w) => w.trim()).filter(Boolean);
-  return extra.length ? new Set([...PASSTHROUGH, ...extra]) : PASSTHROUGH;
+  return extra.length ? new Set([...DUMP, ...extra]) : DUMP;
 }
 
-/** True when every `;`, `&&`, `||`, `|` segment starts with a pass-through command. */
+function firstWord(stage: string): string {
+  const words = stage.trim().split(/\s+/);
+  while (words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0])) words.shift(); // env assignments
+  return (words[0] ?? "").replace(/^.*\//, "");
+}
+
+/** True when the command's output is content the agent asked for rather than noise to condense. */
 export function isContentDump(command: string): boolean {
-  const set = passthroughSet();
-  const segments = command.split(/\s*(?:;|&&|\|\||\|)\s*/).map((s) => s.trim()).filter(Boolean);
-  if (!segments.length) return false;
-  return segments.every((segment) => {
-    const words = segment.split(/\s+/);
-    while (words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0])) words.shift(); // env assignments
-    const first = words[0] ?? "";
-    return set.has(first.replace(/^.*\//, ""));
+  const dump = dumpSet();
+  const pipelines = command.split(/\s*(?:;|&&|\|\|)\s*/).map((p) => p.trim()).filter(Boolean);
+  if (!pipelines.length) return false;
+  const lastStages = pipelines.map((p) => {
+    const stages = p.split(/\s*\|\s*/).map(firstWord);
+    let i = stages.length - 1;
+    while (i > 0 && FILTER.has(stages[i])) i--; // `… | head -20` classifies by what feeds it
+    return stages[i] ?? "";
   });
+  if (lastStages.some((w) => dump.has(w))) return true;
+  return lastStages.every((w) => NEUTRAL.has(w));
 }
 
 /** Pure decision: returns the rewritten command, or null to leave the call untouched. */

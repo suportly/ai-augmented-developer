@@ -31,8 +31,14 @@ test("rewrite passes content dumps through untouched (cat/head/sed/jq chains)", 
   assert.equal(bash("cd MayCRMWeb && cat package.json; head -40 src/App.tsx | nl"), null);
   assert.equal(bash("FOO=1 sed -n '10,60p' plan.md"), null);
   assert.equal(bash("/bin/cat big.log"), null);
-  // Anything that produces rather than dumps is still routed.
+  // A chain that carries file excerpts is content even when one segment greps.
+  assert.equal(bash('cd api && echo "=== a"; sed -n 36,48p a.py; echo "=== b"; sed -n 172,190p b.py; grep -n "def " c.py | head -20'), null);
+  assert.equal(bash("ls -la; pwd"), null);
+  // Anything that produces rather than dumps is still routed; a pipeline's output is its last stage's.
   assert.match(bash("cat a.log | grep -c ERROR"), /^smart-bash --b64 /);
+  assert.match(bash('echo "=== tests"; grep -rn "teach" src | head -20'), /^smart-bash --b64 /);
+  assert.equal(bash("cat big.log | head -50"), null);
+  assert.equal(bash("head -40 src/App.tsx"), null);
   assert.match(bash("pytest -q"), /^smart-bash --b64 /);
   assert.match(bash("cd api && npm test"), /^smart-bash --b64 /);
 });
