@@ -65,6 +65,20 @@ test("process: invalid stdin exits 0 with no stdout (failure mode)", () => {
   assert.match(r.stderr, /ignored/);
 });
 
+test("process: runs when invoked through a symlink (npm global bin)", async () => {
+  const { mkdtempSync, symlinkSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const dir = mkdtempSync(join(tmpdir(), "smart-bash-hook-"));
+  const link = join(dir, "smart-bash-hook");
+  symlinkSync(hookJs, link);
+  const r = spawnSync(process.execPath, [link], {
+    input: JSON.stringify({ tool_name: "Bash", tool_input: { command: "ls" } }),
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /updatedInput/);
+});
+
 test("process: non-Bash tool exits 0 with no stdout", () => {
   const r = runHook(JSON.stringify({ tool_name: "Edit", tool_input: {} }));
   assert.equal(r.status, 0);
