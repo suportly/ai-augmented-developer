@@ -25,10 +25,11 @@ back byte-for-byte; long output comes back condensed, with a short echo of the
 command on the first line. Output that would not get smaller by condensing
 (typically just above the budget) is passed through untouched. So are content
 dumps: when any `;`/`&&` segment ends in `cat`, `head`, `tail`, `sed`, `less`,
-`jq` and the like, or when every segment is a plain listing (`ls`, `echo`,
-`pwd`…), the command is not routed at all, because the agent asked for that
-content, not for a summary of it. A pipeline counts by its last stage, so
-`cat a.log | grep -c ERROR` is still condensed. Extend the dump list with
+`jq`, `git diff`, `git show`, `git blame` and the like, or when every segment
+is a plain listing (`ls`, `echo`, `pwd`…), the command is not routed at all,
+because the agent asked for that content, not for a summary of it. A pipeline
+counts by the stage that produces its content, so `cat a.log | grep -c ERROR`
+and `pytest | cat` are still condensed. Extend the dump list with
 `SMART_BASH_PASSTHROUGH=rg,grep`. Background calls are skipped, the rewrite is
 idempotent, and if the hook fails it does nothing (exit 0, no output), so it
 can never block Bash. Use `node /abs/path/dist/hook.js` as the command when the package is not

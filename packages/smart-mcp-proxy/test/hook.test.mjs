@@ -39,6 +39,19 @@ test("rewrite passes content dumps through untouched (cat/head/sed/jq chains)", 
   assert.match(bash('echo "=== tests"; grep -rn "teach" src | head -20'), /^smart-bash --b64 /);
   assert.equal(bash("cat big.log | head -50"), null);
   assert.equal(bash("head -40 src/App.tsx"), null);
+  // `| cat` only turns the pager off: what feeds it decides.
+  assert.match(bash("pytest -q | cat"), /^smart-bash --b64 /);
+  assert.match(bash("git log --oneline -50 | cat"), /^smart-bash --b64 /);
+  assert.match(bash("curl -s localhost:8000/api/x | jq ."), /^smart-bash --b64 /);
+  // git diff / show / blame are content the agent reads.
+  assert.equal(bash("cd repo && git diff --stat -- api | cat && wc -l api/x.py && git diff -- api/x.py"), null);
+  assert.equal(bash("git --no-pager show HEAD:api/x.py"), null);
+  assert.equal(bash("GIT_PAGER=cat git blame -L 10,40 api/x.py"), null);
+  assert.match(bash("git status --short; pytest -q"), /^smart-bash --b64 /);
+  // Heredoc bodies are data: a `cat` or `|` inside them must not decide.
+  assert.match(bash("python3 - <<'EOF'\nx = a | b; y = 'cat'\nprint(x)\nEOF\npytest -q"), /^smart-bash --b64 /);
+  assert.match(bash("python3 - <<'EOF'\nprint(1)\nEOF"), /^smart-bash --b64 /);
+  assert.equal(bash("python3 - <<'EOF'\nprint(1)\nEOF\ngit diff -- x.py"), null);
   assert.match(bash("pytest -q"), /^smart-bash --b64 /);
   assert.match(bash("cd api && npm test"), /^smart-bash --b64 /);
 });

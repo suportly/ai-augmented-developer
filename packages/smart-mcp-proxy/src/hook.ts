@@ -56,8 +56,9 @@ function defaultBin(): string {
  * the four excerpts and the agent Read all four files.
  *
  * Rule: split the command into pipelines (`;`, `&&`, `||`); each pipeline's
- * output is its last stage's, skipping trailing limiters (`| head -20`).
- * If any pipeline ends in a DUMP command the whole
+ * output is its last stage's, skipping piped-into limiters and dumps
+ * (`| head -20`, `| cat`). If any pipeline ends in a DUMP command, or in
+ * `git diff` / `git show` / `git blame`, the whole
  * output carries content the agent wants → pass through. If every pipeline
  * ends in a DUMP or NEUTRAL command (echo, ls, pwd…) → pass through too.
  * Otherwise (something builds, tests, greps…) → route through smart-bash.
@@ -73,24 +74,40 @@ function dumpSet(): Set<string> {
   return extra.length ? new Set([...DUMP, ...extra]) : DUMP;
 }
 
+/** `git diff`, `git show`, `git blame`: the agent reads that content (its own change, a file at a revision). */
+const GIT_DUMP = /^git\s+(?:--no-pager\s+)?(?:diff|show|blame)\b/;
+
 function firstWord(stage: string): string {
   const words = stage.trim().split(/\s+/);
   while (words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0])) words.shift(); // env assignments
   return (words[0] ?? "").replace(/^.*\//, "");
 }
 
+function stripEnv(stage: string): string {
+  return stage.trim().replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*/, "");
+}
+
+/** Drop heredoc bodies (`<<'EOF' … EOF`): they are data, not shell segments. */
+function stripHeredocs(command: string): string {
+  return command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2[ \t]*(?=\n|$)/g, "<<HEREDOC");
+}
+
 /** True when the command's output is content the agent asked for rather than noise to condense. */
 export function isContentDump(command: string): boolean {
   const dump = dumpSet();
-  const pipelines = command.split(/\s*(?:;|&&|\|\|)\s*/).map((p) => p.trim()).filter(Boolean);
+  // Newlines separate commands too (once heredoc bodies are gone).
+  const pipelines = stripHeredocs(command).split(/\s*(?:;|&&|\|\||\n)\s*/).map((p) => p.trim()).filter(Boolean);
   if (!pipelines.length) return false;
   const lastStages = pipelines.map((p) => {
-    const stages = p.split(/\s*\|\s*/).map(firstWord);
-    let i = stages.length - 1;
-    while (i > 0 && FILTER.has(stages[i])) i--; // `… | head -20` classifies by what feeds it
-    return stages[i] ?? "";
+    const stages = p.split(/\s*\|\s*/);
+    const words = stages.map(firstWord);
+    let i = words.length - 1;
+    // `… | head -20`, `… | cat` (pager off), `… | sed s/x/y/`: a piped-into dump or
+    // filter only reshapes what feeds it, so classify by the stage before it.
+    while (i > 0 && (FILTER.has(words[i]) || dump.has(words[i]))) i--;
+    return GIT_DUMP.test(stripEnv(stages[i] ?? "")) ? "git-dump" : (words[i] ?? "");
   });
-  if (lastStages.some((w) => dump.has(w))) return true;
+  if (lastStages.some((w) => w === "git-dump" || dump.has(w))) return true;
   return lastStages.every((w) => NEUTRAL.has(w));
 }
 
