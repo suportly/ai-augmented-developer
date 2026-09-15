@@ -23,8 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   four excerpts and the agent `Read` all four files. A command passes
   through untouched when any `;`/`&&` segment ends in `cat`, `head`,
   `tail`, `sed`, `less`, `jq` and the like, or when every segment is a
-  plain listing (`ls`, `echo`, `pwd`…); a pipeline counts by its last
-  stage. `SMART_BASH_PASSTHROUGH` extends the dump list.
+  plain listing (`ls`, `echo`, `pwd`…); a pipeline counts by the stage
+  that produces its content (`pytest | cat` is still condensed, `| cat`
+  only turns the pager off), and `git diff` / `git show` / `git blame`
+  count as content. `SMART_BASH_PASSTHROUGH` extends the dump list.
 
 ## [0.23.2] - 2026-09-15
 
