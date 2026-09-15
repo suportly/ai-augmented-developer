@@ -1,0 +1,139 @@
+name: smart-mcp-proxy
+
+# Builds and tests packages/smart-mcp-proxy on every change, and publishes
+# it to the npm registry as @aiadev/smart-mcp-proxy. Mirrors the
+# vscode-extension workflow: a `smart-mcp-proxy-v*` tag push is the manual
+# re-cut path, and a main push whose package.json version has no matching
+# tag auto-releases. Publishing needs the NPM_TOKEN repo secret (an npm
+# granular access token with publish rights on the @aiadev scope); when it
+# is absent the publish step is skipped and the job still succeeds, so the
+# tag/release bookkeeping never runs ahead of an actual publish.
+# See docs/RELEASING.md ("npm: smart-mcp-proxy").
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'smart-mcp-proxy-v*'
+    paths:
+      - 'packages/smart-mcp-proxy/**'
+      - '.github/workflows/smart-mcp-proxy.yml'
+  pull_request:
+    paths:
+      - 'packages/smart-mcp-proxy/**'
+      - '.github/workflows/smart-mcp-proxy.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/smart-mcp-proxy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: packages/smart-mcp-proxy/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball
+          path: packages/smart-mcp-proxy/*.tgz
+          if-no-files-found: error
+
+  release:
+    if: >
+      github.event_name == 'push' &&
+      (startsWith(github.ref, 'refs/tags/smart-mcp-proxy-v') ||
+       github.ref == 'refs/heads/main')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write   # npm provenance attestation
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve release context
+        id: ctx
+        env:
+          GITHUB_REF_NAME: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME#refs/tags/}"
+            VERSION="${TAG#smart-mcp-proxy-v}"
+            SHOULD_RELEASE=true
+            CREATE_TAG=false
+          else
+            VERSION=$(jq -r .version packages/smart-mcp-proxy/package.json)
+            TAG="smart-mcp-proxy-v${VERSION}"
+            if git ls-remote --tags --exit-code origin "${TAG}" >/dev/null 2>&1; then
+              echo "Tag ${TAG} already exists on origin; nothing to release."
+              SHOULD_RELEASE=false
+              CREATE_TAG=false
+            else
+              echo "Version ${VERSION} has no matching tag; auto-releasing."
+              SHOULD_RELEASE=true
+              CREATE_TAG=true
+            fi
+          fi
+          {
+            echo "tag=${TAG}"
+            echo "version=${VERSION}"
+            echo "should_release=${SHOULD_RELEASE}"
+            echo "create_tag=${CREATE_TAG}"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        if: steps.ctx.outputs.should_release == 'true'
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: packages/smart-mcp-proxy/package-lock.json
+      - name: Install and build
+        if: steps.ctx.outputs.should_release == 'true'
+        working-directory: packages/smart-mcp-proxy
+        run: npm ci && npm run build
+      - name: Publish to npm
+        if: steps.ctx.outputs.should_release == 'true' && env.NODE_AUTH_TOKEN != ''
+        working-directory: packages/smart-mcp-proxy
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+      - name: Publish skipped
+        if: steps.ctx.outputs.should_release == 'true' && env.NODE_AUTH_TOKEN == ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: echo "::warning::NPM_TOKEN secret is not set; skipped npm publish and tagging. See docs/RELEASING.md."
+      # Tag after a successful publish, never before (same rationale as the
+      # vscode-extension workflow: a pre-created tag turns a publish failure
+      # into an unrecoverable no-op on rerun).
+      - name: Create and push tag (main-push path)
+        if: steps.ctx.outputs.create_tag == 'true' && env.NODE_AUTH_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ steps.ctx.outputs.tag }}
+          VERSION: ${{ steps.ctx.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "smart-mcp-proxy ${VERSION} (auto-tagged from main)"
+          git push origin "$TAG"
+      - name: Attach tarball to GitHub release
+        if: steps.ctx.outputs.should_release == 'true' && env.NODE_AUTH_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ctx.outputs.tag }}
+          name: smart-mcp-proxy ${{ steps.ctx.outputs.version }}
+          files: packages/smart-mcp-proxy/*.tgz

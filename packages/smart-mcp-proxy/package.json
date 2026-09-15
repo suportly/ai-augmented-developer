@@ -11,8 +11,13 @@
     "smart-bash-hook": "./dist/hook.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "BENCHMARK.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=18"
   },
@@ -21,6 +26,7 @@
     "start": "node dist/index.js",
     "dev": "tsc -p tsconfig.json --watch",
     "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test",
     "clean": "rm -rf dist"
   },
   "repository": {

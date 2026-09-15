@@ -5,6 +5,13 @@ the `.github/workflows/publish.yml` workflow on every GitHub release
 event. Authentication uses **OIDC trusted publishing** — no long-lived
 API token lives in this repository.
 
+Two more artefacts have their own release lanes, both driven by a version
+bump in their `package.json` on `main`: the VS Code extension
+(`.github/workflows/vscode-extension.yml`, Marketplace, `VSCE_PAT` secret)
+and the npm package `@aiadev/smart-mcp-proxy`
+(`.github/workflows/smart-mcp-proxy.yml`, npm registry, `NPM_TOKEN` secret;
+see [npm: smart-mcp-proxy](#npm-smart-mcp-proxy) at the end).
+
 This document covers the **one-time setup** (per-maintainer), the
 **routine release flow** (every release), and the most common
 **failure modes**.
@@ -41,7 +48,7 @@ On <https://pypi.org/manage/project/aiadev/settings/publishing/> click
 project already exists) with:
 
 | Field | Value |
-|---|---|
+| --- | --- |
 | PyPI Project Name | `aiadev` |
 | Owner | `suportly` |
 | Repository name | `ai-augmented-developer` |
@@ -190,3 +197,51 @@ a feature PR), the Marketplace stayed on 0.0.10 and the gap was only
 caught by a user report. The auto-release flow above eliminates that
 failure mode.
 
+
+## npm: smart-mcp-proxy
+
+`packages/smart-mcp-proxy` ships to the npm registry as
+`@aiadev/smart-mcp-proxy` through `.github/workflows/smart-mcp-proxy.yml`.
+The lane mirrors the VS Code extension: every push and PR touching the
+package builds, tests and packs it; a **main push whose `package.json`
+version has no `smart-mcp-proxy-v<version>` tag yet** publishes and then
+tags; a manual `smart-mcp-proxy-v*` tag push re-cuts a release.
+
+### One-time setup
+
+1. On [npmjs.com](https://www.npmjs.com/) make sure you own the `aiadev`
+   scope: either create the **organization** `aiadev` (free for public
+   packages) or rename the package in `packages/smart-mcp-proxy/package.json`
+   to a scope you own (`@<your-user>/smart-mcp-proxy`) or to the unscoped
+   `smart-mcp-proxy`. The workflow reads the name from `package.json`.
+2. Create a **granular access token** (Access Tokens → Generate new token →
+   Granular) with *Read and write* on packages, scoped to `@aiadev`, and
+   with **bypass 2FA for automation** enabled, otherwise `npm publish` from
+   CI fails on the 2FA prompt.
+3. Store it in the repository:
+
+   ```bash
+   gh secret set NPM_TOKEN --repo suportly/ai-augmented-developer
+   ```
+
+Until `NPM_TOKEN` exists the workflow still runs build and tests but skips
+the publish, the tag and the GitHub release with a warning, so nothing gets
+marked as released without an actual publish.
+
+### Routine release
+
+1. Bump `version` in `packages/smart-mcp-proxy/package.json` (and note it in
+   `CHANGELOG.md` under the framework version that ships alongside).
+2. Merge to `main`. The workflow publishes with provenance
+   (`npm publish --provenance --access public`), creates the
+   `smart-mcp-proxy-v<version>` tag and attaches the tarball to a GitHub
+   release named `smart-mcp-proxy <version>`.
+3. Verify: `npm view @aiadev/smart-mcp-proxy version`.
+
+### Retrying a failed publish
+
+The tag is created only after a successful publish, so a failed run (expired
+token, missing scope) can simply be re-run from the Actions tab or by pushing
+`main` again. If a tag was pushed by hand before the publish succeeded,
+delete it (`git push origin :refs/tags/smart-mcp-proxy-v<version>`) or push
+the tag again to take the manual re-cut path.
