@@ -70,6 +70,20 @@ configured — or it is unavailable at runtime — omit the Impacted subsystems
 section and prepare the review context exactly as before. Never emit an error
 because a provider is absent.
 
+## Diff summary (optional — token-economy preset)
+
+When the `smart_git_diff` tool is available (the optional `token-economy`
+preset, spec 0022), open the **Changed Files** section with its output for the
+branch range (e.g. `main...HEAD`): the `git diff --stat` verbatim followed by
+one to three bullets per file written by the local model. Read the full diff of
+a file only where its bullets are not enough. This keeps the reviewer's context
+small without hiding any file: every changed path is still listed by the stat.
+
+**Graceful degradation.** The tool is optional. When it is not configured — or
+the local model is unavailable, in which case it returns the stat and lists the
+files as not summarized — fall back to `git diff --stat` plus the full diff as
+before. Never emit an error because the tool is absent.
+
 ## Dispatching the Reviewer
 
 Use the `code-reviewer` agent with the review context document.
