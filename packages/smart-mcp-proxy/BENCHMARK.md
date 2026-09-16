@@ -213,6 +213,44 @@ O servidor passou por cinco versões durante o benchmark, cada uma corrigindo um
 
 A rodada final acima usa a v5 fatorada (spec 0022: `core.ts` compartilhado por MCP, CLI e hook). A v6 veio de uso real, não do benchmark: numa sessão de trabalho com o hook ativo, 2 das 7 saídas condensadas ficaram *maiores* que o original (2.087 → 2.278 chars; 3.060 → 3.067), porque listagens de `grep` pouco acima do orçamento não têm o que resumir e o envelope (eco do comando encadeado de 400+ chars, cabeçalho, RAW TAIL) pesava mais que o conteúdo. Nas outras 5, a redução foi de 55% no agregado (29.063 → 12.957 chars), com latência mediana de 6,2 s por chamada condensada contra 2,2 s crua.
 
+## Modelo local vs. modo determinístico
+
+Pergunta: quanto o modelo local acrescenta sobre os blocos determinísticos (assinaturas de erro com file:line e trecho head/tail)? Rodada em 2026-09-16 com o mesmo agente e os mesmos seis casos, três variantes: `bash` puro, `bash+hook` com `qwen2.5-coder:3b`, e `bash+hook-det` com `SMART_MCP_MODE=deterministic` (nunca chama o modelo). Os quatro casos sintéticos passaram a ser entregues como `cat caseN.log`, porque a regra de pass-through da 0.23.3 deixa `cat` de arquivos comuns sem condensar.
+
+| Caso | Variante | Turnos | Chars da tool | Tokens entrada | Saída | Custo | Latência | Acertou? |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |
+| js-stack | bash | 2 | 10,039 | 32,182 | 12 | $0.1038 | 7.2 s | ✅ |
+| js-stack | bash+hook | 2 | 1,367 | 17,282 | 23 | $0.0553 | 8.4 s | ✅ |
+| js-stack | bash+hook-det | 2 | 2,497 | 17,231 | 9 | $0.0606 | 5.7 s | ✅ |
+| jest-fail | bash | 2 | 10,038 | 15,970 | 18 | $0.1008 | 5.7 s | ✅ |
+| jest-fail | bash+hook | 2 | 832 | 22,180 | 12 | $0.0572 | 9.3 s | ✅ |
+| jest-fail | bash+hook-det | 2 | 2,521 | 11,984 | 19 | $0.0603 | 5.6 s | ✅ |
+| py-trace | bash | 2 | 10,039 | 35,396 | 14 | $0.1212 | 6.9 s | ✅ |
+| py-trace | bash+hook | 2 | 1,170 | 11,259 | 18 | $0.0543 | 7.7 s | ✅ |
+| py-trace | bash+hook-det | 2 | 2,591 | 12,311 | 18 | $0.0645 | 5.6 s | ✅ |
+| build-ok | bash | 2 | 8,062 | 14,605 | 19 | $0.0858 | 5.1 s | ✅ |
+| build-ok | bash+hook | 2 | 549 | 10,943 | 21 | $0.0490 | 8.1 s | ✅ |
+| build-ok | bash+hook-det | 2 | 2,275 | 23,570 | 12 | $0.0608 | 6.3 s | ✅ |
+| pytest-real | bash | 2 | 10,040 | 25,047 | 23 | $0.0942 | 6.8 s | ✅ |
+| pytest-real | bash+hook | 2 | 2,848 | 11,953 | 24 | $0.0600 | 10.9 s | ✅ |
+| pytest-real | bash+hook-det | 2 | 2,716 | 11,817 | 18 | $0.0588 | 7.5 s | ✅ |
+| mdlint-real | bash | 2 | 10,040 | 29,972 | 8 | $0.0956 | 13.2 s | ✅ |
+| mdlint-real | bash+hook | 2 | 2,619 | 23,390 | 12 | $0.0613 | 15.5 s | ✅ |
+| mdlint-real | bash+hook-det | 2 | 2,294 | 17,781 | 24 | $0.0602 | 10.8 s | ✅ |
+
+### Agregado (6 casos)
+
+| Métrica | bash | bash+hook (modelo) | bash+hook-det (sem modelo) | det vs modelo |
+| --- | ---: | ---: | ---: | ---: |
+| Turnos | 12 | 12 | 12 | |
+| Chars da tool | 58,258 | 9,385 | 14,894 | -59% |
+| Tokens entrada | 153,172 | 97,007 | 94,694 | 2% |
+| Custo | $0.6014 | $0.3371 | $0.3652 | -8% |
+| Latência | 44.9 s | 60.0 s | 41.5 s | 31% |
+| Acertos | 6/6 | 6/6 | 6/6 | |
+
+Leitura: as duas variantes acertam 6/6 em 2 turnos. O modelo entrega 37% menos chars que o modo determinístico, mas isso não se traduz em tokens de entrada (diferença de 2%, dentro do ruído de cache) nem em custo relevante (8%, também dentro do ruído: o caso `build-ok` inverteu o sinal só por variação de cache). Em latência o modo determinístico é 31% mais rápido que o modelo e empata com o `bash` puro. Ou seja, quase toda a economia (74% menos chars, 38% menos custo contra o `bash`) vem das partes determinísticas; o modelo acrescenta compressão marginal, 4 s por chamada e o risco de conteúdo inventado visto em uso real.
+
 ## Ressalvas
 
 - Uma repetição por caso e variante. Os tokens variam alguns por cento entre execuções por conta da contabilidade de cache; o custo é a métrica mais estável.

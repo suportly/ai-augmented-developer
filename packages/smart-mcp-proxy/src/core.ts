@@ -13,6 +13,7 @@
  *   OLLAMA_MODEL               Model to summarize   (default: qwen2.5-coder:3b)
  *   OLLAMA_TIMEOUT_MS          HTTP timeout         (default: 60000)
  *   SMART_MCP_MAX_CHARS        Raw-output budget    (default: 2000)
+ *   SMART_MCP_MODE             "deterministic" = never call the model (signatures + excerpt only)
  *   SMART_MCP_EXEC_TIMEOUT_MS  Command timeout      (default: 300000)
  *   SMART_MCP_MAX_BUFFER       exec maxBuffer bytes (default: 50 MiB)
  */
@@ -39,6 +40,8 @@ export const CONFIG = {
   ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5-coder:3b",
   ollamaTimeoutMs: envInt("OLLAMA_TIMEOUT_MS", 60_000),
   maxChars: envInt("SMART_MCP_MAX_CHARS", 2_000),
+  /** SMART_MCP_MODE=deterministic: never call the model; condense with error signatures + head/tail excerpt only. */
+  deterministic: (process.env.SMART_MCP_MODE ?? "").toLowerCase() === "deterministic",
   execTimeoutMs: envInt("SMART_MCP_EXEC_TIMEOUT_MS", 300_000),
   maxBufferBytes: envInt("SMART_MCP_MAX_BUFFER", 50 * 1024 * 1024),
 } as const;
@@ -271,6 +274,7 @@ export function rawTail(text: string, lines: number): string {
 // ---------------------------------------------------------------------------
 
 export async function ollamaGenerate(system: string, prompt: string): Promise<string> {
+  if (CONFIG.deterministic) throw new Error("model disabled (SMART_MCP_MODE=deterministic)");
   const response = await axios.post(
     `${CONFIG.ollamaUrl}/api/generate`,
     {
@@ -340,7 +344,7 @@ export class RawCache {
 // Condensation — the one decision function shared by every entry point
 // ---------------------------------------------------------------------------
 
-export type CondenseMode = "verbatim" | "condensed" | "excerpt" | "fallback";
+export type CondenseMode = "verbatim" | "condensed" | "excerpt" | "fallback" | "deterministic";
 
 export interface Condensed {
   mode: CondenseMode;
@@ -391,6 +395,12 @@ async function buildEnvelope(
   const rawId = cache?.put({ command, output, status });
   const idNote = rawId ? ` raw_id=${rawId}` : "";
   const signatures = errorSignatures(output);
+  if (CONFIG.deterministic) {
+    const lineCount = output.split("\n").length;
+    const header = `[smart-mcp-proxy] ${output.length} chars / ${lineCount} lines condensed (error lines verbatim, head/tail excerpt).${idNote}`;
+    const excerpt = `EXCERPT (head/tail, verbatim):\n${headTail(output, CONFIG.maxChars)}`;
+    return { mode: "deterministic", rawId, text: [header, signatures, excerpt].filter(Boolean).join("\n\n") };
+  }
   try {
     const summary = await summarizeLog(command, output);
     const excerpt = headTail(output, CONFIG.maxChars);

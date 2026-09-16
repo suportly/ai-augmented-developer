@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `smart-mcp-proxy`: `SMART_MCP_MODE=deterministic` never calls the local
+  model; long output is condensed with the error signatures plus a
+  head/tail excerpt, under a neutral header. Added to measure what the
+  model contributes on top of the deterministic blocks.
+
+### Fixed
+
+- `smart-bash-hook`: dumping a captured log (`cat build.log`,
+  `tail -200 x.output`, `.log`/`.out`/`.output`/`.err`) is condensed like any
+  other log instead of passing through as content. Found because the
+  benchmark fixtures are delivered with `cat case1.txt` and the 0.23.3
+  pass-through rule left them uncondensed.
+
 ## [0.23.3] - 2026-09-15
 
 ### Fixed
