@@ -2,22 +2,20 @@
 
 An **opt-in** preset that wires the [`smart-mcp-proxy`](../../packages/smart-mcp-proxy/)
 compressor into a project: long command output is condensed before it reaches
-the agent (error lines verbatim with file:line plus a head/tail excerpt by
-default; a **local** Ollama model with `SMART_MCP_MODE=model`), so test
-suites, builds and linters stop flooding the context window. Spec:
+the agent — error lines verbatim with the nearest `file:line`, plus a head/tail
+excerpt — so test suites, builds and linters stop flooding the context window.
+Nothing is rewritten: every byte comes from the command itself. Spec:
 [`specs/0022-smart-mcp-proxy-token-economy/`](../../specs/0022-smart-mcp-proxy-token-economy/).
 
-This preset ships **nothing mandatory**: no other preset gains a dependency,
-no model is required (the default mode is deterministic), and even in model
-mode an absent Ollama degrades to the same excerpt plus `ERROR SIGNATURES`. The framework core still implements no
+This preset ships **nothing mandatory**: no other preset gains a dependency
+and no model is involved at all — condensation is pure text processing. The framework core still implements no
 compressor (Article III); the compressor is a separate npm package this preset
 merely declares.
 
 ## What it declares
 
 - `mcps.yaml` — one MCP server, `smart-bash`, exposing `smart_bash_execute`
-  (condensed command output, raw output cached per call) and `smart_git_diff`
-  (`git diff --stat` verbatim + one summary per file).
+  (condensed command output, raw output cached per call).
 - `hooks/claude-code-settings.snippet.json` — a Claude Code `PreToolUse` hook
   that routes the **native Bash tool** through the same condenser. This is what
   makes the economy automatic: the agent keeps using Bash and never has to pick
@@ -34,7 +32,6 @@ merely declares.
 git clone https://github.com/suportly/ai-augmented-developer.git
 cd ai-augmented-developer/packages/smart-mcp-proxy && npm install && npm run build
 npm install -g .
-ollama pull qwen2.5-coder:3b                 # optional: only with SMART_MCP_MODE=model
 
 # 2. the preset (declares the MCP server on every platform aiadev supports)
 aiadev install --preset token-economy
@@ -75,8 +72,8 @@ it does nothing, so a broken install can never block the Bash tool.
 The MCP server is platform-neutral: `aiadev install` translates `mcps.yaml`
 into each platform's native config (Claude Code `.mcp.json`, Cursor
 `.cursor/mcp.json`, Gemini CLI `.gemini/settings.json`, Codex
-`.codex/config.toml`, OpenCode `opencode.json`), so `smart_bash_execute` and
-`smart_git_diff` are available everywhere. The **automatic** path (the hook on
+`.codex/config.toml`, OpenCode `opencode.json`), so `smart_bash_execute` is
+available everywhere. The **automatic** path (the hook on
 the native shell tool) depends on the platform having a rewriting hook:
 
 | Platform | MCP tools | Native-shell hook |
@@ -109,7 +106,7 @@ sessions before and after enabling the preset.
 
 ## Privacy
 
-Everything runs locally: the default mode needs no model at all, the optional
-model is served by Ollama on `localhost`, the raw output cache lives in the
-MCP server's memory, and `metrics --tokens` never prints message text. Pointing `OLLAMA_URL` at a remote host is a
-consumer decision (Article VI).
+Everything runs locally and no model is involved: condensation is text
+processing, the raw output cache lives in the MCP server's memory, and
+`metrics --tokens` never prints message text. The condenser makes no network
+calls at all.

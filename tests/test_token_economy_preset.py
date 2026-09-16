@@ -73,12 +73,12 @@ def test_catalog_registers_optin_preset() -> None:
     assert entry["stability"] == "experimental"
 
 
-def test_review_skill_has_optional_diff_summary_step() -> None:
-    body = REVIEW_SKILL.read_text(encoding="utf-8")
-    assert "smart_git_diff" in body
-    lowered = body.lower()
-    assert "optional" in lowered
-    assert "degrad" in lowered  # graceful degradation clause
+def test_no_model_dependency_anywhere_in_the_preset() -> None:
+    """0.4.0 removed the local-model path; nothing may reintroduce it silently."""
+    for path in (PRESET / "preset.yaml", MCPS, README, TOKEN_DOC, REVIEW_SKILL):
+        body = path.read_text(encoding="utf-8").lower()
+        assert "ollama" not in body, f"{path} still references a model backend"
+        assert "smart_git_diff" not in body, f"{path} references a removed tool"
 
 
 def test_token_economy_doc_cites_the_package_and_keeps_non_goal() -> None:

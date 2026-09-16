@@ -3,25 +3,26 @@
  *
  * Everything that decides what an agent gets to see lives here, so the
  * MCP server, the `smart-bash` CLI and the `smart-bash-hook` PreToolUse hook
- * behave identically: run a command, return short output verbatim, condense
- * long output with a local Ollama model, and always append the
- * deterministic blocks (ERROR SIGNATURES, RAW TAIL) that the benchmark
- * showed were needed for the agent to trust the result.
+ * behave identically: run a command, return short output verbatim, and
+ * condense long output deterministically — error lines extracted verbatim
+ * with the nearest project frame, plus a head/tail excerpt.
+ *
+ * No model is involved. A local-model summarizer existed until 0.3.0; it was
+ * removed in 0.4.0 after measurement: BENCHMARK.md showed it matched this
+ * path's accuracy while costing ~4 s per call, and two independent studies of
+ * an equivalent tool (JetBrains, 425 trials; Quesma, 1,740 attempts) found
+ * such preprocessing raises cost per task because it inflates turn count.
+ * Nothing here may rewrite output: every byte an agent sees is copied verbatim
+ * from the command it ran.
  *
  * Configuration (environment variables, all optional):
- *   OLLAMA_URL                 Ollama base URL      (default: http://localhost:11434)
- *   OLLAMA_MODEL               Model to summarize   (default: qwen2.5-coder:3b)
- *   OLLAMA_TIMEOUT_MS          HTTP timeout         (default: 60000)
  *   SMART_MCP_MAX_CHARS        Raw-output budget    (default: 2000)
- *   SMART_MCP_MODE             "deterministic" (default) = never call a model: error signatures + head/tail excerpt;
- *                              "model" = condense with the local Ollama model (OLLAMA_* below)
  *   SMART_MCP_EXEC_TIMEOUT_MS  Command timeout      (default: 300000)
  *   SMART_MCP_MAX_BUFFER       exec maxBuffer bytes (default: 50 MiB)
  */
 
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import axios from "axios";
 
 const execAsync = promisify(exec);
 
@@ -37,56 +38,16 @@ function envInt(name: string, fallback: number): number {
 }
 
 export const CONFIG = {
-  ollamaUrl: (process.env.OLLAMA_URL ?? "http://localhost:11434").replace(/\/+$/, ""),
-  ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5-coder:3b",
-  ollamaTimeoutMs: envInt("OLLAMA_TIMEOUT_MS", 60_000),
   maxChars: envInt("SMART_MCP_MAX_CHARS", 2_000),
-  /**
-   * Default since 0.3.0: never call a model; condense with error signatures + head/tail excerpt.
-   * The benchmark (BENCHMARK.md, "Modelo local vs. modo determinístico") showed the model adds
-   * marginal compression at +4 s per call and a real risk of invented lines. SMART_MCP_MODE=model opts in.
-   */
-  deterministic: (process.env.SMART_MCP_MODE ?? "deterministic").toLowerCase() !== "model",
   execTimeoutMs: envInt("SMART_MCP_EXEC_TIMEOUT_MS", 300_000),
   maxBufferBytes: envInt("SMART_MCP_MAX_BUFFER", 50 * 1024 * 1024),
 } as const;
 
-/**
- * Hard cap on how much raw text we send to the local model. Small models
- * have short context windows; sending an unbounded log would silently
- * truncate at the model side and lose the tail (where the error usually is).
- */
-export const OLLAMA_INPUT_CAP = 24_000;
-
-/** Max tokens the model may emit. A summary must stay small by construction. */
-export const OLLAMA_NUM_PREDICT = 400;
-
-/** Verbatim tail appended after every summary, so exit summaries survive even when the model drops them. */
+/** Verbatim tail of the output, kept available for callers that want the last lines. */
 export const RAW_TAIL_LINES = 8;
 
 /** Cap on raw output returned via raw_id / force_raw, comparable to Claude Code's own Bash truncation. */
 export const RAW_RETURN_CAP = 12_000;
-
-export const LOG_SYSTEM_PROMPT = `You are a log filter, not an assistant. You never explain, never suggest fixes, never write code.
-Input: the raw output of a shell command. Output: ONLY the lines that matter, copied verbatim, in exactly this format:
-
-ERRORS:
-<verbatim lines, or "none">
-RESULT:
-<verbatim lines, or "none">
-
-What counts as ERRORS (always include when present):
-- Exception / error messages and their stack frames (keep frames in project files; drop frames inside node_modules, site-packages, /usr/lib).
-- Failing tests: lines marked ✕, ✗, FAIL, FAILED, ERROR, ●, and the assertion detail that follows (expect/Expected/Received/AssertionError/diff lines, and the "at file:line" frame).
-- Compiler / linter / type errors with file:line.
-What counts as RESULT:
-- Final summary lines: test counts (passed/failed), build success/failure, exit summaries, produced artifacts, warnings that affect correctness.
-Never include: progress bars, download/compile progress, spinners, timestamps, passing-test lines (✓), repeated lines.
-Never add commentary, explanations, advice or markdown fences.`;
-
-export const DIFF_SYSTEM_PROMPT = `You summarize a git diff of ONE file for a code reviewer.
-Output ONLY 1 to 3 short bullet lines (each starting with "- "), naming what changed: functions/classes/config keys added, removed or renamed, and any behavior change. Use identifiers from the diff verbatim.
-No code, no advice, no praise, no markdown fences, max 60 words total.`;
 
 // ---------------------------------------------------------------------------
 // Command execution
@@ -202,16 +163,6 @@ export function normalizeOutput(text: string): string {
   return out.join("\n");
 }
 
-/** Small models sometimes wrap the answer in fences or add a label line; strip both. */
-export function cleanSummary(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) => !/^\s*```[a-z]*\s*$/i.test(line))
-    .filter((line) => !/^\s*ERRORS \/ RESULT block:\s*$/i.test(line))
-    .join("\n")
-    .trim();
-}
-
 /** Lines that look like error signatures. Deterministic, model-independent. */
 const ERROR_LINE_RE =
   /(\b[A-Za-z_][\w.]*(?:Error|Exception|Failure)\b\s*[:(]|^\s*Traceback \(most recent call last\)|^\s*(?:FAIL|FAILED|ERROR|E)\b\s+\S|^\s*(?:fatal|panic|error)\s*(?:\[[\w-]+\])?\s*:|^\s*npm ERR!|^\s*[✕✗●]\s+\S)/i;
@@ -245,7 +196,7 @@ function nearestFrame(lines: string[], idx: number): string | undefined {
 /**
  * Extract distinct error-looking lines with occurrence counts, most frequent
  * first, each with the nearest project frame. Guarantees the root-cause line
- * survives even when the model summarizes only file lists.
+ * survives regardless of how much of the output is excerpted.
  */
 export function errorSignatures(text: string): string {
   const lines = text.split("\n");
@@ -272,49 +223,6 @@ export function errorSignatures(text: string): string {
 export function rawTail(text: string, lines: number): string {
   const all = text.trimEnd().split("\n");
   return all.slice(-lines).join("\n");
-}
-
-// ---------------------------------------------------------------------------
-// Ollama
-// ---------------------------------------------------------------------------
-
-export async function ollamaGenerate(system: string, prompt: string): Promise<string> {
-  if (CONFIG.deterministic) throw new Error("model disabled (set SMART_MCP_MODE=model to enable)");
-  const response = await axios.post(
-    `${CONFIG.ollamaUrl}/api/generate`,
-    {
-      model: CONFIG.ollamaModel,
-      system,
-      prompt,
-      stream: false,
-      options: { temperature: 0, num_predict: OLLAMA_NUM_PREDICT },
-    },
-    { timeout: CONFIG.ollamaTimeoutMs },
-  );
-  const text: unknown = response.data?.response;
-  if (typeof text !== "string" || text.trim() === "") {
-    throw new Error("Ollama returned an empty response");
-  }
-  return cleanSummary(text);
-}
-
-export async function summarizeLog(command: string, output: string): Promise<string> {
-  const clipped = headTail(normalizeOutput(output), OLLAMA_INPUT_CAP);
-  const prompt = `Command executed:\n${command}\n\nRaw output:\n${clipped}\n\nProduce the ERRORS / RESULT block and nothing else.`;
-  return ollamaGenerate(LOG_SYSTEM_PROMPT, prompt);
-}
-
-export function describeOllamaError(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    if (error.code === "ECONNREFUSED") return `Ollama unreachable at ${CONFIG.ollamaUrl} (connection refused)`;
-    if (error.code === "ECONNABORTED") return `Ollama timed out after ${CONFIG.ollamaTimeoutMs} ms`;
-    if (error.response) {
-      const body = typeof error.response.data === "object" ? JSON.stringify(error.response.data) : String(error.response.data);
-      return `Ollama HTTP ${error.response.status}: ${body.slice(0, 300)}`;
-    }
-    return `Ollama request failed: ${error.message}`;
-  }
-  return error instanceof Error ? error.message : String(error);
 }
 
 // ---------------------------------------------------------------------------
@@ -349,7 +257,7 @@ export class RawCache {
 // Condensation — the one decision function shared by every entry point
 // ---------------------------------------------------------------------------
 
-export type CondenseMode = "verbatim" | "condensed" | "excerpt" | "fallback" | "deterministic";
+export type CondenseMode = "verbatim" | "condensed";
 
 export interface Condensed {
   mode: CondenseMode;
@@ -362,13 +270,10 @@ export interface Condensed {
  * Decide what the agent gets for a command's combined output.
  *
  * - under `maxChars`: verbatim;
- * - default (deterministic): ERROR SIGNATURES + head/tail EXCERPT, no model;
- * - with SMART_MCP_MODE=model the local model condenses it, and the deterministic
- *   ERROR SIGNATURES + RAW TAIL blocks are appended;
- * - a summary that is no shorter than a plain excerpt is replaced by the excerpt;
- * - if the model is unreachable, a truncated excerpt + signatures + warning;
- * - whatever was built, if it (plus the caller's `overhead`) is not smaller
- *   than the raw output, the raw output is returned verbatim (mode "verbatim").
+ * - otherwise: ERROR SIGNATURES (verbatim error lines + nearest project frame)
+ *   plus a head/tail EXCERPT, both copied from the output, never rewritten;
+ * - if that envelope (plus the caller's `overhead`) would not be smaller than
+ *   the raw output, the raw output is returned verbatim.
  */
 export async function condense(
   command: string,
@@ -381,115 +286,17 @@ export async function condense(
   if (output.length <= CONFIG.maxChars) {
     return { mode: "verbatim", text: output };
   }
-  const envelope = await buildEnvelope(command, output, status, cache);
-  // Seen in real sessions: output just above the budget (grep listings of
-  // ~2.1k chars) came back as a 2.3k-char envelope — header, summary that
-  // re-emitted the listing, and RAW TAIL together outgrew the raw output.
-  // An envelope that saves nothing is worse than nothing: hand the output over as-is.
-  if (envelope.text.length + overhead >= output.length) {
-    return { mode: "verbatim", text: output };
-  }
-  return envelope;
-}
-
-async function buildEnvelope(
-  command: string,
-  output: string,
-  status: string,
-  cache?: RawCache,
-): Promise<Condensed> {
   const rawId = cache?.put({ command, output, status });
   const idNote = rawId ? ` raw_id=${rawId}` : "";
   const signatures = errorSignatures(output);
-  if (CONFIG.deterministic) {
-    const lineCount = output.split("\n").length;
-    const header = `[smart-mcp-proxy] ${output.length} chars / ${lineCount} lines condensed (error lines verbatim, head/tail excerpt).${idNote}`;
-    const excerpt = `EXCERPT (head/tail, verbatim):\n${headTail(output, CONFIG.maxChars)}`;
-    return { mode: "deterministic", rawId, text: [header, signatures, excerpt].filter(Boolean).join("\n\n") };
+  const lineCount = output.split("\n").length;
+  const header = `[smart-mcp-proxy] ${output.length} chars / ${lineCount} lines condensed (error lines verbatim, head/tail excerpt).${idNote}`;
+  const excerpt = `EXCERPT (head/tail, verbatim):\n${headTail(output, CONFIG.maxChars)}`;
+  const text = [header, signatures, excerpt].filter(Boolean).join("\n\n");
+  // An envelope that saves nothing is worse than nothing: hand the output over as-is.
+  // Seen in real sessions: grep listings just above the budget came back larger than the raw output.
+  if (text.length + overhead >= output.length) {
+    return { mode: "verbatim", text: output };
   }
-  try {
-    const summary = await summarizeLog(command, output);
-    const excerpt = headTail(output, CONFIG.maxChars);
-    if (summary.length >= excerpt.length) {
-      const header = `[smart-mcp-proxy] Output was ${output.length} chars; ${CONFIG.ollamaModel} summary was not shorter than a plain excerpt, showing the excerpt instead.${idNote}`;
-      return { mode: "excerpt", rawId, text: [header, excerpt, signatures].filter(Boolean).join("\n\n") };
-    }
-    const lineCount = output.split("\n").length;
-    const header = `[smart-mcp-proxy] ${output.length} chars / ${lineCount} lines condensed (error lines verbatim).${idNote}`;
-    const tail = `RAW TAIL (last ${RAW_TAIL_LINES} lines, verbatim):\n${rawTail(output, RAW_TAIL_LINES)}`;
-    return { mode: "condensed", rawId, text: [header, summary, signatures, tail].filter(Boolean).join("\n\n") };
-  } catch (error) {
-    const reason = describeOllamaError(error);
-    const header = `[smart-mcp-proxy] WARNING: summarization failed (${reason}). Showing a truncated excerpt of the ${output.length}-char output.${idNote}`;
-    return { mode: "fallback", rawId, text: [header, headTail(output, CONFIG.maxChars), signatures].filter(Boolean).join("\n\n") };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Git diff summarization
-// ---------------------------------------------------------------------------
-
-export interface DiffFile {
-  file: string;
-  text: string;
-}
-
-/** Split a unified diff into per-file blocks, keyed by the `+++ b/<path>` (or `--- a/<path>` for deletions). */
-export function splitDiffByFile(diff: string): DiffFile[] {
-  const blocks = diff.split(/^(?=diff --git )/m).filter((b) => b.trim() !== "");
-  return blocks.map((text) => {
-    const header = /^diff --git a\/(.+?) b\/(.+)$/m.exec(text);
-    const file = header ? header[2] : "(unknown)";
-    return { file, text };
-  });
-}
-
-/** Per-file input cap sent to the model; large files are head/tail clipped. */
-export const DIFF_FILE_CAP = 6_000;
-/** Total model input budget across files. */
-export const DIFF_TOTAL_CAP = OLLAMA_INPUT_CAP;
-
-export interface DiffSummary {
-  stat: string;
-  bullets: string[];
-  skipped: string[];
-  warning?: string;
-}
-
-export async function summarizeDiff(diff: string, stat: string): Promise<DiffSummary> {
-  const files = splitDiffByFile(diff);
-  const bullets: string[] = [];
-  const skipped: string[] = [];
-  let spent = 0;
-  let warning: string | undefined;
-  for (const f of files) {
-    const clipped = headTail(f.text, DIFF_FILE_CAP);
-    if (spent + clipped.length > DIFF_TOTAL_CAP) {
-      skipped.push(f.file);
-      continue;
-    }
-    spent += clipped.length;
-    try {
-      const out = await ollamaGenerate(DIFF_SYSTEM_PROMPT, `Diff of ${f.file}:\n${clipped}\n\nBullets:`);
-      const lines = out
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.startsWith("-"))
-        .slice(0, 3);
-      bullets.push(`${f.file}\n${(lines.length ? lines : [`- ${out.split("\n")[0]}`]).map((l) => `  ${l}`).join("\n")}`);
-    } catch (error) {
-      warning = `summarization stopped: ${describeOllamaError(error)}`;
-      skipped.push(f.file, ...files.slice(files.indexOf(f) + 1).map((x) => x.file));
-      break;
-    }
-  }
-  return { stat, bullets, skipped, warning };
-}
-
-export function renderDiffSummary(range: string, s: DiffSummary): string {
-  const parts = [`[smart-mcp-proxy] git diff ${range} — --stat verbatim, then one summary per file by ${CONFIG.ollamaModel}.`, s.stat.trimEnd()];
-  if (s.bullets.length) parts.push(`SUMMARY BY FILE:\n${s.bullets.join("\n")}`);
-  if (s.skipped.length) parts.push(`NOT SUMMARIZED (${s.skipped.length}, over the input budget or model unavailable):\n${s.skipped.map((f) => `  ${f}`).join("\n")}`);
-  if (s.warning) parts.push(`WARNING: ${s.warning}`);
-  return parts.join("\n\n");
+  return { mode: "condensed", rawId, text };
 }

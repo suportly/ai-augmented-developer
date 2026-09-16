@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `smart-mcp-proxy` 0.4.0: the local-model path is gone. `ollamaGenerate`,
+  `summarizeLog`, `summarizeDiff`, `cleanSummary`, `describeOllamaError`, the
+  `smart_git_diff` tool, the `SMART_MCP_MODE` switch, every `OLLAMA_*` variable
+  and the `axios` dependency were removed; the package now has no network
+  access and two runtime dependencies. Condensation is a verbatim
+  `ERROR SIGNATURES` block (error lines with the nearest project `file:line`)
+  plus a head/tail `EXCERPT`, with the existing size guards.
+
+  **Why:** BENCHMARK.md measured the model at the same 6/6 accuracy as this
+  path while costing ~4 s per call, and it invented content twice in live use.
+  Two independent studies of an equivalent tool (JetBrains, 425 billed trials,
+  +7.6% cost at low effort, p=0.004, turns +13.8%; Quesma, 1,740 attempts,
+  +1% to +17% per task) found that condensing tool output *raises* cost per
+  task, because terminal output is a small share of input, prompt caching
+  already prices re-reads at 1/10–1/30, and any extra turn erases the saving.
+  Keeping a code path that the evidence does not support is a liability.
+
+  The `requesting-code-review` skill loses its diff-summary section, and
+  `tests/test_token_economy_preset.py` gains a guard against reintroducing a
+  model backend. Whether the remaining deterministic path earns its keep is
+  the open question the next experiment measures — on cost per completed task
+  and turn count, never on "tokens saved".
+
 ## [0.23.4] - 2026-09-16
 
 ### Changed
