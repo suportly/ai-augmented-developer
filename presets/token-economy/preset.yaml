@@ -2,10 +2,10 @@ name: token-economy
 version: 1.0.0
 description: >
   Opt-in preset that declares the smart-mcp-proxy MCP server (long command
-  output condensed by a local Ollama model) and ships the Claude Code
-  PreToolUse hook snippet that routes the native Bash tool through it.
-  Nothing mandatory; without Ollama everything degrades to truncated
-  excerpts. See specs/0022-smart-mcp-proxy-token-economy/.
+  output condensed to error lines + excerpt, or by a local Ollama model when
+  opted in) and ships the Claude Code PreToolUse hook snippet that routes the
+  native Bash tool through it. Nothing mandatory; no model required.
+  See specs/0022-smart-mcp-proxy-token-economy/.
 
 variables:
   - name: PROJECT_NAME

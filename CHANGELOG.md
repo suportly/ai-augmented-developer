@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `smart-mcp-proxy` 0.3.0: the deterministic mode is now the **default**;
+  the local Ollama model is opt-in with `SMART_MCP_MODE=model`. The benchmark
+  (BENCHMARK.md, "Modelo local vs. modo determinístico") showed both at 6/6
+  accuracy with equal input tokens, the deterministic mode 31% faster and
+  without the invented-content risk observed live. No model is required
+  anymore; the `token-economy` preset, catalog and docs say so. Tool
+  descriptions and the ready line report the active mode.
+
 ### Added
 
 - `smart-mcp-proxy`: `SMART_MCP_MODE=deterministic` never calls the local

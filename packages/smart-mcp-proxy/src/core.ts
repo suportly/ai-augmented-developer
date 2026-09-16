@@ -13,7 +13,8 @@
  *   OLLAMA_MODEL               Model to summarize   (default: qwen2.5-coder:3b)
  *   OLLAMA_TIMEOUT_MS          HTTP timeout         (default: 60000)
  *   SMART_MCP_MAX_CHARS        Raw-output budget    (default: 2000)
- *   SMART_MCP_MODE             "deterministic" = never call the model (signatures + excerpt only)
+ *   SMART_MCP_MODE             "deterministic" (default) = never call a model: error signatures + head/tail excerpt;
+ *                              "model" = condense with the local Ollama model (OLLAMA_* below)
  *   SMART_MCP_EXEC_TIMEOUT_MS  Command timeout      (default: 300000)
  *   SMART_MCP_MAX_BUFFER       exec maxBuffer bytes (default: 50 MiB)
  */
@@ -40,8 +41,12 @@ export const CONFIG = {
   ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5-coder:3b",
   ollamaTimeoutMs: envInt("OLLAMA_TIMEOUT_MS", 60_000),
   maxChars: envInt("SMART_MCP_MAX_CHARS", 2_000),
-  /** SMART_MCP_MODE=deterministic: never call the model; condense with error signatures + head/tail excerpt only. */
-  deterministic: (process.env.SMART_MCP_MODE ?? "").toLowerCase() === "deterministic",
+  /**
+   * Default since 0.3.0: never call a model; condense with error signatures + head/tail excerpt.
+   * The benchmark (BENCHMARK.md, "Modelo local vs. modo determinístico") showed the model adds
+   * marginal compression at +4 s per call and a real risk of invented lines. SMART_MCP_MODE=model opts in.
+   */
+  deterministic: (process.env.SMART_MCP_MODE ?? "deterministic").toLowerCase() !== "model",
   execTimeoutMs: envInt("SMART_MCP_EXEC_TIMEOUT_MS", 300_000),
   maxBufferBytes: envInt("SMART_MCP_MAX_BUFFER", 50 * 1024 * 1024),
 } as const;
@@ -274,7 +279,7 @@ export function rawTail(text: string, lines: number): string {
 // ---------------------------------------------------------------------------
 
 export async function ollamaGenerate(system: string, prompt: string): Promise<string> {
-  if (CONFIG.deterministic) throw new Error("model disabled (SMART_MCP_MODE=deterministic)");
+  if (CONFIG.deterministic) throw new Error("model disabled (set SMART_MCP_MODE=model to enable)");
   const response = await axios.post(
     `${CONFIG.ollamaUrl}/api/generate`,
     {
@@ -357,7 +362,8 @@ export interface Condensed {
  * Decide what the agent gets for a command's combined output.
  *
  * - under `maxChars`: verbatim;
- * - otherwise the local model condenses it, and the deterministic
+ * - default (deterministic): ERROR SIGNATURES + head/tail EXCERPT, no model;
+ * - with SMART_MCP_MODE=model the local model condenses it, and the deterministic
  *   ERROR SIGNATURES + RAW TAIL blocks are appended;
  * - a summary that is no shorter than a plain excerpt is replaced by the excerpt;
  * - if the model is unreachable, a truncated excerpt + signatures + warning;

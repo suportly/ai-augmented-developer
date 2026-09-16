@@ -1,14 +1,15 @@
 # `token-economy` preset (opt-in)
 
 An **opt-in** preset that wires the [`smart-mcp-proxy`](../../packages/smart-mcp-proxy/)
-compressor into a project: long command output is condensed by a **local**
-Ollama model before it reaches the agent, so test suites, builds and linters
-stop flooding the context window. Spec:
+compressor into a project: long command output is condensed before it reaches
+the agent (error lines verbatim with file:line plus a head/tail excerpt by
+default; a **local** Ollama model with `SMART_MCP_MODE=model`), so test
+suites, builds and linters stop flooding the context window. Spec:
 [`specs/0022-smart-mcp-proxy-token-economy/`](../../specs/0022-smart-mcp-proxy-token-economy/).
 
 This preset ships **nothing mandatory**: no other preset gains a dependency,
-and when Ollama is absent every path degrades to a truncated excerpt plus the
-deterministic `ERROR SIGNATURES` block. The framework core still implements no
+no model is required (the default mode is deterministic), and even in model
+mode an absent Ollama degrades to the same excerpt plus `ERROR SIGNATURES`. The framework core still implements no
 compressor (Article III); the compressor is a separate npm package this preset
 merely declares.
 
@@ -33,7 +34,7 @@ merely declares.
 git clone https://github.com/suportly/ai-augmented-developer.git
 cd ai-augmented-developer/packages/smart-mcp-proxy && npm install && npm run build
 npm install -g .
-ollama pull qwen2.5-coder:3b                 # any Ollama model works; set OLLAMA_MODEL
+ollama pull qwen2.5-coder:3b                 # optional: only with SMART_MCP_MODE=model
 
 # 2. the preset (declares the MCP server on every platform aiadev supports)
 aiadev install --preset token-economy
@@ -108,7 +109,7 @@ sessions before and after enabling the preset.
 
 ## Privacy
 
-Everything runs locally: the model is served by Ollama on `localhost`, the
-raw output cache lives in the MCP server's memory, and `metrics --tokens`
-never prints message text. Pointing `OLLAMA_URL` at a remote host is a
+Everything runs locally: the default mode needs no model at all, the optional
+model is served by Ollama on `localhost`, the raw output cache lives in the
+MCP server's memory, and `metrics --tokens` never prints message text. Pointing `OLLAMA_URL` at a remote host is a
 consumer decision (Article VI).
