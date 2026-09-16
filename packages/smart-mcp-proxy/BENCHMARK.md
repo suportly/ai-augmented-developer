@@ -249,7 +249,7 @@ Pergunta: quanto o modelo local acrescenta sobre os blocos determinísticos (ass
 | Latência | 44.9 s | 60.0 s | 41.5 s | 31% |
 | Acertos | 6/6 | 6/6 | 6/6 | |
 
-Leitura: as duas variantes acertam 6/6 em 2 turnos. O modelo entrega 37% menos chars que o modo determinístico, mas isso não se traduz em tokens de entrada (diferença de 2%, dentro do ruído de cache) nem em custo relevante (8%, também dentro do ruído: o caso `build-ok` inverteu o sinal só por variação de cache). Em latência o modo determinístico é 31% mais rápido que o modelo e empata com o `bash` puro. Ou seja, quase toda a economia (74% menos chars, 38% menos custo contra o `bash`) vem das partes determinísticas; o modelo acrescenta compressão marginal, 4 s por chamada e o risco de conteúdo inventado visto em uso real.
+Leitura: as duas variantes acertam 6/6 em 2 turnos. O modelo entrega 37% menos chars que o modo determinístico, mas isso não se traduz em tokens de entrada (diferença de 2%, dentro do ruído de cache) nem em custo relevante (8%, também dentro do ruído: o caso `build-ok` inverteu o sinal só por variação de cache). Em latência o modo determinístico é 31% mais rápido que o modelo e empata com o `bash` puro. Ou seja, quase toda a economia (74% menos chars, 38% menos custo contra o `bash`) vem das partes determinísticas; o modelo acrescenta compressão marginal, 4 s por chamada e o risco de conteúdo inventado visto em uso real. Por isso, a partir da 0.3.0 o modo determinístico é o padrão e o modelo é opt-in (`SMART_MCP_MODE=model`).
 
 ## Ressalvas
 

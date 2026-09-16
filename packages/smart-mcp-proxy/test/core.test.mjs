@@ -1,5 +1,6 @@
 // T001 / T005 — core helpers. Runs against the compiled dist/ (npm test builds first).
 // Ollama is pointed at a closed port so `condense` exercises the fallback path deterministically.
+process.env.SMART_MCP_MODE = "model"; // exercise the model path; Ollama is unreachable so it falls back
 process.env.OLLAMA_URL = "http://127.0.0.1:9";
 process.env.OLLAMA_TIMEOUT_MS = "500";
 process.env.SMART_MCP_MAX_CHARS = "200";
@@ -134,10 +135,11 @@ test("condense counts the caller's overhead in the size guard", async () => {
   assert.equal(withOverhead.mode, "verbatim");
 });
 
-test("SMART_MCP_MODE=deterministic condenses without the model and without a warning", async () => {
-  process.env.SMART_MCP_MODE = "deterministic";
+test("default mode (SMART_MCP_MODE unset) condenses without a model and without a warning", async () => {
+  delete process.env.SMART_MCP_MODE;
   try {
-    const det = await import("../dist/core.js?deterministic");
+    const det = await import("../dist/core.js?default-mode");
+    assert.equal(det.CONFIG.deterministic, true);
     const output = Array.from({ length: 80 }, (_, i) => `line ${i}`).join("\n") + "\nRuntimeError: boom\n";
     const c = await det.condense("npm test", output, "[exit code: 1]");
     assert.equal(c.mode, "deterministic");
@@ -146,6 +148,6 @@ test("SMART_MCP_MODE=deterministic condenses without the model and without a war
     assert.match(c.text, /EXCERPT \(head\/tail, verbatim\)/);
     assert.doesNotMatch(c.text, /WARNING|failed/);
   } finally {
-    delete process.env.SMART_MCP_MODE;
+    process.env.SMART_MCP_MODE = "model";
   }
 });

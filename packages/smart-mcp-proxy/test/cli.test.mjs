@@ -8,10 +8,12 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cliJs = join(here, "..", "dist", "cli.js");
-const env = { ...process.env, OLLAMA_URL: "http://127.0.0.1:9", OLLAMA_TIMEOUT_MS: "500", SMART_MCP_MAX_CHARS: "200" };
+// Model path (Ollama unreachable → deterministic fallback with a warning) unless a test overrides the mode.
+const env = { ...process.env, SMART_MCP_MODE: "model", OLLAMA_URL: "http://127.0.0.1:9", OLLAMA_TIMEOUT_MS: "500", SMART_MCP_MAX_CHARS: "200" };
+const envDefault = { ...env }; delete envDefault.SMART_MCP_MODE;
 
-function run(args) {
-  return spawnSync(process.execPath, [cliJs, ...args], { encoding: "utf8", env });
+function run(args, e = env) {
+  return spawnSync(process.execPath, [cliJs, ...args], { encoding: "utf8", env: e });
 }
 const b64 = (s) => Buffer.from(s).toString("base64");
 
@@ -66,4 +68,15 @@ test("the size guard counts the CLI's own echo and status lines", () => {
   assert.equal(r.status, 0);
   assert.ok(!r.stdout.includes("[smart-bash]"), r.stdout.slice(0, 160));
   assert.equal(r.stdout.split("\n").length, 39);
+});
+
+test("default mode: long output is condensed deterministically, no model, no warning", () => {
+  const cmd = "for i in $(seq 1 100); do echo \"line $i\"; done; echo 'RuntimeError: nope' >&2; exit 2";
+  const r = run(["--b64", b64(cmd)], envDefault);
+  assert.equal(r.status, 2);
+  assert.match(r.stdout, /condensed \(error lines verbatim, head\/tail excerpt\)/);
+  assert.match(r.stdout, /ERROR SIGNATURES[\s\S]*RuntimeError: nope/);
+  assert.match(r.stdout, /EXCERPT \(head\/tail, verbatim\)/);
+  assert.doesNotMatch(r.stdout, /WARNING|summarization failed/);
+  assert.ok(r.stdout.length < 100 * 9 + 200);
 });

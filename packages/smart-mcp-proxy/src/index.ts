@@ -37,8 +37,10 @@ server.tool(
   "smart_bash_execute",
   [
     "Run a shell command and return its output.",
-    `If stdout+stderr exceed ${CONFIG.maxChars} characters, the output is condensed by a local`,
-    `Ollama model (${CONFIG.ollamaModel}) down to root errors, clean stack traces and final results.`,
+    `If stdout+stderr exceed ${CONFIG.maxChars} characters, the output is condensed: ` +
+      (CONFIG.deterministic
+        ? "error lines extracted verbatim (with file:line) plus a head/tail excerpt."
+        : `by the local Ollama model (${CONFIG.ollamaModel}) down to root errors, clean stack traces and final results.`),
     "Use it for noisy commands (test suites, builds, installs, long logs) to protect the context window.",
     "Condensed responses copy error lines verbatim and append a deterministic ERROR SIGNATURES block and the raw tail;",
     "treat them as sufficient for root-cause answers. Only if something essential is missing, pass raw_id (from the header)",
@@ -85,7 +87,9 @@ server.tool(
   "smart_git_diff",
   [
     "Summarize a git diff for review: returns `git diff --stat` verbatim (deterministic) followed by 1-3 bullets per file",
-    `written by the local Ollama model (${CONFIG.ollamaModel}). Files beyond the input budget are listed without a summary.`,
+    (CONFIG.deterministic
+      ? "(bullets need SMART_MCP_MODE=model; in the default deterministic mode every file is listed without a summary)."
+      : `written by the local Ollama model (${CONFIG.ollamaModel}). Files beyond the input budget are listed without a summary.`),
     "Use it before reading a full diff; read specific files afterwards only where the summary is not enough.",
   ].join(" "),
   {
@@ -114,7 +118,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
   // stdout is the MCP channel; diagnostics must go to stderr.
   console.error(
-    `[smart-mcp-proxy] ready — model=${CONFIG.ollamaModel} url=${CONFIG.ollamaUrl} maxChars=${CONFIG.maxChars}`,
+    `[smart-mcp-proxy] ready — mode=${CONFIG.deterministic ? "deterministic" : `model (${CONFIG.ollamaModel} @ ${CONFIG.ollamaUrl})`} maxChars=${CONFIG.maxChars}`,
   );
 }
 

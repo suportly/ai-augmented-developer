@@ -1,14 +1,14 @@
 # Optional token-economy compressor (spec 0022).
 #
 # This preset is opt-in: enabling it declares the smart-mcp-proxy MCP server
-# so the agent gets `smart_bash_execute` (long command output condensed by a
-# local Ollama model, with deterministic ERROR SIGNATURES and RAW TAIL blocks)
-# and `smart_git_diff` (git diff --stat verbatim + one summary per file).
-# No other preset gains a dependency.
+# so the agent gets `smart_bash_execute` (long command output condensed to a
+# deterministic ERROR SIGNATURES block plus a head/tail excerpt; or through a
+# local Ollama model with SMART_MCP_MODE=model) and `smart_git_diff` (git diff
+# --stat verbatim + one summary per file in model mode). No other preset gains
+# a dependency and no model is required.
 #
-# Privacy: the model runs locally (Ollama on localhost by default). Nothing
-# leaves the machine unless you point OLLAMA_URL at a remote host yourself.
-# Without Ollama the tools still work and fall back to truncated excerpts.
+# Privacy: nothing leaves the machine. The optional model runs locally (Ollama
+# on localhost) unless you point OLLAMA_URL at a remote host yourself.
 #
 # PATH: the package must be installed (`npm install -g @aiadev/smart-mcp-proxy`,
 # or `npm install && npm run build` inside packages/smart-mcp-proxy of the
@@ -22,5 +22,6 @@ servers:
     command: "smart-mcp-proxy"
     args: []
     env:
-      OLLAMA_MODEL: "qwen2.5-coder:3b"
       SMART_MCP_MAX_CHARS: "2000"
+      # SMART_MCP_MODE: "model"          # opt in to the local Ollama model
+      # OLLAMA_MODEL: "qwen2.5-coder:3b"
