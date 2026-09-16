@@ -1,14 +1,14 @@
 # smart-mcp-proxy
 
 Runs shell commands and, when the output is too long, condenses it before it
-reaches the agent: error lines extracted verbatim with file:line plus a
-head/tail excerpt (default, no model needed), or a local Ollama model when you
-opt in with `SMART_MCP_MODE=model`. Cuts token cost and context pollution from
-noisy builds, test runs and logs. Three entry points share one core:
+reaches the agent: error lines extracted verbatim with the nearest project
+`file:line`, plus a head/tail excerpt. **Nothing is rewritten or summarized** —
+every byte the agent sees is copied from the command it ran. No model, no
+network, no dependency beyond Node. Three entry points share one core:
 
 | Binary | What it is |
 | --- | --- |
-| `smart-mcp-proxy` | MCP server (stdio) exposing `smart_bash_execute` and `smart_git_diff`. |
+| `smart-mcp-proxy` | MCP server (stdio) exposing `smart_bash_execute`. |
 | `smart-bash` | CLI: `smart-bash -c "<cmd>"` runs the command and prints condensed output, exit code preserved. |
 | `smart-bash-hook` | Claude Code `PreToolUse` hook that routes the **native Bash tool** through `smart-bash`, so the economy is automatic. |
 
@@ -46,12 +46,6 @@ session; unit-tested for the output shape only.
 
 ## Tools
 
-`smart_git_diff` — `range` (default `HEAD`; `--staged` for the index), optional
-`paths`, `cwd`. Returns `git diff --stat` verbatim, then, with
-`SMART_MCP_MODE=model`, 1-3 bullets per file from the local model. Files beyond
-the input budget (24k chars) are listed without a summary; in the default
-deterministic mode, all of them are.
-
 `smart_bash_execute`
 
 | Param | Type | Description |
@@ -65,11 +59,11 @@ Behavior:
 
 1. Runs the command with `child_process.exec`.
 2. If `stdout + stderr` ≤ `SMART_MCP_MAX_CHARS` (default 2000), returns it verbatim.
-3. Otherwise, by default, returns the deterministic `ERROR SIGNATURES` block
-   plus a head/tail excerpt within the budget (no model involved).
-4. With `SMART_MCP_MODE=model`, POSTs to `${OLLAMA_URL}/api/generate` with a
-   triage prompt (root error, clean stack trace, final result only) and, if
-   Ollama is offline or fails, returns the truncated excerpt with a warning.
+3. Otherwise returns the `ERROR SIGNATURES` block (distinct error-looking
+   lines, most frequent first, each with the nearest project `file:line`)
+   followed by a head/tail `EXCERPT` within the budget.
+4. If that envelope would not be smaller than the raw output, returns the raw
+   output verbatim instead.
 
 Summarized responses have a fixed shape so the agent can rely on it:
 
@@ -107,7 +101,6 @@ cd packages/smart-mcp-proxy
 npm install
 npm run build          # or: npm test (builds, then runs the node --test suite)
 npm install -g .       # puts smart-mcp-proxy, smart-bash and smart-bash-hook on PATH
-ollama pull qwen2.5-coder:3b   # only if you opt in to SMART_MCP_MODE=model
 ```
 
 The package is not on the npm registry yet; the global install from the
@@ -124,20 +117,15 @@ hook snippet; `aiadev metrics --tokens` measures the effect per session.
 
 | Variable | Default |
 | --- | --- |
-| `OLLAMA_URL` | `http://localhost:11434` |
-| `OLLAMA_MODEL` | `qwen2.5-coder:3b` |
-| `OLLAMA_TIMEOUT_MS` | `60000` |
 | `SMART_MCP_MAX_CHARS` | `2000` |
-| `SMART_MCP_MODE` | `deterministic` |
 | `SMART_MCP_EXEC_TIMEOUT_MS` | `300000` |
 | `SMART_MCP_MAX_BUFFER` | `52428800` |
 
-The default mode never calls a model: long output is condensed with the error
-signatures (file:line) plus a head/tail excerpt, under a neutral header.
-`SMART_MCP_MODE=model` condenses through the local Ollama model instead. In
-BENCHMARK.md the two match at 6/6 accuracy with equal input tokens; the model
-returns ~37% fewer chars but runs 31% slower and can invent lines, which is
-why deterministic became the default in 0.3.0.
+Condensation never calls a model. A local-model summarizer existed until
+0.3.0 and was removed in 0.4.0: [BENCHMARK.md](./BENCHMARK.md) showed it
+matched this path's accuracy while adding ~4 s per call, and two independent
+studies of an equivalent tool found that preprocessing tool output raises
+cost per task by inflating turn count.
 
 ## Registering with Claude Code
 
@@ -149,6 +137,4 @@ servers:
     command: "node"
     args: ["packages/smart-mcp-proxy/dist/index.js"]
     env:
-      SMART_MCP_MODE: "model"          # optional: use the local Ollama model
-      OLLAMA_MODEL: "qwen2.5-coder:3b"
 ```

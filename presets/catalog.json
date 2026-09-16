@@ -37,8 +37,8 @@
     {
       "name": "token-economy",
       "path": "presets/token-economy",
-      "summary": "Opt-in compressor: smart-mcp-proxy MCP server + Claude Code PreToolUse hook that condense long command output (error lines + excerpt by default, local Ollama model optional).",
-      "use_when": "Test suites, builds or linters flood the agent's context; requires Node; a local Ollama model is optional (SMART_MCP_MODE=model).",
+      "summary": "Opt-in compressor: smart-mcp-proxy MCP server + Claude Code PreToolUse hook that condense long command output to verbatim error lines plus a head/tail excerpt.",
+      "use_when": "Test suites, builds or linters flood the agent's context; requires Node; no model and no network.",
       "maintained_by": "ai-augmented-developer core",
       "stability": "experimental"
     }

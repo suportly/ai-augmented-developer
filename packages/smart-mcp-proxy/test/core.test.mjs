@@ -1,8 +1,5 @@
 // T001 / T005 — core helpers. Runs against the compiled dist/ (npm test builds first).
-// Ollama is pointed at a closed port so `condense` exercises the fallback path deterministically.
-process.env.SMART_MCP_MODE = "model"; // exercise the model path; Ollama is unreachable so it falls back
-process.env.OLLAMA_URL = "http://127.0.0.1:9";
-process.env.OLLAMA_TIMEOUT_MS = "500";
+// No model is involved: condense() is pure text processing.
 process.env.SMART_MCP_MAX_CHARS = "200";
 
 import { test } from "node:test";
@@ -22,10 +19,6 @@ test("headTail keeps head and tail within budget", () => {
 test("normalizeOutput strips ANSI and collapses repeats", () => {
   const out = core.normalizeOutput("[32mok[0m\nsame\nsame\nsame\nend");
   assert.equal(out, "ok\nsame\n[previous line repeated 2 more time(s)]\nend");
-});
-
-test("cleanSummary drops fences and label line", () => {
-  assert.equal(core.cleanSummary("```\nERRORS / RESULT block:\nKeyError: x\n```"), "KeyError: x");
 });
 
 test("errorSignatures counts, ranks and attaches nearest project frame", () => {
@@ -66,16 +59,6 @@ test("condense returns verbatim under the budget", async () => {
   assert.equal(c.text, "hi");
 });
 
-test("condense falls back to excerpt + signatures when Ollama is unreachable", async () => {
-  const output = "progress line\n".repeat(40) + "TypeError: boom\n    at f (src/x.ts:4:2)";
-  const c = await core.condense("npm test", output, "[exit code: 1]");
-  assert.equal(c.mode, "fallback");
-  assert.match(c.text, /WARNING: summarization failed/);
-  assert.match(c.text, /ERROR SIGNATURES/);
-  assert.match(c.text, /TypeError: boom/);
-  assert.ok(c.text.length < output.length);
-});
-
 test("condense records raw output in the cache when one is given", async () => {
   const cache = new core.RawCache(2);
   const output = "x\n".repeat(300);
@@ -88,35 +71,6 @@ test("condense records raw output in the cache when one is given", async () => {
   assert.equal(cache.get(c.rawId), undefined);
 });
 
-test("splitDiffByFile names each block", () => {
-  const diff = [
-    "diff --git a/src/a.py b/src/a.py",
-    "--- a/src/a.py",
-    "+++ b/src/a.py",
-    "@@ -1 +1 @@",
-    "-x",
-    "+y",
-    "diff --git a/docs/b.md b/docs/b.md",
-    "--- a/docs/b.md",
-    "+++ b/docs/b.md",
-    "@@ -1 +1 @@",
-    "+z",
-  ].join("\n");
-  const files = core.splitDiffByFile(diff);
-  assert.deepEqual(files.map((f) => f.file), ["src/a.py", "docs/b.md"]);
-  assert.ok(files[1].text.startsWith("diff --git a/docs/b.md"));
-});
-
-test("summarizeDiff lists every file as skipped when the model is unreachable", async () => {
-  const diff = "diff --git a/x b/x\n+++ b/x\n+1\ndiff --git a/y b/y\n+++ b/y\n+2";
-  const s = await core.summarizeDiff(diff, " x | 1 +\n y | 1 +\n");
-  assert.deepEqual(s.skipped, ["x", "y"]);
-  assert.equal(s.bullets.length, 0);
-  assert.match(s.warning, /unreachable|failed|timed out/);
-  const rendered = core.renderDiffSummary("HEAD", s);
-  assert.match(rendered, /NOT SUMMARIZED \(2/);
-});
-
 test("condense returns verbatim when the envelope would not be smaller than the output", async () => {
   // Output just above the budget: header + excerpt + signatures would exceed it.
   const output = Array.from({ length: 60 }, (_, i) => `line ${i} ${"x".repeat(30)}`).join("\n").slice(0, core.CONFIG.maxChars + 40);
@@ -126,28 +80,28 @@ test("condense returns verbatim when the envelope would not be smaller than the 
   assert.equal(c.text, output);
 });
 
+test("condense returns ERROR SIGNATURES + verbatim EXCERPT, no rewriting", async () => {
+  // Well above the 2000-char budget so the envelope is genuinely smaller.
+  const output = Array.from({ length: 400 }, (_, i) => `line ${i} ${"x".repeat(20)}`).join("\n") + "\nRuntimeError: boom\n";
+  const c = await core.condense("npm test", output, "[exit code: 1]");
+  assert.equal(c.mode, "condensed");
+  assert.ok(c.text.length < output.length);
+  assert.match(c.text, /condensed \(error lines verbatim, head\/tail excerpt\)/);
+  assert.match(c.text, /ERROR SIGNATURES[\s\S]*RuntimeError: boom/);
+  assert.match(c.text, /EXCERPT \(head\/tail, verbatim\)/);
+  // Every non-header line must come from the original output.
+  const body = c.text.split("EXCERPT (head/tail, verbatim):\n")[1];
+  for (const line of body.split("\n")) {
+    if (line.trim() === "" || /characters omitted/.test(line)) continue;
+    assert.ok(output.includes(line), `invented line: ${line}`);
+  }
+});
+
 test("condense counts the caller's overhead in the size guard", async () => {
   const output = Array.from({ length: 12 }, (_, i) => `row ${i} ${"y".repeat(30)}`).join("\n");
   assert.ok(output.length > core.CONFIG.maxChars);
   const without = await core.condense("cmd", output, "[exit code: 0]");
-  const withOverhead = await core.condense("cmd", output, "[exit code: 0]", undefined, 500);
-  assert.equal(without.mode, "fallback");
+  const withOverhead = await core.condense("cmd", output, "[exit code: 0]", undefined, 900);
+  assert.equal(without.mode, "condensed");
   assert.equal(withOverhead.mode, "verbatim");
-});
-
-test("default mode (SMART_MCP_MODE unset) condenses without a model and without a warning", async () => {
-  delete process.env.SMART_MCP_MODE;
-  try {
-    const det = await import("../dist/core.js?default-mode");
-    assert.equal(det.CONFIG.deterministic, true);
-    const output = Array.from({ length: 80 }, (_, i) => `line ${i}`).join("\n") + "\nRuntimeError: boom\n";
-    const c = await det.condense("npm test", output, "[exit code: 1]");
-    assert.equal(c.mode, "deterministic");
-    assert.match(c.text, /condensed \(error lines verbatim, head\/tail excerpt\)/);
-    assert.match(c.text, /ERROR SIGNATURES[\s\S]*RuntimeError: boom/);
-    assert.match(c.text, /EXCERPT \(head\/tail, verbatim\)/);
-    assert.doesNotMatch(c.text, /WARNING|failed/);
-  } finally {
-    process.env.SMART_MCP_MODE = "model";
-  }
 });
