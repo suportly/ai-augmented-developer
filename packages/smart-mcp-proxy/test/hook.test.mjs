@@ -30,14 +30,14 @@ test("rewrite passes content dumps through untouched (cat/head/sed/jq chains)", 
   assert.equal(bash("cat specs/0167-copilot-teaching-via-plays/tasks.md"), null);
   assert.equal(bash("cd MayCRMWeb && cat package.json; head -40 src/App.tsx | nl"), null);
   assert.equal(bash("FOO=1 sed -n '10,60p' plan.md"), null);
-  assert.equal(bash("/bin/cat big.log"), null);
+  assert.equal(bash("/bin/cat notes.md"), null);
   // A chain that carries file excerpts is content even when one segment greps.
   assert.equal(bash('cd api && echo "=== a"; sed -n 36,48p a.py; echo "=== b"; sed -n 172,190p b.py; grep -n "def " c.py | head -20'), null);
   assert.equal(bash("ls -la; pwd"), null);
   // Anything that produces rather than dumps is still routed; a pipeline's output is its last stage's.
   assert.match(bash("cat a.log | grep -c ERROR"), /^smart-bash --b64 /);
   assert.match(bash('echo "=== tests"; grep -rn "teach" src | head -20'), /^smart-bash --b64 /);
-  assert.equal(bash("cat big.log | head -50"), null);
+  assert.equal(bash("cat big.json | head -50"), null);
   assert.equal(bash("head -40 src/App.tsx"), null);
   // `| cat` only turns the pager off: what feeds it decides.
   assert.match(bash("pytest -q | cat"), /^smart-bash --b64 /);
@@ -48,6 +48,11 @@ test("rewrite passes content dumps through untouched (cat/head/sed/jq chains)", 
   assert.equal(bash("git --no-pager show HEAD:api/x.py"), null);
   assert.equal(bash("GIT_PAGER=cat git blame -L 10,40 api/x.py"), null);
   assert.match(bash("git status --short; pytest -q"), /^smart-bash --b64 /);
+  // Dumping a captured log is noise, not content: route it.
+  assert.match(bash("cat build.log"), /^smart-bash --b64 /);
+  assert.match(bash("tail -200 /tmp/claude/tasks/abc.output; echo done"), /^smart-bash --b64 /);
+  assert.match(bash("cat /var/log/app.err | head -100"), /^smart-bash --b64 /);
+  assert.equal(bash("cat docs/logging.md"), null);
   // Heredoc bodies are data: a `cat` or `|` inside them must not decide.
   assert.match(bash("python3 - <<'EOF'\nx = a | b; y = 'cat'\nprint(x)\nEOF\npytest -q"), /^smart-bash --b64 /);
   assert.match(bash("python3 - <<'EOF'\nprint(1)\nEOF"), /^smart-bash --b64 /);

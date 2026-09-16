@@ -27,6 +27,8 @@ command on the first line. Output that would not get smaller by condensing
 dumps: when any `;`/`&&` segment ends in `cat`, `head`, `tail`, `sed`, `less`,
 `jq`, `git diff`, `git show`, `git blame` and the like, or when every segment
 is a plain listing (`ls`, `echo`, `pwd`…), the command is not routed at all,
+with one exception: dumping a captured log (`cat build.log`,
+`tail -200 x.output`) is condensed like any other log,
 because the agent asked for that content, not for a summary of it. A pipeline
 counts by the stage that produces its content, so `cat a.log | grep -c ERROR`
 and `pytest | cat` are still condensed. Extend the dump list with
@@ -122,8 +124,14 @@ hook snippet; `aiadev metrics --tokens` measures the effect per session.
 | `OLLAMA_MODEL` | `qwen2.5-coder:3b` |
 | `OLLAMA_TIMEOUT_MS` | `60000` |
 | `SMART_MCP_MAX_CHARS` | `2000` |
+| `SMART_MCP_MODE` | unset |
 | `SMART_MCP_EXEC_TIMEOUT_MS` | `300000` |
 | `SMART_MCP_MAX_BUFFER` | `52428800` |
+
+`SMART_MCP_MODE=deterministic` never calls the model: long output is condensed
+with the error signatures (file:line) plus a head/tail excerpt, under a neutral
+header. In BENCHMARK.md it matches the model's 6/6 accuracy with equal input
+tokens, runs 31% faster, and returns somewhat larger condensed output.
 
 ## Registering with Claude Code
 

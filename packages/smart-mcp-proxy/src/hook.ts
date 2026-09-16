@@ -74,6 +74,9 @@ function dumpSet(): Set<string> {
   return extra.length ? new Set([...DUMP, ...extra]) : DUMP;
 }
 
+/** A dump of a captured log (`cat build.log`, `tail -100 /tmp/x.output`) is noise to condense, not content to keep. */
+const LOG_FILE = /\S+\.(?:log|out|output|err)(?:\s|$)/;
+
 /** `git diff`, `git show`, `git blame`: the agent reads that content (its own change, a file at a revision). */
 const GIT_DUMP = /^git\s+(?:--no-pager\s+)?(?:diff|show|blame)\b/;
 
@@ -105,7 +108,10 @@ export function isContentDump(command: string): boolean {
     // `… | head -20`, `… | cat` (pager off), `… | sed s/x/y/`: a piped-into dump or
     // filter only reshapes what feeds it, so classify by the stage before it.
     while (i > 0 && (FILTER.has(words[i]) || dump.has(words[i]))) i--;
-    return GIT_DUMP.test(stripEnv(stages[i] ?? "")) ? "git-dump" : (words[i] ?? "");
+    const stage = stripEnv(stages[i] ?? "");
+    if (GIT_DUMP.test(stage)) return "git-dump";
+    if (dump.has(words[i]) && LOG_FILE.test(stage)) return "log-dump"; // routed like a producer
+    return words[i] ?? "";
   });
   if (lastStages.some((w) => w === "git-dump" || dump.has(w))) return true;
   return lastStages.every((w) => NEUTRAL.has(w));

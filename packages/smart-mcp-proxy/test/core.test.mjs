@@ -133,3 +133,19 @@ test("condense counts the caller's overhead in the size guard", async () => {
   assert.equal(without.mode, "fallback");
   assert.equal(withOverhead.mode, "verbatim");
 });
+
+test("SMART_MCP_MODE=deterministic condenses without the model and without a warning", async () => {
+  process.env.SMART_MCP_MODE = "deterministic";
+  try {
+    const det = await import("../dist/core.js?deterministic");
+    const output = Array.from({ length: 80 }, (_, i) => `line ${i}`).join("\n") + "\nRuntimeError: boom\n";
+    const c = await det.condense("npm test", output, "[exit code: 1]");
+    assert.equal(c.mode, "deterministic");
+    assert.match(c.text, /condensed \(error lines verbatim, head\/tail excerpt\)/);
+    assert.match(c.text, /ERROR SIGNATURES[\s\S]*RuntimeError: boom/);
+    assert.match(c.text, /EXCERPT \(head\/tail, verbatim\)/);
+    assert.doesNotMatch(c.text, /WARNING|failed/);
+  } finally {
+    delete process.env.SMART_MCP_MODE;
+  }
+});
