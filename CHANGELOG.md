@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.4] - 2026-09-16
+
 ### Changed
 
 - `smart-mcp-proxy` 0.3.0: the deterministic mode is now the **default**;

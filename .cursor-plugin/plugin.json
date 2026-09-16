@@ -2,7 +2,7 @@
   "name": "ai-augmented-developer",
   "displayName": "AI-Augmented Developer",
   "description": "CLI for the AI-Augmented Developer framework: validates skills, scaffolds feature specs, installs presets.",
-  "version": "0.23.3",
+  "version": "0.23.4",
   "author": {
     "name": "alairjt",
     "email": "alairjt@gmail.com"
