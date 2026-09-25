@@ -4,7 +4,7 @@
 
 **Branch:** `feature/0023-product-context`
 **Created:** 2026-09-24
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Implemented — PR #56 <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0023 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
