@@ -14,9 +14,9 @@
      version or range if known. This is a DECISION record, not detected
      inventory: the aiadev:auto-stack block that `aiadev sync` writes to the
      project's AGENTS.md is the detected inventory instead. The `product`
-     skill seeds this list with the same stack detection that fills that
-     block (aiadev's `project_introspect.introspect()`), citing the project
-     file each entry came from (e.g. package.json, pyproject.toml). Use
+     skill seeds this list from that block (the stack detection `aiadev sync`
+     runs), citing the project file each entry came from (e.g. package.json,
+     pyproject.toml). Use
      [NEEDS CLARIFICATION:cl-N ...] for anything not inferable. -->
 
 - {{LANGUAGE_1}}
@@ -26,7 +26,7 @@
 
 <!-- Frameworks and major libraries adopted by this product. One bullet per
      framework, with the version if known. Same sourcing rule as Languages:
-     seed from `project_introspect.introspect()` and cite the source. -->
+     seed from the auto-stack block and cite the source. -->
 
 - {{FRAMEWORK_1}}
 

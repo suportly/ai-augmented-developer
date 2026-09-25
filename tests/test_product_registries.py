@@ -68,6 +68,7 @@ def test_product_listed_in_every_registry(framework_root: pathlib.Path, relative
     elif relative_path == "README.md":
         # README's pipeline bullets and workflow list bold skill names
         # (`**specify**`, ...) rather than backtick-code them.
-        assert "**product**" in text
+        assert "0. **product**" in text, "The Basic Workflow must list product"
+        assert "- **product**" in text, "What's Inside must list product"
     else:
         assert "`product`" in text

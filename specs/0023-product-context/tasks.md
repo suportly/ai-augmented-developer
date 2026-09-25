@@ -45,7 +45,7 @@
 - **Spec scenarios:** Story 2 scenario 1, scenario 2
 - **Acceptance:**
   - [ ] Failing test written and observed failing: `test_tech_stack_template_shape` e `test_tech_stack_template_has_no_product_content`.
-  - [ ] Anchors para linguagens, frameworks e decisões; cada decisão tem campos de porquê e alternativas descartadas (cl-3: `tech-stack.md` guarda decisões, o auto-stack guarda o inventário). O comentário-guia diz que a primeira versão vem de `project_introspect.introspect()` com fonte citada.
+  - [ ] Anchors para linguagens, frameworks e decisões; cada decisão tem campos de porquê e alternativas descartadas (cl-3: `tech-stack.md` guarda decisões, o auto-stack guarda o inventário). O comentário-guia diz que a primeira versão vem do bloco auto-stack (a detecção de stack que o `aiadev sync` roda), com fonte citada, sem nomear funções internas do framework.
   - [ ] No other existing test regresses.
   - [ ] Commit message: `feat(product): T002 template de tech-stack`.
 

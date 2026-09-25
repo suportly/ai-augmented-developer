@@ -6,7 +6,7 @@ metadata:
     version: 0.1.0
     inputs:
     - type: text
-      description: What to update (optional; omit to bootstrap or refresh all three documents).
+      description: What to update (optional; omit it to bootstrap, or to pick a section to update).
       optional: true
     outputs:
     - type: file
@@ -33,12 +33,12 @@ Bootstrap or refresh the project's product context — mission, tech stack, and 
 
 1. **Check whether `specs/_product/` exists** in the project root.
 2. **If `specs/_product/` does not exist** (no `mission.md`, `tech-stack.md`, or `roadmap.md` yet), enter **Bootstrap mode** below.
-3. **If `specs/_product/` exists**, enter **Update mode** below.
+3. **If `specs/_product/` exists**, enter **Update mode** below for the files it has. If any of the three files is missing, bootstrap only the missing ones (Bootstrap mode, limited to those files).
 
 ## Bootstrap mode
 
 1. **Read what describes the project.** `README.md`, package files (`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, and equivalents), `AGENTS.md`/`CLAUDE.md`, `.claude/rules/*`, and the top-level folder layout. In a monorepo, also read the manifests of nested subprojects (e.g. `packages/*/package.json`): stack detection only looks at the repository root. This is the same reconnaissance `constitution` does in its own bootstrap mode.
-2. **Render the three templates into drafts**: `templates/mission-template.md`, `templates/tech-stack-template.md`, `templates/roadmap-template.md`. Every filled value must cite its source inline — the file path, and the line number when there is one (e.g. "audience inferred from README.md:12"). A value with no traceable source does not get filled. Drop the templates' guidance comments from the rendered files: they quote the clarification-marker grammar and would read as open markers.
+2. **Render the three templates into drafts**: `templates/mission-template.md`, `templates/tech-stack-template.md`, `templates/roadmap-template.md`. Every filled value must cite its source inline — the file path, and the line number when there is one (e.g. "audience inferred from README.md:12"). A value with no traceable source does not get filled. Drop the templates' guidance comments from the rendered files — they quote the clarification-marker grammar and would read as open markers — but keep the `<!-- section: … -->` anchors.
 3. **Seed `tech-stack.md`'s Languages and Frameworks from the stack detection `aiadev sync` already does.** `tech-stack.md` records decisions (what was adopted, why, what was rejected); the auto-stack block that `aiadev sync` writes into `AGENTS.md`, between the `aiadev:auto-stack:start` and `aiadev:auto-stack:end` markers, is the detected inventory.
    - If `AGENTS.md` has that block, take the languages and frameworks from it.
    - If not, read the files that detection reads: `package.json`, `tsconfig.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, `pubspec.yaml`, `docker-compose.yml`, `Makefile`, `Taskfile.yml`, and `.github/workflows/*.yml`.

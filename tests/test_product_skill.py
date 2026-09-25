@@ -149,3 +149,22 @@ def test_bootstrap_reads_nested_manifests(framework_root: pathlib.Path) -> None:
     manifests read too."""
     bootstrap = _section(_body(framework_root), "Bootstrap mode").lower()
     assert "nested" in bootstrap or "subproject" in bootstrap
+
+
+def test_mode_detection_handles_partial_product_dir(framework_root: pathlib.Path) -> None:
+    """A `specs/_product/` with a missing file bootstraps only the missing file."""
+    mode = _section(_body(framework_root), "Mode detection").lower()
+    assert "missing" in mode
+    assert "bootstrap" in mode
+
+
+def test_rendering_keeps_section_anchors(framework_root: pathlib.Path) -> None:
+    """Dropping guidance comments must not drop the `<!-- section: -->` anchors."""
+    bootstrap = _section(_body(framework_root), "Bootstrap mode")
+    assert "<!-- section:" in bootstrap
+
+
+def test_input_description_matches_update_mode(framework_root: pathlib.Path) -> None:
+    """Omitting the input never refreshes all three files wholesale."""
+    text = (framework_root / "skills" / "product" / "SKILL.md").read_text(encoding="utf-8")
+    assert "refresh all three" not in text

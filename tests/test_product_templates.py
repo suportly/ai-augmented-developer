@@ -142,7 +142,8 @@ def test_tech_stack_template_documents_role_split(
     assert tech_stack_template_path.is_file(), "templates/tech-stack-template.md is missing"
     text = tech_stack_template_path.read_text(encoding="utf-8")
 
-    assert "introspect" in text, "must document that the first version comes from introspect()"
+    assert "aiadev sync" in text, "must say the first version comes from the stack detection `aiadev sync` runs"
+    assert "introspect" not in text, "consumers cannot call the framework-internal introspect(); name the auto-stack block instead"
     assert "auto-stack" in text, "must document the <!-- aiadev:auto-stack --> role split"
 
 
