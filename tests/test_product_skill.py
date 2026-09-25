@@ -89,3 +89,30 @@ def test_hand_off_section_present(framework_root: pathlib.Path) -> None:
     hand_off = _section(text, "Hand-off")
 
     assert "specify" in hand_off.lower()
+
+
+def test_update_mode_lists_sections_without_overwrite(framework_root: pathlib.Path) -> None:
+    text = _body(framework_root)
+    update_mode = _section(text, "Update mode").lower()
+
+    assert "list" in update_mode
+    assert "section" in update_mode
+    assert "which to update" in update_mode
+    assert "never overwrite" in update_mode
+
+
+def test_never_reads_secret_files(framework_root: pathlib.Path) -> None:
+    text = _body(framework_root)
+    rules = _section(text, "Rules").lower()
+
+    assert ".env" in rules
+    assert "*.pem" in rules
+    assert "*.key" in rules
+    assert "id_rsa" in rules
+    assert "credentials" in rules
+
+
+def test_no_forward_pointers_left(framework_root: pathlib.Path) -> None:
+    text = _body(framework_root)
+
+    assert "added in a later task" not in text.lower()

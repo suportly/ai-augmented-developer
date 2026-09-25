@@ -33,7 +33,7 @@ Bootstrap or refresh the project's product context — mission, tech stack, and 
 
 1. **Check whether `specs/_product/` exists** in the project root.
 2. **If `specs/_product/` does not exist** (no `mission.md`, `tech-stack.md`, or `roadmap.md` yet), enter **Bootstrap mode** below.
-3. **If `specs/_product/` exists**, enter **Update mode**: list the current sections of the three files and ask which to update, without overwriting anything — see Update mode (added in a later task).
+3. **If `specs/_product/` exists**, enter **Update mode** below.
 
 ## Bootstrap mode
 
@@ -43,12 +43,21 @@ Bootstrap or refresh the project's product context — mission, tech stack, and 
 4. **Present the three drafts** and ask only the targeted questions needed to resolve the clarification markers — no open-ended "tell me about your product" questions when the repository context already answers them.
 5. **Write only after explicit approval.** Create `specs/_product/` if it does not exist, then write `mission.md`, `tech-stack.md`, and `roadmap.md`. Do not write before approval, and do not write partial drafts.
 
+## Update mode
+
+Same contract as the `constitution` skill when a constitution already exists, applied to three files instead of one.
+
+1. **With user text naming what to change**: edit only the section(s) that text points to — in whichever of `mission.md`, `tech-stack.md`, `roadmap.md` it belongs to. Show the diff before writing. Write only after approval.
+2. **With no user text**: list the current sections of the three files (file + heading, e.g. `mission.md — For whom`) and ask which to update. Never overwrite a file wholesale — always target a specific section.
+3. Values added or changed in update mode follow the same cite-or-mark rule as bootstrap: cite the source, or mark it `[NEEDS CLARIFICATION:cl-N ...]` when it cannot be traced.
+
 ## Rules
 
 - Every filled value cites its source (file, and line when there is one) — zero values without a source.
 - Inferred is not the same as fabricated. When a value cannot be traced to something in the repository, it becomes a `cl-N` marker, never a plausible-sounding guess.
-- Do not read secret files during inference (see Update mode, added in a later task, for the exact exclusion list).
+- Never read secret files during inference: `.env*`, `*.pem`, `*.key`, `id_rsa*`, `*credentials*`. Product context must not carry secrets (Article VI, Privacy by design).
 - Do not write any file in `specs/_product/` before the user has explicitly approved the drafts.
+- In update mode, never overwrite a file wholesale — edit only the targeted section.
 
 ## Hand-off
 

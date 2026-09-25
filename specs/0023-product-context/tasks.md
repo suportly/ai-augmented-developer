@@ -110,7 +110,7 @@
 
 ### T007 — Skill `product`: modo atualização e exclusão de segredos
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - modify: `skills/product/SKILL.md`
