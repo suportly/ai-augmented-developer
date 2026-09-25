@@ -231,7 +231,7 @@
 
 ### T015 — Dogfooding: `specs/_product/` do aiadev, fora do pacote
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008, T011, T012, T013, T014
 - **Files:**
   - create: `specs/_product/mission.md`

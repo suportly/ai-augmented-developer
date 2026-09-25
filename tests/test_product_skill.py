@@ -127,3 +127,25 @@ def test_tech_stack_seeded_from_introspect(framework_root: pathlib.Path) -> None
     assert "tech-stack.md" in bootstrap
     assert "rejected alternatives" in bootstrap.lower()
     assert "src/aiadev" not in text
+
+
+def test_render_drops_template_guidance_comments(framework_root: pathlib.Path) -> None:
+    """Rendered files must not keep the templates' guidance comments: they
+    quote the clarification-marker grammar and would trip the CI marker gate."""
+    bootstrap = _section(_body(framework_root), "Bootstrap mode").lower()
+    assert "guidance comment" in bootstrap
+
+
+def test_roadmap_field_lines_carry_no_citation(framework_root: pathlib.Path) -> None:
+    """`**Status:**`-style field lines are machine-parsed; citations go in the
+    entry's paragraph instead."""
+    rules = _section(_body(framework_root), "Rules")
+    assert "**Status:**" in rules
+    assert "paragraph" in rules.lower()
+
+
+def test_bootstrap_reads_nested_manifests(framework_root: pathlib.Path) -> None:
+    """Stack detection only reads the root; monorepo subprojects need their own
+    manifests read too."""
+    bootstrap = _section(_body(framework_root), "Bootstrap mode").lower()
+    assert "nested" in bootstrap or "subproject" in bootstrap

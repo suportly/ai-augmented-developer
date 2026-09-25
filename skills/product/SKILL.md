@@ -37,8 +37,8 @@ Bootstrap or refresh the project's product context — mission, tech stack, and 
 
 ## Bootstrap mode
 
-1. **Read what describes the project.** `README.md`, package files (`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, and equivalents), `AGENTS.md`/`CLAUDE.md`, `.claude/rules/*`, and the top-level folder layout. This is the same reconnaissance `constitution` does in its own bootstrap mode.
-2. **Render the three templates into drafts**: `templates/mission-template.md`, `templates/tech-stack-template.md`, `templates/roadmap-template.md`. Every filled value must cite its source inline — the file path, and the line number when there is one (e.g. "audience inferred from README.md:12"). A value with no traceable source does not get filled.
+1. **Read what describes the project.** `README.md`, package files (`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, and equivalents), `AGENTS.md`/`CLAUDE.md`, `.claude/rules/*`, and the top-level folder layout. In a monorepo, also read the manifests of nested subprojects (e.g. `packages/*/package.json`): stack detection only looks at the repository root. This is the same reconnaissance `constitution` does in its own bootstrap mode.
+2. **Render the three templates into drafts**: `templates/mission-template.md`, `templates/tech-stack-template.md`, `templates/roadmap-template.md`. Every filled value must cite its source inline — the file path, and the line number when there is one (e.g. "audience inferred from README.md:12"). A value with no traceable source does not get filled. Drop the templates' guidance comments from the rendered files: they quote the clarification-marker grammar and would read as open markers.
 3. **Seed `tech-stack.md`'s Languages and Frameworks from the stack detection `aiadev sync` already does.** `tech-stack.md` records decisions (what was adopted, why, what was rejected); the auto-stack block that `aiadev sync` writes into `AGENTS.md`, between the `aiadev:auto-stack:start` and `aiadev:auto-stack:end` markers, is the detected inventory.
    - If `AGENTS.md` has that block, take the languages and frameworks from it.
    - If not, read the files that detection reads: `package.json`, `tsconfig.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, `pubspec.yaml`, `docker-compose.yml`, `Makefile`, `Taskfile.yml`, and `.github/workflows/*.yml`.
@@ -63,6 +63,7 @@ Same contract as the `constitution` skill when a constitution already exists, ap
 - Never read secret files during inference: `.env*`, `*.pem`, `*.key`, `id_rsa*`, `*credentials*`. Product context must not carry secrets (Article VI, Privacy by design).
 - Do not write any file in `specs/_product/` before the user has explicitly approved the drafts.
 - In update mode, never overwrite a file wholesale — edit only the targeted section.
+- Roadmap field lines (`- **Status:**`, `- **Spec:**`, `- **Depends on:**`) are machine-parsed: keep them bare and put their citations in the entry's paragraph.
 
 ## Hand-off
 

@@ -205,3 +205,10 @@ def test_templates_readme_lists_product_templates(
     assert rows, f"templates/README.md table has no row for {template}"
     assert "`product`" in rows[0], f"{template} row must name `product` as producer"
     assert f"`{consumer}`" in rows[0], f"{template} row must name `{consumer}` as consumer"
+
+
+@pytest.mark.parametrize("name", ["mission", "tech-stack"])
+def test_template_marker_grammar_matches_skill(framework_root: pathlib.Path, name: str) -> None:
+    text = (framework_root / "templates" / f"{name}-template.md").read_text(encoding="utf-8")
+    assert "[NEEDS CLARIFICATION: cl-N" not in text
+    assert "[NEEDS CLARIFICATION:cl-N" in text

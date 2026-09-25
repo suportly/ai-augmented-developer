@@ -62,7 +62,7 @@ specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  imple
 
 ## Repository-local commands
 
-This repository is Markdown-heavy with Python-only tooling; it does not need the stack commands a Django or React project would. Everything below assumes a clean clone.
+This repository is Markdown-heavy with Python tooling (plus two TypeScript packages: `vscode-extension/` and `packages/smart-mcp-proxy/`); it does not need the stack commands a Django or React project would. Everything below assumes a clean clone.
 
 ```bash
 # Validate every SKILL.md against the schema

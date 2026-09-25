@@ -14,7 +14,7 @@
 <!-- The purpose this product exists to serve. 2-4 sentences. Cite the
      source for each inferred claim (README, package file, prior spec) —
      see the `product` skill's citation rule. Use
-     [NEEDS CLARIFICATION: cl-N ...] for anything not inferable. -->
+     [NEEDS CLARIFICATION:cl-N ...] for anything not inferable. -->
 
 {{WHY_STATEMENT}}
 

@@ -17,7 +17,7 @@
      skill seeds this list with the same stack detection that fills that
      block (aiadev's `project_introspect.introspect()`), citing the project
      file each entry came from (e.g. package.json, pyproject.toml). Use
-     [NEEDS CLARIFICATION: cl-N ...] for anything not inferable. -->
+     [NEEDS CLARIFICATION:cl-N ...] for anything not inferable. -->
 
 - {{LANGUAGE_1}}
 
