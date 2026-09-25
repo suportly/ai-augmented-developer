@@ -22,7 +22,7 @@
 
 ### T001 — Template de missão
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `templates/mission-template.md`
