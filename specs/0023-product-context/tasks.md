@@ -95,7 +95,7 @@
 
 ### T006 — Skill `product`: modo bootstrap com fonte citada
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `skills/product/SKILL.md`
