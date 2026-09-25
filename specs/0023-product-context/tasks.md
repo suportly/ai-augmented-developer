@@ -66,7 +66,7 @@
 
 ### T004 — Tabela do `templates/README.md`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T002, T003
 - **Files:**
   - modify: `templates/README.md`

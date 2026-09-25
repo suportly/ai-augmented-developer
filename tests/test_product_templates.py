@@ -187,3 +187,21 @@ def test_roadmap_template_has_no_product_content(
 
     offenders = _non_template_lines(text)
     assert offenders == [], f"template contains concrete content: {offenders!r}"
+
+
+@pytest.mark.parametrize(
+    ("template", "consumer"),
+    [
+        ("mission-template.md", "specify"),
+        ("tech-stack-template.md", "plan"),
+        ("roadmap-template.md", "specify"),
+    ],
+)
+def test_templates_readme_lists_product_templates(
+    framework_root: pathlib.Path, template: str, consumer: str
+) -> None:
+    readme = (framework_root / "templates" / "README.md").read_text(encoding="utf-8")
+    rows = [line for line in readme.splitlines() if line.startswith("|") and f"`{template}`" in line]
+    assert rows, f"templates/README.md table has no row for {template}"
+    assert "`product`" in rows[0], f"{template} row must name `product` as producer"
+    assert f"`{consumer}`" in rows[0], f"{template} row must name `{consumer}` as consumer"
