@@ -201,7 +201,7 @@
 
 ### T013 — `plan` lê tech-stack e aponta divergência com o auto-stack
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `skills/plan/SKILL.md`
