@@ -215,7 +215,7 @@
 
 ### T014 — Atribuição ao curso SDD e CHANGELOG
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - modify: `CREDITS.md`

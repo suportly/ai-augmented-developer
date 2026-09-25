@@ -99,6 +99,17 @@ under **Apache License 2.0** and its documentation under **CC-BY-4.0**;
 we cite both here per Article VII rather than re-publish the license
 text.
 
+### ["Spec-Driven Development with Coding Agents"](https://www.deeplearning.ai/courses/spec-driven-development-with-coding-agents) (DeepLearning.AI, in partnership with JetBrains; instructor Paul Everitt)
+
+Feature `0023-product-context` adapts the course's idea of keeping product
+context — mission, tech stack, roadmap — as durable artifacts the agent
+reads before specifying and planning, rather than re-deriving it from
+conversation every time. We apply that idea with our own `product` skill
+and our own `mission-template.md`, `tech-stack-template.md`, and
+`roadmap-template.md`, written from scratch for this framework's
+Markdown-skill architecture; no text or code from the course was copied
+(the course material is not openly licensed).
+
 ## Bundled catalogs
 
 ### [contains-studio/agents](https://github.com/contains-studio/agents) — not bundled
