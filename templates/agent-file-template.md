@@ -19,6 +19,7 @@ Invoke the right skill for the stage you are at:
 
 | Stage | Skill |
 |---|---|
+| No product context in `specs/_product/` yet, or it needs updating | `product` |
 | User described a demand, no `spec.md` yet | `specify` |
 | `spec.md` exists, has `[NEEDS CLARIFICATION]` markers | `clarify` |
 | Spec is clean, no `plan.md` yet | `plan` |

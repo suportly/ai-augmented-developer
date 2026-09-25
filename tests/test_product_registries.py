@@ -43,3 +43,31 @@ def test_claude_md_table_has_product(framework_root: pathlib.Path):
     assert "specs/_product/" in row, (
         "the `product` row must mention specs/_product/ as its condition"
     )
+
+
+# T011 — `product` must also be listed in every remaining registry that
+# enumerates skills by name: the meta-skill's pipeline table, the agent-file
+# template's stage table, the lean preset's pipeline line, the slash-commands
+# rule, and the README.
+REGISTRY_FILES = (
+    "skills/using-ai-augmented-developer/SKILL.md",
+    "templates/agent-file-template.md",
+    "presets/lean/CLAUDE.md",
+    "rules/slash-commands.md",
+    "README.md",
+)
+
+
+@pytest.mark.parametrize("relative_path", REGISTRY_FILES)
+def test_product_listed_in_every_registry(framework_root: pathlib.Path, relative_path: str):
+    text = (framework_root / relative_path).read_text(encoding="utf-8")
+    if relative_path == "rules/slash-commands.md":
+        assert "`/aia:product`" in text
+    elif relative_path == "presets/lean/CLAUDE.md":
+        assert "product → specify" in text
+    elif relative_path == "README.md":
+        # README's pipeline bullets and workflow list bold skill names
+        # (`**specify**`, ...) rather than backtick-code them.
+        assert "**product**" in text
+    else:
+        assert "`product`" in text

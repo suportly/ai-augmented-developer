@@ -277,7 +277,9 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 
 ## The Basic Workflow
 
-1. **specify** — Activates first. Turns a natural-language demand into a `spec.md` under `specs/<branch>/`, surfacing any ambiguity as `[NEEDS CLARIFICATION: …]` markers instead of guessing.
+0. **product** — Runs once per project (or whenever the context is stale) before `specify` ever fires. Bootstraps or updates `specs/_product/mission.md`, `tech-stack.md`, and `roadmap.md`, inferred from the repository.
+
+1. **specify** — Activates first for each new feature. Turns a natural-language demand into a `spec.md` under `specs/<branch>/`, surfacing any ambiguity as `[NEEDS CLARIFICATION: …]` markers instead of guessing.
 
 2. **clarify** — Walks the user through the clarification markers one at a time and rewrites the spec with the answers. The spec stays unapproved while any marker is unresolved.
 
@@ -297,9 +299,10 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 
 ## What's Inside
 
-### Skills (14 generic + preset)
+### Skills (17 generic + preset)
 
 **Pipeline**
+- **product** — Bootstraps or updates `specs/_product/mission.md`, `tech-stack.md`, and `roadmap.md` from the repository; runs once per project before `specify`.
 - **specify** — Natural-language demand → numbered `spec.md` with `[NEEDS CLARIFICATION]` markers for ambiguity.
 - **clarify** — Surfaces those markers one at a time and rewrites the spec with the answers.
 - **plan** — Turns an approved spec into `plan.md` with a mandatory Constitution Check.

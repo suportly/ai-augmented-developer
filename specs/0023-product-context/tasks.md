@@ -169,7 +169,7 @@
 
 ### T011 — Demais registros de skills e README
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009, T010
 - **Files:**
   - modify: `skills/using-ai-augmented-developer/SKILL.md`

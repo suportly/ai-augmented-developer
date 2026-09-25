@@ -33,6 +33,7 @@ When in conflict, the user wins.
 
 | Skill | Use when |
 |---|---|
+| `product` | no product context in `specs/_product/` yet, or it needs updating |
 | `specify` | the user describes a demand in natural language and no `spec.md` exists yet |
 | `clarify` | `spec.md` exists but contains `[NEEDS CLARIFICATION]` markers |
 | `plan` | spec is clean; no `plan.md` yet |
