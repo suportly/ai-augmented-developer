@@ -138,7 +138,7 @@
 
 ### T009 — Comando `/aia:product`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - create: `commands/product.md`

@@ -14,7 +14,7 @@ This test file covers two things:
   validates against both the external Agent Skills conformance schema
   and the internal aiadev pipeline schema (mirrors
   ``tests/test_skills_conformance.py``).
-- ``test_product_skill_installed[<platform>]``: after
+- ``test_product_skill_installed[<platform>]`` (and the `/aia:product` command tests): after
   ``aiadev install --preset lean --platform <p>``, the SKILL.md lands
   at that platform's skills directory.
 """
@@ -73,6 +73,27 @@ def test_product_skill_frontmatter_validates() -> None:
         )
 
 
+def _install_lean(
+    platform: str, isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> pathlib.Path:
+    """Install the `lean` preset for ``platform`` into a fresh project; return its root."""
+    monkeypatch.setenv("AIADEV_ROOT", str(isolated_framework))
+    project = tmp_path / "demo-project"
+    project.mkdir()
+    result = CliRunner().invoke(
+        install_command,
+        [
+            "--project-root", str(project),
+            "--preset", "lean",
+            "--platform", platform,
+            "--non-interactive",
+            "--vars", "PROJECT_NAME=Demo",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    return project
+
+
 @pytest.mark.parametrize(
     "platform", sorted(PLATFORM_SKILL_PATHS), ids=sorted(PLATFORM_SKILL_PATHS)
 )
@@ -82,28 +103,22 @@ def test_product_skill_installed(
     tmp_path: pathlib.Path,
     monkeypatch,
 ) -> None:
-    monkeypatch.setenv("AIADEV_ROOT", str(isolated_framework))
-    project = tmp_path / "demo-project"
-    project.mkdir()
+    project = _install_lean(platform, isolated_framework, tmp_path, monkeypatch)
+    assert (project / PLATFORM_SKILL_PATHS[platform]).is_file()
 
-    runner = CliRunner()
-    result = runner.invoke(
-        install_command,
-        [
-            "--project-root",
-            str(project),
-            "--preset",
-            "lean",
-            "--platform",
-            platform,
-            "--non-interactive",
-            "--vars",
-            "PROJECT_NAME=Demo",
-        ],
-    )
-    assert result.exit_code == 0, result.output
 
-    skill_path = project / PLATFORM_SKILL_PATHS[platform]
-    assert skill_path.is_file(), (
-        f"expected {skill_path} to exist after install; output:\n{result.output}"
-    )
+def test_product_command_invokes_skill(framework_root: pathlib.Path) -> None:
+    command = framework_root / "commands" / "product.md"
+    fm, error = extract_frontmatter(command)
+    assert fm is not None, f"{command}: {error}"
+    assert fm.get("description"), "frontmatter missing 'description'"
+    body = command.read_text(encoding="utf-8").split("---", 2)[2]
+    assert "`product` skill" in body, "command body must invoke the `product` skill"
+    assert "$ARGUMENTS" in body
+
+
+def test_product_command_installed_for_claude_code(
+    isolated_framework: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> None:
+    project = _install_lean("claude-code", isolated_framework, tmp_path, monkeypatch)
+    assert (project / ".claude" / "commands" / "aia" / "product.md").is_file()
