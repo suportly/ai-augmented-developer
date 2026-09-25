@@ -8,6 +8,7 @@ Invoke the appropriate skill **before any action that writes code or state**. Cl
 
 | What you're doing | Skill to invoke |
 |---|---|
+| Project has no product context in `specs/_product/` yet (or it needs updating) | `product` |
 | User described a demand, no `spec.md` yet | `specify` |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | `clarify` |
 | Spec is clean, no `plan.md` yet | `plan` |

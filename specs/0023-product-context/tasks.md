@@ -152,7 +152,7 @@
 
 ### T010 — `CLAUDE.md` e pipeline-reference com `product`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005
 - **Files:**
   - modify: `CLAUDE.md`
