@@ -14,7 +14,7 @@ directory by `aiadev init --feature <name>` and then filled in by the
 | [`constitution-template.md`](./constitution-template.md) | `aiadev init` | project maintainers |
 | [`mission-template.md`](./mission-template.md) | `product` | `specify` |
 | [`tech-stack-template.md`](./tech-stack-template.md) | `product` | `plan` |
-| [`roadmap-template.md`](./roadmap-template.md) | `product` | `specify`, `replan` |
+| [`roadmap-template.md`](./roadmap-template.md) | `product` | `specify` (and `replan` once spec 0024 ships) |
 | [`agent-file-template.md`](./agent-file-template.md) | `aiadev install` | the coding agent at session start |
 | [`commands/command-template.md`](./commands/command-template.md) | contributors adding plugin commands | agent runtime |
 
