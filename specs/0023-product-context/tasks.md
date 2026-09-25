@@ -37,7 +37,7 @@
 
 ### T002 — Template de tech-stack
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `templates/tech-stack-template.md`

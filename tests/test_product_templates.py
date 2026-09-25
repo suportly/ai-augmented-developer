@@ -104,3 +104,43 @@ def test_non_template_lines_flags_concrete_content(line: str) -> None:
 )
 def test_non_template_lines_accepts_template_skeleton(line: str) -> None:
     assert _non_template_lines(line) == []
+
+
+@pytest.fixture
+def tech_stack_template_path(framework_root: pathlib.Path) -> pathlib.Path:
+    return framework_root / "templates" / "tech-stack-template.md"
+
+
+def test_tech_stack_template_shape(tech_stack_template_path: pathlib.Path) -> None:
+    assert tech_stack_template_path.is_file(), "templates/tech-stack-template.md is missing"
+    text = tech_stack_template_path.read_text(encoding="utf-8")
+
+    assert "**Language:**" in text, "missing Language: header"
+
+    required_anchors = ["Languages", "Frameworks", "Decisions"]
+    for name in required_anchors:
+        anchor = f"<!-- section: {name} -->"
+        assert anchor in text, f"missing section anchor {anchor!r}"
+
+    for label in ("**Choice:**", "**Why:**", "**Rejected alternatives:**"):
+        assert label in text, f"Decisions section missing field label {label!r}"
+
+
+def test_tech_stack_template_has_no_product_content(
+    tech_stack_template_path: pathlib.Path,
+) -> None:
+    assert tech_stack_template_path.is_file(), "templates/tech-stack-template.md is missing"
+    text = tech_stack_template_path.read_text(encoding="utf-8")
+
+    offenders = _non_template_lines(text)
+    assert offenders == [], f"template contains concrete content: {offenders!r}"
+
+
+def test_tech_stack_template_documents_role_split(
+    tech_stack_template_path: pathlib.Path,
+) -> None:
+    assert tech_stack_template_path.is_file(), "templates/tech-stack-template.md is missing"
+    text = tech_stack_template_path.read_text(encoding="utf-8")
+
+    assert "introspect" in text, "must document that the first version comes from introspect()"
+    assert "auto-stack" in text, "must document the <!-- aiadev:auto-stack --> role split"
