@@ -51,7 +51,7 @@
 
 ### T003 — Template de roadmap com a gramática de entrada
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `templates/roadmap-template.md`

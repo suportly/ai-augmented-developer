@@ -144,3 +144,46 @@ def test_tech_stack_template_documents_role_split(
 
     assert "introspect" in text, "must document that the first version comes from introspect()"
     assert "auto-stack" in text, "must document the <!-- aiadev:auto-stack --> role split"
+
+
+@pytest.fixture
+def roadmap_template_path(framework_root: pathlib.Path) -> pathlib.Path:
+    return framework_root / "templates" / "roadmap-template.md"
+
+
+ROADMAP_ENTRY_RE = re.compile(
+    r"^### R\{\{[A-Z0-9_]+\}\} — .+\n"
+    r"(?:.*\n)*?"
+    r"- \*\*Status:\*\*.*\n"
+    r"- \*\*Spec:\*\*.*\n"
+    r"- \*\*Depends on:\*\*.*$",
+    re.MULTILINE,
+)
+
+
+def test_roadmap_template_entry_grammar(roadmap_template_path: pathlib.Path) -> None:
+    assert roadmap_template_path.is_file(), "templates/roadmap-template.md is missing"
+    text = roadmap_template_path.read_text(encoding="utf-8")
+
+    assert "**Language:**" in text, "missing Language: header"
+
+    anchor = "<!-- section: Entries -->"
+    assert anchor in text, f"missing section anchor {anchor!r}"
+
+    assert ROADMAP_ENTRY_RE.search(text), (
+        "expected a '### R{{...}} — ...' heading followed by "
+        "'- **Status:**', '- **Spec:**', '- **Depends on:**' in order"
+    )
+
+    for status in ("planned", "in-progress", "done", "dropped"):
+        assert status in text, f"missing status value {status!r} in closed set"
+
+
+def test_roadmap_template_has_no_product_content(
+    roadmap_template_path: pathlib.Path,
+) -> None:
+    assert roadmap_template_path.is_file(), "templates/roadmap-template.md is missing"
+    text = roadmap_template_path.read_text(encoding="utf-8")
+
+    offenders = _non_template_lines(text)
+    assert offenders == [], f"template contains concrete content: {offenders!r}"
