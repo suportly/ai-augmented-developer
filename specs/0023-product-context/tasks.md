@@ -80,7 +80,7 @@
 
 ### T005 — Skill `product`: esqueleto e instalação nas 5 plataformas
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T002, T003
 - **Files:**
   - create: `skills/product/SKILL.md`
