@@ -187,7 +187,7 @@
 
 ### T012 — `specify` lê mission e roadmap
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T003
 - **Files:**
   - modify: `skills/specify/SKILL.md`
