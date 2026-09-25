@@ -39,9 +39,14 @@ Bootstrap or refresh the project's product context — mission, tech stack, and 
 
 1. **Read what describes the project.** `README.md`, package files (`package.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, and equivalents), `AGENTS.md`/`CLAUDE.md`, `.claude/rules/*`, and the top-level folder layout. This is the same reconnaissance `constitution` does in its own bootstrap mode.
 2. **Render the three templates into drafts**: `templates/mission-template.md`, `templates/tech-stack-template.md`, `templates/roadmap-template.md`. Every filled value must cite its source inline — the file path, and the line number when there is one (e.g. "audience inferred from README.md:12"). A value with no traceable source does not get filled.
-3. **Replace every non-inferable value** with a `[NEEDS CLARIFICATION:cl-N <precise question>]` marker, with ids monotonic per file starting at `cl-1`. Never invent — an audience, a problem statement, or a decision rationale the repository does not state becomes a marker, not a guess. Example: when the repository never says who the product is for, the audience field becomes a marker with a precise question.
-4. **Present the three drafts** and ask only the targeted questions needed to resolve the clarification markers — no open-ended "tell me about your product" questions when the repository context already answers them.
-5. **Write only after explicit approval.** Create `specs/_product/` if it does not exist, then write `mission.md`, `tech-stack.md`, and `roadmap.md`. Do not write before approval, and do not write partial drafts.
+3. **Seed `tech-stack.md`'s Languages and Frameworks from the stack detection `aiadev sync` already does.** `tech-stack.md` records decisions (what was adopted, why, what was rejected); the auto-stack block that `aiadev sync` writes into `AGENTS.md`, between the `aiadev:auto-stack:start` and `aiadev:auto-stack:end` markers, is the detected inventory.
+   - If `AGENTS.md` has that block, take the languages and frameworks from it.
+   - If not, read the files that detection reads: `package.json`, `tsconfig.json`, `pyproject.toml`, `requirements.txt`, `Cargo.toml`, `go.mod`, `pubspec.yaml`, `docker-compose.yml`, `Makefile`, `Taskfile.yml`, and `.github/workflows/*.yml`.
+   - Cite the project file each entry was detected from (e.g. "Python — pyproject.toml").
+   - Never invent the why or the rejected alternatives: ask the human for both, per decision, and mark them `[NEEDS CLARIFICATION:cl-N …]` until answered.
+4. **Replace every other non-inferable value** with a `[NEEDS CLARIFICATION:cl-N <precise question>]` marker, with ids monotonic per file starting at `cl-1`. Never invent — an audience, a problem statement, or a decision rationale the repository does not state becomes a marker, not a guess. Example: when the repository never says who the product is for, the audience field becomes a marker with a precise question.
+5. **Present the three drafts** and ask only the targeted questions needed to resolve the clarification markers — no open-ended "tell me about your product" questions when the repository context already answers them.
+6. **Write only after explicit approval.** Create `specs/_product/` if it does not exist, then write `mission.md`, `tech-stack.md`, and `roadmap.md`. Do not write before approval, and do not write partial drafts.
 
 ## Update mode
 

@@ -124,7 +124,7 @@
 
 ### T008 — Skill `product`: tech-stack semeado pelo introspect
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `skills/product/SKILL.md`

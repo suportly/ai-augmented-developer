@@ -116,3 +116,14 @@ def test_no_forward_pointers_left(framework_root: pathlib.Path) -> None:
     text = _body(framework_root)
 
     assert "added in a later task" not in text.lower()
+
+
+def test_tech_stack_seeded_from_introspect(framework_root: pathlib.Path) -> None:
+    text = _body(framework_root)
+    bootstrap = _section(text, "Bootstrap mode")
+
+    assert "auto-stack" in bootstrap
+    assert "AGENTS.md" in bootstrap
+    assert "tech-stack.md" in bootstrap
+    assert "rejected alternatives" in bootstrap.lower()
+    assert "src/aiadev" not in text
