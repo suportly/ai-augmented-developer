@@ -108,7 +108,7 @@
 
 ### T007 — Orçamento: sempre-carregado por preset
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `scripts/instruction_budget.py`
