@@ -13,11 +13,11 @@
 
 ### R001 — Contexto de produto: skill `product` e templates de mission, tech-stack e roadmap
 
-- **Status:** in-progress
+- **Status:** done
 - **Spec:** 0023-product-context
 - **Depends on:**
 
-Dar ao pipeline um artefato durável que diga por que o produto existe, para quem, com qual stack e em que ordem as features vêm, para que as specs conversem entre si. Fontes: título e porquê em specs/0023-product-context/spec.md:1,16; status `in-progress` até o merge da branch feature/0023-product-context (specs/0023-product-context/tasks.md).
+Dar ao pipeline um artefato durável que diga por que o produto existe, para quem, com qual stack e em que ordem as features vêm, para que as specs conversem entre si. Fontes: título e porquê em specs/0023-product-context/spec.md:1,16; status `done`: mesclada na `main` pela PR #56 (commit `8571f69`, 2026-10-13), com as 15 tasks concluídas (specs/0023-product-context/tasks.md).
 
 ### R002 — Skill `replan`: fechar o ciclo entre entrega e roadmap
 
