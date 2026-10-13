@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+import shutil
 
 import pytest
 
@@ -258,6 +259,22 @@ class TestDryRun:
 # ---------------------------------------------------------------------------
 
 
+_SKILL_REL = "skills/hello-world/SKILL.md"
+_REFERENCE_REL = "skills/hello-world/references/stack.md"
+
+
+def _preset_with_token(tmp_path: pathlib.Path, relative: str) -> pathlib.Path:
+    """Copy the mini fixture and append an unresolvable token to one preset file."""
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    broken = preset / relative
+    broken.write_text(
+        broken.read_text(encoding="utf-8") + "\nMissing: {{MISSING_TOKEN}}\n",
+        encoding="utf-8",
+    )
+    return preset
+
+
 class TestUnresolvedPlaceholders:
     def test_missing_variable_errors_by_default(self, tmp_path: pathlib.Path) -> None:
         with pytest.raises(InstallError, match="unresolved placeholders"):
@@ -287,6 +304,53 @@ class TestUnresolvedPlaceholders:
         # The literal {{GREETING}} survives in the output.
         agent_text = _agent_file(tmp_path).read_text(encoding="utf-8")
         assert "{{GREETING}}" in agent_text
+
+    @pytest.mark.parametrize("mode", [InstallMode.INSTALL, InstallMode.DRY_RUN])
+    def test_error_cites_the_offending_reference_file_and_key(
+        self, tmp_path: pathlib.Path, mode: InstallMode
+    ) -> None:
+        # Spec 0030 Story 4 sc2: a preset author must learn *which* file
+        # holds the stray token; a dry run predicts the same failure.
+        preset = _preset_with_token(tmp_path, _REFERENCE_REL)
+
+        with pytest.raises(InstallError) as excinfo:
+            install(
+                preset,
+                tmp_path / "project",
+                VARIABLES,
+                mode=mode,
+                now="2026-04-14T12:00:00Z",
+            )
+
+        message = str(excinfo.value)
+        assert "unresolved placeholders" in message
+        assert _REFERENCE_REL in message
+        assert "MISSING_TOKEN" in message
+        assert "SKILL.md" not in message  # only the offender is cited
+
+    @pytest.mark.parametrize("broken", [_SKILL_REL, _REFERENCE_REL])
+    def test_failed_install_leaves_nothing_behind_and_rerun_after_fix_succeeds(
+        self, tmp_path: pathlib.Path, broken: str
+    ) -> None:
+        # Every artifact is validated before the first write: a failing
+        # install leaves no file and no manifest, so fixing the variable
+        # and re-running is a clean first install, not a wall of conflicts.
+        preset = _preset_with_token(tmp_path, broken)
+        project = tmp_path / "project"
+        project.mkdir()
+
+        with pytest.raises(InstallError):
+            install(preset, project, VARIABLES, now="2026-04-14T12:00:00Z")
+        assert list(project.rglob("*")) == []  # no artifact, no manifest
+
+        report = install(
+            preset,
+            project,
+            {**VARIABLES, "MISSING_TOKEN": "fixed"},
+            now="2026-04-14T13:00:00Z",
+        )
+        assert report.ok
+        assert _skill_file(project, "hello-world") in report.written
 
 
 # ---------------------------------------------------------------------------

@@ -236,6 +236,12 @@ def install(
     and constitutions are skipped and noted in
     :attr:`InstallReport.skipped_unsupported`.
 
+    Placeholders are validated for every artifact before the first write:
+    an unresolved ``{{TOKEN}}`` raises :class:`InstallError` naming the
+    offending file(s) with nothing written and the manifest untouched
+    (unless ``allow_unresolved``, which writes the literal tokens and
+    reports their keys).
+
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
     scope-appropriate manifest.
@@ -269,6 +275,13 @@ def install(
 
     artifacts = _collect_artifacts(framework_root, platform_module, preset_path)
 
+    # Pass 1 — render every artifact and validate its placeholders before
+    # the first write (spec 0030 Story 4 sc2): a failing install must have
+    # no side effects, so nothing lands on disk and the manifest is
+    # untouched. The re-run after fixing the variable is then a clean
+    # install instead of a wall of conflicts on half-written files.
+    prepared: list[tuple[str, str, str]] = []
+    offenders: list[str] = []
     for role, name, source_path, verbatim in artifacts:
         # Under user scope, skip artifacts the handler says are not
         # installable there (agent_file, constitution). They stay
@@ -291,9 +304,20 @@ def install(
             unresolved = find_unresolved(rendered)
             if unresolved:
                 report.unresolved.extend(unresolved)
-                if not allow_unresolved:
-                    continue
+                # Cite the preset-relative file so the author knows where
+                # the stray token lives, not just which key it is.
+                offenders.append(
+                    f"{_to_rel(source_path, preset_path)} ({', '.join(unresolved)})"
+                )
+        prepared.append((role, name, rendered))
 
+    if offenders and not allow_unresolved:
+        raise InstallError(
+            "unresolved placeholders after substitution: " + "; ".join(offenders)
+        )
+
+    # Pass 2 — write.
+    for role, name, rendered in prepared:
         # Platforms may transform rendered content per-role (Gemini
         # converts markdown commands to TOML, for example). The hook is
         # optional; default is a pass-through.
@@ -340,12 +364,6 @@ def install(
                         report=report,
                         recorded_files=recorded_files,
                     )
-
-    if report.unresolved and not allow_unresolved:
-        raise InstallError(
-            "unresolved placeholders after substitution: "
-            f"{sorted(set(report.unresolved))}"
-        )
 
     if mode is InstallMode.INSTALL:
         merged_vars: dict[str, str] = {}

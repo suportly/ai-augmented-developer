@@ -180,7 +180,7 @@
 
 ### T012 — Placeholders em references de preset
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - modify: `src/aiadev/install_engine.py`
