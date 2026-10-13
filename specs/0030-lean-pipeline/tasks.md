@@ -193,7 +193,7 @@
 
 ### T013 — Remover órfãos pela regra de hash
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/install_engine.py`
@@ -215,6 +215,7 @@
 - **Acceptance:**
   - [ ] Teste vermelho: instalar `cursor` depois de `claude-code` **não** remove `.claude/**` nem `CLAUDE.md`.
   - [ ] O registro do preset mantém as entradas fora das raízes da plataforma corrente, deduplicadas por caminho com a nova vencendo; um `sync --platform claude-code` seguinte não acusa conflito.
+  - [ ] Carry-over da revisão da T013: (a) normalizar `entry.path` uma vez no topo de `_split_previous` (chave de `handled` e de dedupe), porque um alias não normalizado de arquivo ainda distribuído (`./AGENTS.md`) num manifesto adulterado hoje cai em stale e é apagado dentro da raiz; teste com a entrada alias. (b) A contenção atual é "dentro de `install_root`", não "dentro das raízes do framework": a restrição desta task às raízes da plataforma corrente é o que limita o que um manifesto forjado pode aposentar (ex. `src/app.py`); teste com entrada forjada fora das raízes gerenciadas. (c) Fundir o carry-over por escopo de usuário (hoje baseado em role) com o carry-over por raízes, em vez de manter dois mecanismos.
   - [ ] Commit message: `fix(install): T014 remoção restrita à plataforma corrente`.
 
 ### T015 — Dono compartilhado e DRY_RUN em memória
@@ -237,10 +238,12 @@
 - **Depends on:** T015
 - **Files:**
   - modify: `src/aiadev/commands/sync.py`
+  - modify: `src/aiadev/commands/install.py`
   - test: `tests/test_sync_removal.py`
 - **Spec scenarios:** Story 6 scenario 1
 - **Acceptance:**
   - [ ] Teste vermelho: `aiadev sync` lista removidos e preservados, e sai com 0 quando só há preservados.
+  - [ ] Carry-over da T013: `aiadev install` (`commands/install.py` ~:281-286) renderiza `removed` mas não `preserved`, e o seu gate "nothing to do" ignora `preserved`, então um órfão editado fica silencioso; renderizar `preserved` lá também e contá-lo no gate.
   - [ ] Um arquivo editado à mão é preservado na saída.
   - [ ] Commit message: `feat(sync): T016 relatório de arquivos removidos e preservados`.
 

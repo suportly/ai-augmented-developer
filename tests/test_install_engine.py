@@ -20,7 +20,13 @@ from aiadev.install_engine import (
     _collect_skill_references,
     install,
 )
-from aiadev.install_manifest import Manifest, load as load_manifest
+from aiadev.install_manifest import (
+    InstalledFile,
+    Manifest,
+    compute_sha256,
+    load as load_manifest,
+    save as save_manifest,
+)
 from aiadev.placeholders import find_unresolved
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "mini-preset"
@@ -767,3 +773,194 @@ def test_framework_reference_is_copied_verbatim(tmp_path: pathlib.Path) -> None:
     installed = project / _SKILLS_DIR["claude_code"] / "alpha" / "references" / "guide.md"
     assert installed.read_text(encoding="utf-8") == body
     assert report.unresolved == []
+
+
+# ---------------------------------------------------------------------------
+# Files the framework stopped shipping (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+# What a "new version" of the preset drops, as (preset-relative source,
+# project-relative installed path): a rule, and a skill's references/ file
+# while the skill itself stays.
+_RULE = ("rules/terse-mode.md", ".claude/rules/terse-mode.md")
+_REFERENCE = (_REFERENCE_REL, ".claude/skills/hello-world/references/stack.md")
+
+
+def _installed_v1(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
+    """Install the mini preset plus a rule; return ``(preset, project)``."""
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    _write(preset / _RULE[0], "# Terse mode\n")
+    project = tmp_path / "project"
+    install(preset, project, VARIABLES, now="2026-04-14T12:00:00Z")
+    return preset, project
+
+
+def _ship_v2_without(preset: pathlib.Path, *dropped: tuple[str, str]) -> None:
+    for source, _ in dropped:
+        (preset / source).unlink()
+
+
+def _tracked_paths(project: pathlib.Path) -> set[str]:
+    record = load_manifest(_manifest_file(project)).find_preset("mini")
+    assert record is not None
+    return {f.path for f in record.files}
+
+
+class TestStaleFiles:
+    @pytest.mark.parametrize("dropped", [_RULE, _REFERENCE], ids=["rule", "reference"])
+    def test_unedited_file_the_preset_dropped_is_removed(
+        self, tmp_path: pathlib.Path, dropped: tuple[str, str]
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        stale = project / dropped[1]
+        assert stale.is_file()
+        _ship_v2_without(preset, dropped)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [stale]
+        assert report.preserved == []
+        assert not stale.parent.exists()  # the directory it left empty goes too
+        assert dropped[1] not in _tracked_paths(project)
+        assert _agent_file(project).is_file()  # what is still shipped stays
+
+    @pytest.mark.parametrize("force", [False, True])
+    def test_hand_edited_file_is_preserved_and_leaves_the_manifest(
+        self, tmp_path: pathlib.Path, force: bool
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        stale = project / _RULE[1]
+        stale.write_text("my own terse rules\n", encoding="utf-8")
+        _ship_v2_without(preset, _RULE)
+
+        report = install(
+            preset, project, VARIABLES, force=force, now="2026-04-14T13:00:00Z"
+        )
+
+        assert stale.read_text(encoding="utf-8") == "my own terse rules\n"
+        assert report.preserved == [stale]
+        assert report.removed == []
+        assert report.conflicts == []
+        assert report.ok  # the edit is kept and listed, never a failure
+        assert _RULE[1] not in _tracked_paths(project)
+
+    def test_file_the_user_already_deleted_is_dropped_quietly(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        (project / _RULE[1]).unlink()
+        _ship_v2_without(preset, _RULE)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert _RULE[1] not in _tracked_paths(project)
+
+    def test_directory_holding_another_file_survives(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        mine = _write(project / ".claude" / "rules" / "mine.md", "# mine\n")
+        _ship_v2_without(preset, _RULE)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.removed == [project / _RULE[1]]
+        assert mine.is_file()
+
+    def test_file_still_shipped_but_in_conflict_is_not_stale(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # A conflict is "kept because edited", not "no longer shipped": it
+        # must stay tracked and must not show up as preserved.
+        preset, project = _installed_v1(tmp_path)
+        _agent_file(project).write_text("edited by user\n", encoding="utf-8")
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.conflicts == [_agent_file(project)]
+        assert report.preserved == [] and report.removed == []
+        assert "AGENTS.md" in _tracked_paths(project)
+
+    def test_dry_run_lists_removals_and_preservations_but_deletes_nothing(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        edited = project / _REFERENCE[1]
+        edited.write_text("my own stack notes\n", encoding="utf-8")
+        _ship_v2_without(preset, _RULE, _REFERENCE)
+        manifest_before = _manifest_file(project).read_bytes()
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            mode=InstallMode.DRY_RUN,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert report.removed == [project / _RULE[1]]
+        assert report.preserved == [edited]
+        assert (project / _RULE[1]).is_file()
+        assert edited.read_text(encoding="utf-8") == "my own stack notes\n"
+        assert _manifest_file(project).read_bytes() == manifest_before
+
+    def test_user_scope_run_does_not_retire_files_it_cannot_install(
+        self, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        # Agent files are skipped under --scope user, so a project install
+        # that happened to target $HOME left AGENTS.md/CLAUDE.md that this
+        # run never looked at: out of scope, not dropped by the framework.
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+        install(FIXTURES, home, VARIABLES, now="2026-04-14T12:00:00Z")
+
+        report = install(
+            FIXTURES, home, VARIABLES, scope="user", now="2026-04-14T13:00:00Z"
+        )
+
+        assert report.removed == [] and report.preserved == []
+        assert _agent_file(home).is_file() and _wrapper_file(home).is_file()
+        assert {"AGENTS.md", "CLAUDE.md"} <= _tracked_paths(home)
+
+
+class TestManifestPathContainment:
+    """A manifest entry is only ever a path *inside* the install root."""
+
+    @pytest.mark.parametrize("mode", [InstallMode.INSTALL, InstallMode.UNINSTALL])
+    @pytest.mark.parametrize("escape", ["relative", "absolute"])
+    def test_entry_outside_the_root_is_never_touched(
+        self, tmp_path: pathlib.Path, mode: InstallMode, escape: str
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        victim = _write(tmp_path / "victim.txt", "not ours\n")  # beside the project
+        recorded = "../victim.txt" if escape == "relative" else str(victim)
+        manifest = load_manifest(_manifest_file(project))
+        record = manifest.find_preset("mini")
+        assert record is not None
+        record.files.append(InstalledFile(recorded, compute_sha256(victim), "rule"))
+        save_manifest(manifest, _manifest_file(project))
+        _ship_v2_without(preset, _RULE)  # a legitimate stale file goes too
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            mode=mode,
+            force=True,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert victim.read_text(encoding="utf-8") == "not ours\n"
+        legit = project / _RULE[1]
+        assert legit in report.removed  # inside the root, still retired
+        assert not legit.exists()
+        # An install lists the unmanaged entry as preserved and drops it from
+        # the manifest; an uninstall just skips it.
+        assert len(report.preserved) == (0 if mode is InstallMode.UNINSTALL else 1)
+        if mode is InstallMode.INSTALL:
+            assert recorded not in _tracked_paths(project)

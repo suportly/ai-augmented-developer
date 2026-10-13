@@ -8,7 +8,8 @@ walk every artifact the platform handler declares, substitute the user's
 variables, decide (for each artifact) whether to write, skip, or flag a
 conflict, update ``.aiadev/installed.yaml``, and return a structured
 :class:`InstallReport`. Uninstall walks the manifest in reverse, removing
-only files whose sha256 still matches what the installer recorded.
+only files whose sha256 still matches what the installer recorded; a
+re-install applies that same rule to files the framework stopped shipping.
 
 The engine is pure-enough for tests: every side effect is a file write
 inside ``project_root``, and the callers inject ``now=`` for
@@ -18,9 +19,10 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import posixpath
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import yaml
 
@@ -100,6 +102,13 @@ class InstallReport:
     skipped: list[Path] = field(default_factory=list)  # present, identical
     conflicts: list[Path] = field(default_factory=list)  # present, differs
     removed: list[Path] = field(default_factory=list)
+    # Files the framework stopped shipping that the user had hand-edited
+    # (spec 0030 Story 6 sc1): kept on disk, dropped from the manifest and
+    # listed here. Also lists a manifest entry that points outside the
+    # install root (see :func:`_inside_root`), which is never touched.
+    # Deliberately not ``conflicts`` — nothing is wrong, so :attr:`ok`
+    # ignores them and the exit code stays 0.
+    preserved: list[Path] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
     # Artifacts the handler reports as not installable under the current
     # scope (user scope refuses agent_file and constitution). One entry
@@ -142,6 +151,26 @@ def _load_or_create_manifest(install_root: Path) -> Manifest:
 
 def _to_rel(target: Path, install_root: Path) -> str:
     return str(target.relative_to(install_root)).replace("\\", "/")
+
+
+def _inside_root(install_root: Path, rel: str) -> Path | None:
+    """Return ``install_root / rel`` if the manifest entry stays inside the root.
+
+    ``None`` for anything that would leave it — absolute paths, drive or
+    root-anchored paths, ``..`` that climbs above the root, or the root
+    itself — and the caller must then never stat, hash, delete or prune
+    it. Install and uninstall delete whatever the (committable, hence
+    untrusted) manifest names, so every path from it goes through here.
+    The check is lexical on purpose: symlinks are not resolved, so a
+    ``.claude/skills`` that points elsewhere keeps working.
+    """
+    windows = PureWindowsPath(rel)
+    if windows.drive or windows.root:  # also catches POSIX "/abs"
+        return None
+    parts = PurePosixPath(posixpath.normpath(rel.replace("\\", "/"))).parts
+    if not parts or parts[0] == "..":
+        return None
+    return install_root.joinpath(*parts)
 
 
 def _resolve_install_root(scope: str, project_root: Path) -> Path:
@@ -241,6 +270,12 @@ def install(
     offending file(s) with nothing written and the manifest untouched
     (unless ``allow_unresolved``, which writes the literal tokens and
     reports their keys).
+
+    Files the previous install of this preset recorded but the framework no
+    longer ships are retired by the same hash rule as uninstall: unedited
+    ones are removed (:attr:`InstallReport.removed`), hand-edited ones are
+    kept and listed in :attr:`InstallReport.preserved` — never a conflict,
+    and ``force`` does not delete them.
 
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
@@ -365,6 +400,12 @@ def install(
                         recorded_files=recorded_files,
                     )
 
+    # Files this preset used to ship but no longer does would otherwise
+    # drop out of the manifest and stay on disk, silently orphaned.
+    stale, carried = _split_previous(existing, recorded_files, scope, platform_module)
+    _retire_stale_files(stale, install_root=install_root, mode=mode, report=report)
+    recorded_files.extend(carried)
+
     if mode is InstallMode.INSTALL:
         merged_vars: dict[str, str] = {}
         if existing is not None:
@@ -389,6 +430,84 @@ def install(
             _ensure_gitignore_entry(project_root)
 
     return report
+
+
+def _split_previous(
+    existing: InstalledPreset | None,
+    recorded_files: list[InstalledFile],
+    scope: str,
+    platform_module,
+) -> tuple[list[InstalledFile], list[InstalledFile]]:
+    """Split the previous record into ``(stale, carried)`` entries.
+
+    Entries this run wrote, skipped or kept in conflict are still shipped,
+    so they are in neither list. Of the rest, those whose role the handler
+    cannot install under ``--scope user`` were never this run's business
+    and are carried; everything else is stale.
+    """
+    if existing is None:
+        return [], []
+    handled = {f.path for f in recorded_files}
+    stale: list[InstalledFile] = []
+    carried: list[InstalledFile] = []
+    for entry in existing.files:
+        if entry.path in handled:
+            continue
+        if scope == "user" and not platform_module.user_scope_supported(entry.role):
+            carried.append(entry)
+        else:
+            stale.append(entry)
+    return stale, carried
+
+
+def _retire_stale_files(
+    stale: list[InstalledFile],
+    *,
+    install_root: Path,
+    mode: InstallMode,
+    report: InstallReport,
+) -> None:
+    """Apply the uninstall hash rule to files the framework stopped shipping.
+
+    Same hash is ours to delete; a different hash is the user's, so it is
+    kept and listed in ``report.preserved``. ``--force`` deliberately has
+    no say here: it overwrites what the framework still ships, it never
+    deletes a hand-edit. A file already gone just drops out of the
+    manifest. An entry outside the install root (:func:`_inside_root`)
+    is not touched on disk either: it is listed in ``preserved`` and
+    dropped from the manifest. ``DRY_RUN`` reports the same outcome and
+    touches nothing.
+    """
+    for entry in stale:
+        target = _inside_root(install_root, entry.path)
+        if target is None:
+            # Display only, never stat'ed.
+            report.preserved.append(install_root / entry.path)
+            continue
+        if not target.is_file():
+            continue
+        if compute_sha256(target) != entry.sha256:
+            report.preserved.append(target)
+            continue
+        if mode is InstallMode.INSTALL:
+            target.unlink()
+            _prune_empty_dirs(target.parent, install_root)
+        report.removed.append(target)
+
+
+def _prune_empty_dirs(directory: Path, install_root: Path) -> None:
+    """``rmdir`` ``directory`` and its ancestors while empty, up to ``install_root``.
+
+    Never removes a populated directory nor ``install_root`` itself.
+    ``directory`` must come from :func:`_inside_root`: this loop climbs by
+    equality with ``install_root`` and does no containment check of its own.
+    """
+    while directory.is_dir() and directory != install_root:
+        try:
+            directory.rmdir()
+        except OSError:
+            break  # directory not empty; stop climbing.
+        directory = directory.parent
 
 
 def _ensure_team_toml_stub(project_root: Path, framework_root: Path | None) -> None:
@@ -551,8 +670,8 @@ def _perform_uninstall(
         return report
 
     for entry in list(existing.files):
-        target = install_root / entry.path
-        if not target.is_file():
+        target = _inside_root(install_root, entry.path)
+        if target is None or not target.is_file():
             continue
         current_sha = compute_sha256(target)
         if current_sha != entry.sha256 and not force:
@@ -570,13 +689,9 @@ def _perform_uninstall(
     for entry in existing.files:
         if entry.role not in ("skill", "command", "agent", "rule", "mcp"):
             continue
-        parent = (install_root / entry.path).parent
-        while parent.is_dir() and parent != install_root:
-            try:
-                parent.rmdir()
-            except OSError:
-                break  # directory not empty; stop climbing.
-            parent = parent.parent
+        target = _inside_root(install_root, entry.path)
+        if target is not None:
+            _prune_empty_dirs(target.parent, install_root)
 
     manifest.remove(preset_name)
     manifest_path = _manifest_path(install_root)
