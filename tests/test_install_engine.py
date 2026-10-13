@@ -800,26 +800,26 @@ def _ship_v2_without(preset: pathlib.Path, *dropped: tuple[str, str]) -> None:
         (preset / source).unlink()
 
 
-def _record_files(project: pathlib.Path) -> list[InstalledFile]:
-    """The mini preset's recorded files, in order, repeats included."""
-    record = load_manifest(_manifest_file(project)).find_preset("mini")
+def _record_files(project: pathlib.Path, preset: str = "mini") -> list[InstalledFile]:
+    """The preset's recorded files (the mini preset's by default), repeats included."""
+    record = load_manifest(_manifest_file(project)).find_preset(preset)
     assert record is not None
     return list(record.files)
 
 
-def _tracked_files(project: pathlib.Path) -> dict[str, str]:
-    """Manifest record of the mini preset as ``{path: sha256}``."""
-    return {f.path: f.sha256 for f in _record_files(project)}
+def _tracked_files(project: pathlib.Path, preset: str = "mini") -> dict[str, str]:
+    """Manifest record of ``preset`` as ``{path: sha256}``."""
+    return {f.path: f.sha256 for f in _record_files(project, preset)}
 
 
-def _tracked_paths(project: pathlib.Path) -> set[str]:
-    return set(_tracked_files(project))
+def _tracked_paths(project: pathlib.Path, preset: str = "mini") -> set[str]:
+    return set(_tracked_files(project, preset))
 
 
-def _rewrite_record(project: pathlib.Path, rewrite) -> None:
-    """Replace the mini preset's recorded files with ``rewrite(files)``."""
+def _rewrite_record(project: pathlib.Path, rewrite, preset: str = "mini") -> None:
+    """Replace ``preset``'s recorded files with ``rewrite(files)``."""
     manifest = load_manifest(_manifest_file(project))
-    record = manifest.find_preset("mini")
+    record = manifest.find_preset(preset)
     assert record is not None
     record.files[:] = rewrite(list(record.files))
     save_manifest(manifest, _manifest_file(project))
@@ -1042,11 +1042,15 @@ class TestRetirementIsBoundedToTheCurrentPlatform:
     ) -> None:
         # Probes the managed roots of each handler against everything it
         # installs: a root too narrow leaves an orphan behind, one too wide
-        # (the install root itself) reaches the user's file below.
+        # (the install root itself) reaches the user's file below. The MCP
+        # file is the exception: every server of the project lives in it,
+        # hand-added ones included, so it is no preset's to delete. It is
+        # outside every root, hence carried in the record, never retired.
         preset = _rich_preset(tmp_path)
         project = tmp_path / "project"
         install(preset, project, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z")
         installed = _tracked_files(project)
+        (mcp_file,) = (f.path for f in _record_files(project) if f.role == "mcp")
         mine = _write(project / "src" / "app.py", "print('mine')\n")
         sha = compute_sha256(mine)
         forged = [InstalledFile(path, sha, "rule") for path in ("src/app.py", "src/./app.py")]
@@ -1066,14 +1070,19 @@ class TestRetirementIsBoundedToTheCurrentPlatform:
         )
 
         assert report.ok and report.preserved == []
-        assert {p.relative_to(project).as_posix() for p in report.removed} == set(installed)
+        removed = {p.relative_to(project).as_posix() for p in report.removed}
+        assert removed == set(installed) - {mcp_file}
         assert mine.read_text(encoding="utf-8") == "print('mine')\n"
         # Carried over once, whatever its spelling.
-        assert [(f.path, f.sha256) for f in _record_files(project)] == [("src/app.py", sha)]
+        assert [(f.path, f.sha256) for f in _record_files(project)] == [
+            (mcp_file, installed[mcp_file]),
+            ("src/app.py", sha),
+        ]
         left = {p.relative_to(project).as_posix() for p in project.rglob("*") if p.is_file()}
         # Besides the manifest, the install also leaves its own stubs.
         assert left - {".aiadev/installed.yaml", ".gitignore", "_aiadev/team.toml"} == {
-            "src/app.py"
+            mcp_file,
+            "src/app.py",
         }
 
     @pytest.mark.parametrize(
@@ -1101,3 +1110,117 @@ class TestRetirementIsBoundedToTheCurrentPlatform:
         assert _agent_file(project).is_file()
         paths = [f.path for f in _record_files(project)]
         assert paths.count("AGENTS.md") == 1 and alias not in paths
+
+
+# ---------------------------------------------------------------------------
+# Shared owner, the MCP file, dry-run fidelity (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+_NOW = "2026-04-14T12:00:00Z"
+
+
+def _ship(tmp_path: pathlib.Path, name: str, *rules: str) -> pathlib.Path:
+    """(Re)write the preset ``name`` so that it ships exactly ``rules``."""
+    preset = tmp_path / "presets" / name
+    shutil.rmtree(preset, ignore_errors=True)
+    _write(preset / "preset.yaml", f"name: {name}\nversion: 1.0.0\n")
+    for rule in rules:
+        _write(preset / "rules" / f"{rule}.md", f"# {rule}\n")
+    return preset
+
+
+class TestSharedOwner:
+    @pytest.mark.parametrize("alias", ["", "./"], ids=["as-written", "aliased"])
+    def test_file_another_preset_still_records_is_released_not_removed(
+        self, tmp_path: pathlib.Path, alias: str
+    ) -> None:
+        project = tmp_path / "project"
+        shared = project / ".claude" / "rules" / "shared.md"
+        alpha, beta = _ship(tmp_path, "alpha", "shared"), _ship(tmp_path, "beta", "shared")
+        install(alpha, project, {}, now=_NOW)
+        install(beta, project, {}, force=True, now=_NOW)  # --force: the file is alpha's
+        _rewrite_record(  # beta's own spelling of the path
+            project,
+            lambda files: [InstalledFile(alias + f.path, f.sha256, f.role) for f in files],
+            preset="beta",
+        )
+        beta_paths = _tracked_paths(project, "beta")
+        _ship(tmp_path, "alpha")  # alpha drops it, beta still ships it
+
+        report = install(alpha, project, {}, now=_NOW)
+
+        assert shared.is_file()
+        assert report.removed == [] and report.preserved == []
+        assert ".claude/rules/shared.md" not in _tracked_paths(project, "alpha")
+        assert _tracked_paths(project, "beta") == beta_paths
+
+        _ship(tmp_path, "beta")  # now nobody ships it: the last owner removes it
+        assert install(beta, project, {}, now=_NOW).removed == [shared]
+        assert not shared.exists()
+
+    def test_mcp_file_is_out_of_reach_whatever_role_the_record_gives_it(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # Every server of the project lives in this one file, hand-added ones
+        # included: a preset dropping ``mcps.yaml`` must not take it with it,
+        # not even through a (hand-edited) record that calls it a rule.
+        preset = _ship(tmp_path, "alpha")
+        _write(preset / "mcps.yaml", "servers:\n  demo:\n    command: npx\n    args: [demo]\n")
+        project = tmp_path / "project"
+        install(preset, project, {}, now=_NOW)
+        target = project / ".mcp.json"
+        written = target.read_text(encoding="utf-8")
+        _rewrite_record(
+            project,
+            lambda files: [InstalledFile(f.path, f.sha256, "rule") for f in files],
+            preset="alpha",
+        )
+        (preset / "mcps.yaml").unlink()
+
+        report = install(preset, project, {}, force=True, now=_NOW)
+
+        assert report.ok and report.removed == [] and report.preserved == []
+        assert target.read_text(encoding="utf-8") == written
+        assert ".mcp.json" in _tracked_paths(project, "alpha")
+
+    def test_dry_run_over_several_presets_removes_what_the_real_run_removes(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # ``aiadev sync`` re-installs presets one after another. A dry run
+        # saves nothing, so each preset must see the previous one's result
+        # through the manifest object it is handed.
+        alpha = _ship(tmp_path, "alpha", "both", "only-alpha", "beta-keeps")
+        beta = _ship(tmp_path, "beta", "both", "only-beta", "beta-keeps")
+        dry, real = tmp_path / "dry", tmp_path / "real"
+        for project in (dry, real):
+            install(alpha, project, {}, now=_NOW)
+            install(beta, project, {}, force=True, now=_NOW)
+        _ship(tmp_path, "alpha")  # alpha drops all three
+        _ship(tmp_path, "beta", "beta-keeps")  # beta drops "both" and "only-beta"
+
+        def sync_loop(project, mode, manifest=None) -> dict[str, list[str]]:
+            removed = {}
+            for preset in (alpha, beta):
+                report = install(
+                    preset, project, {}, mode=mode, manifest=manifest, now=_NOW
+                )
+                removed[report.preset_name] = sorted(
+                    p.relative_to(project).as_posix() for p in report.removed
+                )
+            return removed
+
+        manifest_before = _manifest_file(dry).read_bytes()
+        dry_removed = sync_loop(
+            dry, InstallMode.DRY_RUN, manifest=load_manifest(_manifest_file(dry))
+        )
+        real_removed = sync_loop(real, InstallMode.INSTALL)
+
+        # "both": alpha releases it, beta - the last owner - removes it.
+        assert real_removed == {
+            "alpha": [".claude/rules/only-alpha.md"],
+            "beta": [".claude/rules/both.md", ".claude/rules/only-beta.md"],
+        }
+        assert dry_removed == real_removed
+        assert _manifest_file(dry).read_bytes() == manifest_before
+        assert (dry / ".claude/rules/both.md").is_file()  # a dry run deletes nothing
+        assert (real / ".claude/rules/beta-keeps.md").is_file()

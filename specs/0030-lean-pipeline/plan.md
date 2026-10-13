@@ -215,6 +215,7 @@ tests/  novos: coverage, tasks_done, next, budget, sync-removal (inclui "instala
 | Prosa da fase 3 estoura a catraca da fase 1 | Med | Low | Edições líquidas negativas; teto com `reason` quando inevitável |
 | Benchmark curto subestima o ganho de contexto acumulado | Med | Low | Registrar como limite; custo por feature e turnos como métricas, nunca tokens salvos |
 | Remoção de órfãos segue symlink de diretório dentro da raiz | Low | Med | Limitação conhecida: a contenção de `_inside_root` é léxica de propósito (quem aponta `.claude/skills` para outro lugar continua funcionando); um symlink commitado no repo mais um manifesto forjado com o hash da vítima ainda alcança arquivos fora da raiz, o que exige o mesmo vetor que `.claude` hooks já oferecem num repositório não confiável; o instalador também escreve através desses symlinks |
+| `uninstall` apaga arquivo que outro preset ainda registra (pré-existente; já em e17fb71) | Low | Med | Fora desta spec (D2 trata `install` e `sync`); `_perform_uninstall` não consulta os outros registros nem preserva `.mcp.json` compartilhado. Registrar como follow-up: aplicar o mesmo dono compartilhado e a regra de mcp ao uninstall |
 | Spec grande para uma branch | Med | Med | Fases mescláveis; linha de corte entre as fases 3 e 4 (P1 inteiras antes dela) |
 
 ## Complexity tracking

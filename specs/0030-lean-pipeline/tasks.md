@@ -220,7 +220,7 @@
 
 ### T015 — Dono compartilhado e DRY_RUN em memória
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T014
 - **Files:**
   - modify: `src/aiadev/install_engine.py`

@@ -268,6 +268,7 @@ def install(
     scope: str = "project",
     framework_root: Path | None = None,
     now: str | None = None,
+    manifest: Manifest | None = None,
 ) -> InstallReport:
     """Install or re-install a preset into ``project_root`` (or ``$HOME``).
 
@@ -290,11 +291,25 @@ def install(
     and ``force`` does not delete them. Only paths under this platform's
     managed roots (:func:`_managed_roots`) are candidates; the rest of the
     previous record, such as another platform's files, is carried over
-    untouched and stays tracked.
+    untouched and stays tracked. A role ``mcp`` file (``.mcp.json``, the
+    one file every server of the project lives in) is never a candidate.
+    A path another preset's record still lists is not this preset's to
+    delete: it leaves this record, stays on disk and is not reported, so
+    the last preset to stop shipping a shared file is the one that
+    removes it.
 
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
     scope-appropriate manifest.
+
+    ``manifest`` is the manifest to read and update instead of the one on
+    disk. A caller that re-installs several presets in ``DRY_RUN`` (``aiadev
+    sync --dry-run``) passes the same object to each call: nothing is
+    saved, but this preset's new record is applied to it in memory, so the
+    next preset decides about shared files from the records a real run
+    would have saved. Without it the manifest is loaded from disk. In
+    INSTALL it is the object saved (and UNINSTALL saves it too), so pass it
+    only when it is the current record.
 
     ``framework_root`` points at the ``aiadev`` checkout whose top-level
     ``commands/``, ``agents/``, and ``skills/`` directories are always
@@ -313,7 +328,8 @@ def install(
     preset_name = preset_data.get("name", preset_path.name)
     preset_version = str(preset_data.get("version", "0.0.0"))
 
-    manifest = _load_or_create_manifest(install_root)
+    if manifest is None:
+        manifest = _load_or_create_manifest(install_root)
     existing = manifest.find_preset(preset_name)
 
     if mode is InstallMode.UNINSTALL:
@@ -423,26 +439,38 @@ def install(
     # Files this preset used to ship but no longer does would otherwise
     # drop out of the manifest and stay on disk, silently orphaned. What
     # this platform does not manage is carried over instead, so the record
-    # keeps tracking the other platforms' files.
+    # keeps tracking the other platforms' files. What another preset's
+    # record still lists is that preset's file as well: not ours to delete.
+    owned_elsewhere = {
+        _normalize_rel(f.path)
+        for other in manifest.installed_presets
+        if other.name != preset_name
+        for f in other.files
+    }
     stale, carried = _split_previous(
-        previous, recorded_files, install_root, scope, platform_module
+        previous, recorded_files, install_root, scope, platform_module, owned_elsewhere
     )
     _retire_stale_files(stale, install_root=install_root, mode=mode, report=report)
     recorded_files.extend(carried)
 
-    if mode is InstallMode.INSTALL:
-        merged_vars: dict[str, str] = {}
-        if existing is not None:
-            merged_vars.update(existing.variables)
-        merged_vars.update(variables)
-        record = InstalledPreset(
+    merged_vars: dict[str, str] = {}
+    if existing is not None:
+        merged_vars.update(existing.variables)
+    merged_vars.update(variables)
+    # Applied in memory in every mode, so a DRY_RUN over several presets
+    # that share one manifest object sees each record a real run would
+    # have saved. Only INSTALL persists it.
+    manifest.upsert(
+        InstalledPreset(
             name=preset_name,
             version=preset_version,
             installed_at=now or _utc_now_iso(),
             variables=merged_vars,
             files=recorded_files,
         )
-        manifest.upsert(record)
+    )
+
+    if mode is InstallMode.INSTALL:
         save_manifest(manifest, _manifest_path(install_root))
 
         # Customization stubs land at the project root only — they are a
@@ -462,18 +490,23 @@ def _split_previous(
     install_root: Path,
     scope: str,
     platform_module,
+    owned_elsewhere: set[str],
 ) -> tuple[list[InstalledFile], list[InstalledFile]]:
     """Split the previous record into ``(stale, carried)`` entries.
 
     ``previous`` has its paths in :func:`_normalize_rel` form, which is
-    also the form of ``recorded_files``, so one path is one entry: the
-    entry this run recorded wins and a repeat of a path is dropped. Each
-    entry the run did not handle is then:
+    also the form of ``recorded_files`` and of ``owned_elsewhere`` (the
+    paths every other preset's record lists), so one path is one entry:
+    the entry this run recorded wins and a repeat of a path is dropped.
+    Each entry the run did not handle is then:
 
     * stale when it points outside ``install_root`` (the retire step lists
       it as preserved and drops it from the manifest) or under a root the
       current platform manages (:func:`_managed_roots`): the framework
       stopped shipping it;
+    * released when it would be stale under a managed root but
+      ``owned_elsewhere`` has it: it leaves this record and is neither
+      retired nor reported, because the file is still that preset's;
     * carried otherwise. Another platform's files, a project install's
       ``AGENTS.md`` seen from ``--scope user`` or any path the handler
       never writes are never this run's business: they stay on disk and in
@@ -492,10 +525,11 @@ def _split_previous(
             continue
         seen.add(entry.path)
         path = PurePosixPath(entry.path)
-        if _inside_root(install_root, entry.path) is None or any(
-            path.is_relative_to(root) for root in managed
-        ):
+        if _inside_root(install_root, entry.path) is None:
             stale.append(entry)
+        elif any(path.is_relative_to(root) for root in managed):
+            if entry.path not in owned_elsewhere:
+                stale.append(entry)
         else:
             carried.append(entry)
     return stale, carried
@@ -518,14 +552,19 @@ def _managed_roots(
     root: the directory when the name is part of the path
     (``.claude/skills``, ``.claude/commands/aia``, whatever the file
     extension) and the file itself when it is not (``AGENTS.md``,
-    ``.mcp.json``). The handler's wrapper (``CLAUDE.md``) is a root too.
+    ``constitution.md``). The handler's wrapper (``CLAUDE.md``) is a root too.
     A role the handler does not install under ``--scope user`` adds
     nothing there, mirroring the filter at the top of :func:`install`.
+    Role ``mcp`` adds nothing either, in any scope: its single file
+    (``.mcp.json``) holds every server of the project, hand-added ones
+    included, so no preset's install may retire it.
     """
     wrapper_hook = getattr(platform_module, "wrapper_target", None)
     targets: set[Path] = set()
     for role in _ROLE_PRIORITY:
-        if scope == "user" and not platform_module.user_scope_supported(role):
+        if role == "mcp" or (
+            scope == "user" and not platform_module.user_scope_supported(role)
+        ):
             continue
         first, second = (
             _resolve_artifact_target(platform_module, role, name, install_root, scope)

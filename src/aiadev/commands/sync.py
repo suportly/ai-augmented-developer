@@ -238,6 +238,10 @@ def sync_command(
         )
 
     # Step 1 — artifact re-sync.
+    #
+    # In a dry run the same manifest object goes to every preset, so a file
+    # they share is judged against the records of the presets before it, as
+    # in a real run (which saves each record before the next preset loads).
     if not skip_artifacts:
         for preset_record in manifest.installed_presets:
             preset_path = _locate_preset(framework_root, preset_record.name)
@@ -258,6 +262,7 @@ def sync_command(
                     mode=mode,
                     force=force,
                     framework_root=framework_root,
+                    manifest=manifest if dry_run else None,
                 )
             except InstallError as exc:
                 console.print(f"[red]error:[/red] {exc}")
