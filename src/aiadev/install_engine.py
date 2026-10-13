@@ -276,9 +276,9 @@ def install(
     artifacts = _collect_artifacts(framework_root, platform_module, preset_path)
 
     # Pass 1 — render every artifact and validate its placeholders before
-    # the first write (spec 0030 Story 4 sc2): a failing install must have
-    # no side effects, so nothing lands on disk and the manifest is
-    # untouched. The re-run after fixing the variable is then a clean
+    # the first write (spec 0030 Story 4 sc2): an unresolved-placeholder
+    # failure must have no side effects, so nothing lands on disk and the
+    # manifest is untouched. The re-run after fixing the variable is then a clean
     # install instead of a wall of conflicts on half-written files.
     prepared: list[tuple[str, str, str]] = []
     offenders: list[str] = []
