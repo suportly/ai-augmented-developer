@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "unit": "ceil(chars/4)",
+  "entries": {
+    "preset:lean:total": {
+      "baseline": 5115,
+      "teto": 5115
+    },
+    "preset:lean:agent_file": {
+      "baseline": 509,
+      "teto": 509
+    },
+    "preset:lean:wrapper": {
+      "baseline": 28,
+      "teto": 28
+    },
+    "preset:lean:rules": {
+      "baseline": 3195,
+      "teto": 3195
+    },
+    "preset:lean:skills": {
+      "baseline": 744,
+      "teto": 744
+    },
+    "preset:lean:commands": {
+      "baseline": 495,
+      "teto": 495
+    },
+    "preset:lean:agents": {
+      "baseline": 144,
+      "teto": 144
+    },
+    "preset:django-drf-react:total": {
+      "baseline": 5725,
+      "teto": 5725
+    },
+    "preset:django-drf-react:agent_file": {
+      "baseline": 875,
+      "teto": 875
+    },
+    "preset:django-drf-react:wrapper": {
+      "baseline": 28,
+      "teto": 28
+    },
+    "preset:django-drf-react:rules": {
+      "baseline": 3195,
+      "teto": 3195
+    },
+    "preset:django-drf-react:skills": {
+      "baseline": 988,
+      "teto": 988
+    },
+    "preset:django-drf-react:commands": {
+      "baseline": 495,
+      "teto": 495
+    },
+    "preset:django-drf-react:agents": {
+      "baseline": 144,
+      "teto": 144
+    },
+    "path:total": {
+      "baseline": 21717,
+      "teto": 21717
+    },
+    "path:skills/specify/SKILL.md": {
+      "baseline": 1349,
+      "teto": 1349
+    },
+    "path:templates/spec-template.md": {
+      "baseline": 978,
+      "teto": 978
+    },
+    "path:agents/spec-document-reviewer.md": {
+      "baseline": 1273,
+      "teto": 1273
+    },
+    "path:skills/clarify/SKILL.md": {
+      "baseline": 708,
+      "teto": 708
+    },
+    "path:skills/plan/SKILL.md": {
+      "baseline": 1280,
+      "teto": 1280
+    },
+    "path:templates/plan-template.md": {
+      "baseline": 780,
+      "teto": 780
+    },
+    "path:constitution.md": {
+      "baseline": 2098,
+      "teto": 2098
+    },
+    "path:agents/plan-document-reviewer.md": {
+      "baseline": 1438,
+      "teto": 1438
+    },
+    "path:skills/tasks/SKILL.md": {
+      "baseline": 740,
+      "teto": 740
+    },
+    "path:templates/tasks-template.md": {
+      "baseline": 579,
+      "teto": 579
+    },
+    "path:skills/implement/SKILL.md": {
+      "baseline": 3552,
+      "teto": 3552
+    },
+    "path:skills/test-driven-development/SKILL.md": {
+      "baseline": 1179,
+      "teto": 1179
+    },
+    "path:agents/code-reviewer.md": {
+      "baseline": 1480,
+      "teto": 1480
+    },
+    "path:skills/requesting-code-review/SKILL.md": {
+      "baseline": 1964,
+      "teto": 1964
+    },
+    "path:skills/finishing-a-branch/SKILL.md": {
+      "baseline": 839,
+      "teto": 839
+    },
+    "skill:analyze": {
+      "baseline": 970,
+      "teto": 970
+    },
+    "skill:checklist": {
+      "baseline": 542,
+      "teto": 542
+    },
+    "skill:clarify": {
+      "baseline": 708,
+      "teto": 708
+    },
+    "skill:constitution": {
+      "baseline": 1284,
+      "teto": 1284
+    },
+    "skill:finishing-a-branch": {
+      "baseline": 839,
+      "teto": 839
+    },
+    "skill:frontend-design": {
+      "baseline": 1142,
+      "teto": 1142
+    },
+    "skill:help": {
+      "baseline": 928,
+      "teto": 928
+    },
+    "skill:implement": {
+      "baseline": 3552,
+      "teto": 3552
+    },
+    "skill:plan": {
+      "baseline": 1280,
+      "teto": 1280
+    },
+    "skill:product": {
+      "baseline": 1577,
+      "teto": 1577
+    },
+    "skill:requesting-code-review": {
+      "baseline": 1964,
+      "teto": 1964
+    },
+    "skill:specify": {
+      "baseline": 1349,
+      "teto": 1349
+    },
+    "skill:systematic-debugging": {
+      "baseline": 1314,
+      "teto": 1314
+    },
+    "skill:task-context": {
+      "baseline": 751,
+      "teto": 751
+    },
+    "skill:tasks": {
+      "baseline": 740,
+      "teto": 740
+    },
+    "skill:test-driven-development": {
+      "baseline": 1179,
+      "teto": 1179
+    },
+    "skill:using-ai-augmented-developer": {
+      "baseline": 941,
+      "teto": 941
+    }
+  }
+}

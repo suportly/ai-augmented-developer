@@ -135,7 +135,7 @@
 
 ### T009 — Baseline versionado e catraca no CI
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008
 - **Files:**
   - create: `docs/instruction-budget.json`

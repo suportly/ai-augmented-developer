@@ -1,4 +1,4 @@
-"""T007/T008 — instruction budget: always-loaded cost per preset and the
+"""T007-T009 — instruction budget: always-loaded cost per preset and the
 pipeline path (spec 0030, Story 4).
 
 ``scripts/instruction_budget.py`` estimates "tokens" as ceil(chars / 4) (no
@@ -15,10 +15,17 @@ T008 adds the pipeline path: ``docs/pipeline-path.yaml`` lists, per stage of
 ``specify -> finish``, the framework files the default route reads;
 ``measure_pipeline_path`` sums ceil(chars / 4) per file, per stage, and fails
 (strictly, unlike the optional ``AGENTS.md``) when a cited file is missing.
+
+T009 adds the ratchet: ``docs/instruction-budget.json`` versions a ``baseline``
+(the pre-cut measurement) and a ``teto`` (ceiling) per key. ``check_budget``
+fails when a measurement exceeds its ``teto``; a ``teto`` above the
+``baseline`` needs a ``reason``. One test runs the real measurement against
+the committed file: that is the CI catraca (it runs in the pytest job).
 """
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import os
 import pathlib
@@ -33,6 +40,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "instruction_budget.py"
 
 COMPONENTS = ("agent_file", "wrapper", "rules", "skills", "commands", "agents")
+
+UNIT = "ceil(chars/4)"
 
 
 @pytest.fixture(scope="module")
@@ -671,3 +680,309 @@ def test_script_runs_standalone_without_pythonpath_from_any_directory(tmp_path):
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "lean" in result.stdout and "total" in result.stdout
+
+
+# --- unit: budget, check_budget and write_baseline (T009) ------------------
+
+
+def _budget(entries: dict) -> dict:
+    return {"version": 1, "unit": UNIT, "entries": entries}
+
+
+def _entry(baseline: int, teto: int | None = None, **extra) -> dict:
+    return {"baseline": baseline, "teto": baseline if teto is None else teto, **extra}
+
+
+def test_check_budget_passes_at_the_teto_and_below(budget):
+    limits = _budget({"skill:plan": _entry(100), "path:total": _entry(500, 400)})
+    assert budget.check_budget({"skill:plan": 100, "path:total": 400}, limits) == []
+    assert budget.check_budget({"skill:plan": 3, "path:total": 0}, limits) == []
+
+
+def test_one_token_over_the_teto_fails_naming_key_current_teto_and_delta(budget):
+    limits = _budget({"skill:plan": _entry(100)})
+    assert budget.check_budget({"skill:plan": 101}, limits) == [
+        "FAIL skill:plan: 101 > teto 100 (+1)"
+    ]
+
+
+def test_the_delta_is_measured_against_the_teto_not_the_baseline(budget):
+    limits = _budget({"preset:lean:total": _entry(1000, 900)})
+    assert budget.check_budget({"preset:lean:total": 990}, limits) == [
+        "FAIL preset:lean:total: 990 > teto 900 (+90)"
+    ]
+
+
+def test_every_exceeded_entry_gets_its_own_line(budget):
+    limits = _budget(
+        {"a": _entry(10), "b": _entry(10), "c": _entry(10), "path:x.md": _entry(5)}
+    )
+    lines = budget.check_budget({"a": 11, "b": 10, "c": 15, "path:x.md": 6}, limits)
+    assert lines == [
+        "FAIL a: 11 > teto 10 (+1)",
+        "FAIL c: 15 > teto 10 (+5)",
+        "FAIL path:x.md: 6 > teto 5 (+1)",
+    ]
+
+
+def test_a_measured_key_absent_from_the_budget_is_not_a_failure(budget):
+    limits = _budget({"skill:plan": _entry(100)})
+    assert budget.check_budget({"skill:plan": 100, "skill:new": 99999}, limits) == []
+
+
+def test_a_budget_entry_that_is_no_longer_measured_is_ignored(budget):
+    limits = _budget({"skill:plan": _entry(100), "skill:gone": _entry(1)})
+    assert budget.check_budget({"skill:plan": 100}, limits) == []
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{}, {"reason": ""}, {"reason": "   "}, {"reason": None}, {"reason": 3}],
+    ids=["absent", "empty", "blank", "null", "not-a-string"],
+)
+def test_a_teto_above_the_baseline_without_a_reason_is_a_malformed_budget(budget, extra):
+    limits = _budget({"skill:plan": _entry(100, 120, **extra)})
+    lines = budget.check_budget({"skill:plan": 100}, limits)
+
+    assert len(lines) == 1
+    assert lines[0].startswith("FAIL skill:plan: ")
+    assert "teto 120 > baseline 100" in lines[0]
+    assert "reason" in lines[0]
+
+
+def test_a_malformed_entry_fails_even_when_it_is_no_longer_measured(budget):
+    limits = _budget({"skill:gone": _entry(100, 120)})
+    assert len(budget.check_budget({}, limits)) == 1
+
+
+def test_a_teto_above_the_baseline_with_a_reason_is_accepted(budget):
+    limits = _budget({"skill:plan": _entry(100, 120, reason="new review gate (spec 0031)")})
+    assert budget.check_budget({"skill:plan": 120}, limits) == []
+    assert budget.check_budget({"skill:plan": 121}, limits) == [
+        "FAIL skill:plan: 121 > teto 120 (+1)"
+    ]
+
+
+def test_write_baseline_records_every_measurement_as_baseline_and_teto(budget, tmp_path):
+    target = tmp_path / "instruction-budget.json"
+    measured = {"preset:lean:total": 1000, "path:total": 2000, "skill:plan": 300}
+
+    budget.write_baseline(target, measured)
+
+    text = target.read_text(encoding="utf-8")
+    assert text.endswith("\n")
+    assert json.loads(text) == {
+        "version": 1,
+        "unit": UNIT,
+        "entries": {key: {"baseline": n, "teto": n} for key, n in measured.items()},
+    }
+    assert budget.check_budget(measured, budget.load_budget(target)) == []
+
+
+@pytest.mark.parametrize(
+    ("content", "match"),
+    [
+        pytest.param("{not json", "invalid JSON", id="not-json"),
+        pytest.param("[]", "JSON object", id="not-an-object"),
+        pytest.param(json.dumps({"version": 2, "unit": UNIT, "entries": {}}), "version", id="version"),
+        pytest.param(json.dumps({"version": 1, "unit": "words", "entries": {}}), "unit", id="unit"),
+        pytest.param(json.dumps({"version": 1, "unit": UNIT}), "entries", id="no-entries"),
+        pytest.param(
+            json.dumps({"version": 1, "unit": UNIT, "entries": {"k": {"baseline": "9", "teto": 9}}}),
+            "k.*baseline",
+            id="baseline-not-int",
+        ),
+        pytest.param(
+            json.dumps({"version": 1, "unit": UNIT, "entries": {"k": 9}}), "k", id="entry-not-object"
+        ),
+    ],
+)
+def test_load_budget_rejects_a_malformed_file(budget, tmp_path, content, match):
+    target = _write(tmp_path / "instruction-budget.json", content)
+    with pytest.raises(budget.BudgetError, match=match):
+        budget.load_budget(target)
+
+
+def test_load_budget_names_a_missing_file(budget, tmp_path):
+    with pytest.raises(budget.BudgetError, match="not found"):
+        budget.load_budget(tmp_path / "nope.json")
+
+
+# --- unit: skill keys (T009) -----------------------------------------------
+
+
+def test_measure_skills_counts_each_whole_skill_file_under_its_directory_name(
+    budget, tmp_path
+):
+    framework = tmp_path / "framework"
+    plan = "---\nname: plan\ndescription: d\n---\n" + "body " * 10
+    _write(framework / "skills" / "plan" / "SKILL.md", plan)
+    _write(framework / "skills" / "tasks" / "SKILL.md", "t" * 5)
+    _write(framework / "skills" / "plan" / "references" / "gate.md", "g" * 4000)
+    _write(framework / "skills" / "README.md", "r" * 4000)
+
+    assert budget.measure_skills(framework) == {
+        "skill:plan": _tokens(plan),
+        "skill:tasks": 2,
+    }
+
+
+# --- the committed budget and the CI ratchet (T009) ------------------------
+
+
+@pytest.fixture(scope="module")
+def measured_repo(budget):
+    return budget.measure_all()
+
+
+HEADLINE = {"preset:lean:total", "preset:django-drf-react:total", "path:total"}
+
+
+def test_repo_is_within_the_committed_budget(budget, measured_repo):
+    """The CI catraca: nothing measured may exceed its ``teto``. To raise one,
+    edit docs/instruction-budget.json with a ``reason`` (reviewed in the PR).
+
+    The headline keys must be both budgeted and measured: ``check_budget``
+    skips keys that do not match, so a budget whose keys were renamed would
+    otherwise pass while checking nothing."""
+    data = budget.load_budget(budget.BUDGET_FILE)
+    assert HEADLINE <= data["entries"].keys() & measured_repo.keys()
+
+    failures = budget.check_budget(measured_repo, data)
+    assert not failures, "\n".join(failures)
+
+
+# --- CLI: --check / --write-baseline (T009) --------------------------------
+
+
+@pytest.fixture
+def stubbed(budget, monkeypatch):
+    """Deterministic measurements, so the CLI tests exercise only the budget
+    logic. Keys: 2 presets x (6 components + total), the path and one skill."""
+    monkeypatch.setattr(budget, "install_preset", lambda preset, dest: None)
+    monkeypatch.setattr(
+        budget,
+        "measure_always_loaded",
+        lambda root: {**{name: 1 for name in COMPONENTS}, "total": 6},
+    )
+    monkeypatch.setattr(
+        budget,
+        "measure_pipeline_path",
+        lambda *a, **k: {
+            "stages": {"plan": 7},
+            "files": {"skills/plan/SKILL.md": 7},
+            "total": 7,
+        },
+    )
+    monkeypatch.setattr(budget, "measure_skills", lambda *a, **k: {"skill:plan": 9})
+
+
+def test_write_baseline_then_check_passes_and_reports_the_blocks(
+    budget, stubbed, tmp_path, capsys
+):
+    target = tmp_path / "instruction-budget.json"
+
+    assert budget.main(["--write-baseline", "--budget", str(target)]) == 0
+    entries = json.loads(target.read_text(encoding="utf-8"))["entries"]
+    assert entries["preset:lean:total"] == {"baseline": 6, "teto": 6}
+    assert entries["path:total"] == {"baseline": 7, "teto": 7}
+    assert entries["skill:plan"] == {"baseline": 9, "teto": 9}
+    assert entries["path:skills/plan/SKILL.md"] == {"baseline": 7, "teto": 7}
+    assert entries["preset:django-drf-react:rules"] == {"baseline": 1, "teto": 1}
+    capsys.readouterr()
+
+    assert budget.main(["--check", "--budget", str(target)]) == 0
+
+    out = capsys.readouterr().out
+    assert "OK   lean:" in out
+    assert "OK   django-drf-react:" in out
+    assert "OK   pipeline path:" in out
+    assert "OK   budget" in out
+    assert "FAIL" not in out
+
+
+def test_check_fails_with_exit_1_naming_the_key_and_the_delta(
+    budget, stubbed, tmp_path, capsys
+):
+    target = tmp_path / "instruction-budget.json"
+    budget.write_baseline(
+        target,
+        {"preset:lean:total": 6, "path:total": 6, "skill:plan": 9},
+    )
+
+    assert budget.main(["--check", "--budget", str(target)]) == 1
+
+    out = capsys.readouterr().out
+    assert re.findall(r"^FAIL .*$", out, re.MULTILINE) == [
+        "FAIL path:total: 7 > teto 6 (+1)"
+    ]
+    assert "OK   budget" not in out
+
+
+def test_check_reports_a_missing_budget_file(budget, stubbed, tmp_path, capsys):
+    target = tmp_path / "nope.json"
+
+    assert budget.main(["--check", "--budget", str(target)]) == 1
+
+    out = capsys.readouterr().out
+    assert re.search(r"^FAIL .*nope\.json", out, re.MULTILINE)
+
+
+def test_check_fails_when_no_budget_entry_matches_the_measurement(
+    budget, stubbed, tmp_path, capsys
+):
+    target = tmp_path / "instruction-budget.json"
+    budget.write_baseline(target, {"preset:renamed:total": 1000})
+
+    assert budget.main(["--check", "--budget", str(target)]) == 1
+
+    out = capsys.readouterr().out
+    assert "FAIL budget: no budget entry matches the current measurement" in out
+    assert "OK   budget" not in out
+
+
+def test_check_does_not_judge_the_budget_when_a_measurement_failed(
+    budget, stubbed, tmp_path, monkeypatch, capsys
+):
+    target = tmp_path / "instruction-budget.json"
+    budget.write_baseline(target, {"path:total": 999})
+
+    def boom(*args, **kwargs):
+        raise budget.PipelinePathError("cannot measure")
+
+    monkeypatch.setattr(budget, "measure_pipeline_path", boom)
+
+    assert budget.main(["--check", "--budget", str(target)]) == 1
+
+    out = capsys.readouterr().out
+    assert "FAIL pipeline path: cannot measure" in out
+    assert "OK   budget" not in out
+
+
+def test_write_baseline_refuses_to_overwrite_from_the_cli_unless_forced(
+    budget, stubbed, tmp_path, capsys
+):
+    target = _write(tmp_path / "instruction-budget.json", "keep me")
+
+    assert budget.main(["--write-baseline", "--budget", str(target)]) == 1
+    out = capsys.readouterr().out
+    assert "--force" in out
+    assert target.read_text(encoding="utf-8") == "keep me"
+
+    assert budget.main(["--write-baseline", "--force", "--budget", str(target)]) == 0
+    assert json.loads(target.read_text(encoding="utf-8"))["version"] == 1
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--check", "--write-baseline"],
+        ["--check", "lean"],
+        ["--write-baseline", "lean"],
+    ],
+    ids=["both-modes", "check-with-preset", "write-with-preset"],
+)
+def test_incompatible_options_are_a_usage_error(budget, argv):
+    with pytest.raises(SystemExit) as excinfo:
+        budget.main(argv)
+    assert excinfo.value.code == 2

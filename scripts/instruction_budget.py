@@ -26,20 +26,67 @@ that does not exist fails the measurement instead of counting as zero.
 tokenizer: deterministic, dependency-free, and good enough to track a
 budget. The figures are a relative gauge, not billing numbers.
 
+The **budget** (``docs/instruction-budget.json``) is the ratchet that keeps
+all of the above from growing back. It is a flat map of measurement keys to
+``{"baseline": N, "teto": N}`` (``teto`` is the ceiling; ``reason`` is an
+optional string)::
+
+    preset:<preset>:total            always-loaded total of a preset
+    preset:<preset>:<component>      one of agent_file, wrapper, rules,
+                                     skills, commands, agents
+    path:total                       pipeline path total (sum of the stages)
+    path:<file>                      one cited file of the pipeline path,
+                                     in its normalised POSIX spelling
+    skill:<name>                     whole skills/<name>/SKILL.md
+
+``baseline`` is the measurement taken before any cut (the reference for the
+reduction target); ``teto`` starts equal to it and only goes down as the
+text is cut. ``--check`` fails for every key measured above its ``teto``.
+A key measured but absent from the file is not a failure (a new skill's body
+is not budgeted until it is added to the file); a key in the file that is no
+longer measured is ignored.
+
+To raise a ``teto`` on purpose, edit the file by hand: set the new ``teto``
+and, when it ends up above the ``baseline``, a non-empty ``reason`` on that
+entry; a ``teto`` above its ``baseline`` without a ``reason`` makes the
+budget malformed and ``--check`` fails. The rule is stateless: raising a
+lowered ``teto`` back up to its ``baseline`` needs no ``reason``, and only
+the PR diff shows it. The ``reason`` is reviewed in the PR.
+
 Usage:
     scripts/instruction_budget.py                # lean and django-drf-react
     scripts/instruction_budget.py PRESET ...     # specific presets
+    scripts/instruction_budget.py --check        # compare against the budget
+    scripts/instruction_budget.py --write-baseline [--force]
+    scripts/instruction_budget.py --check --budget FILE   # another budget file
 
-The pipeline path is always printed after the presets.
+The pipeline path is always printed after the presets. ``--check`` and
+``--write-baseline`` always cover the default presets (they take no PRESET)
+and print that same report before the verdict. ``--check`` prints one
+``FAIL <key>: <current> > teto <teto> (+<delta>)`` line per exceeded entry
+and ``OK   budget: ...`` otherwise. ``--write-baseline`` records the current
+measurement with ``teto == baseline`` and refuses to overwrite an existing
+file without ``--force``: the baseline is rewritten only when a spec closes.
+``--write-baseline --force`` rewrites EVERY entry as baseline == teto ==
+current, discarding any ``reason`` and the previous baseline (the reference
+of the reduction target): verify the reduction BEFORE ``--force``, and
+restore a ``reason`` by hand if one is still needed.
 
 Exit codes:
-    0 — every preset and the pipeline path measured
+    0 — every preset and the pipeline path measured (and, with ``--check``,
+        nothing exceeds its teto; with ``--write-baseline``, the file written)
     1 — a preset is unknown or its install/measurement failed, or the
-        pipeline path file is malformed or cites a file that does not exist
-    2 — missing runtime dependencies (pyyaml, aiadev and its click/rich)
+        pipeline path file is malformed or cites a file that does not exist;
+        with ``--check``, an entry exceeds its teto, the budget is missing
+        or malformed, or no entry matches the measurement; with
+        ``--write-baseline``, the file exists and ``--force`` was not given
+    2 — missing runtime dependencies (pyyaml, aiadev and its click/rich),
+        or a usage error
 """
 from __future__ import annotations
 
+import argparse
+import json
 import re
 import sys
 import tempfile
@@ -67,6 +114,12 @@ CHARS_PER_TOKEN = 4
 
 #: The versioned list of files read per pipeline stage, under the framework root.
 PIPELINE_PATH_FILE = Path("docs") / "pipeline-path.yaml"
+
+#: The versioned instruction budget (baseline + teto per key).
+BUDGET_FILE = ROOT / "docs" / "instruction-budget.json"
+BUDGET_VERSION = 1
+#: Recorded in the budget: figures are only comparable under the same estimator.
+BUDGET_UNIT = "ceil(chars/4)"
 
 
 def estimate_tokens(text: str) -> int:
@@ -329,6 +382,136 @@ def install_preset(preset: str, dest: Path) -> None:
         )
 
 
+def measure_skills(root: Path = ROOT) -> dict[str, int]:
+    """Tokens of each whole ``<root>/skills/<name>/SKILL.md``, keyed
+    ``skill:<name>`` (directory name). Unlike the always-loaded figures this
+    counts the body: it is what a skill costs once invoked."""
+    return {
+        f"skill:{path.parent.name}": estimate_tokens(path.read_text(encoding="utf-8"))
+        for path in sorted((Path(root) / "skills").glob("*/SKILL.md"))
+    }
+
+
+def _measure_preset(preset: str) -> dict[str, int]:
+    """Install *preset* into a temporary project and measure it. Raises
+    ``ValueError`` for an unknown preset, ``RuntimeError`` if the install fails."""
+    if not (ROOT / "presets" / preset).is_dir():
+        raise ValueError(f"no such preset under {ROOT / 'presets'}")
+    with tempfile.TemporaryDirectory(prefix="instruction-budget-") as tmp:
+        install_preset(preset, Path(tmp))
+        return measure_always_loaded(Path(tmp))
+
+
+def _flatten(
+    presets: dict[str, dict[str, int]], path: dict, skills: dict[str, int]
+) -> dict[str, int]:
+    """The measurement as the flat ``key -> tokens`` map the budget is keyed by."""
+    measured: dict[str, int] = {}
+    for preset, counts in presets.items():
+        for name in ("total", *COMPONENTS):
+            measured[f"preset:{preset}:{name}"] = counts[name]
+    measured["path:total"] = path["total"]
+    for file, tokens in path["files"].items():
+        measured[f"path:{file}"] = tokens
+    measured.update(skills)
+    return measured
+
+
+def measure_all(presets: tuple[str, ...] | list[str] = DEFAULT_PRESETS) -> dict[str, int]:
+    """Every budgeted figure of the current tree, keyed as in the budget file
+    (see the module docstring). Raises ``RuntimeError`` / ``ValueError`` when
+    a preset or the pipeline path cannot be measured."""
+    counts = {preset: _measure_preset(preset) for preset in presets}
+    return _flatten(counts, measure_pipeline_path(), measure_skills())
+
+
+class BudgetError(ValueError):
+    """The budget file is missing or malformed, or would be overwritten."""
+
+
+def load_budget(path: Path) -> dict:
+    """The parsed budget at *path*, structure validated.
+
+    Raises ``BudgetError`` for a missing file, invalid JSON, another
+    ``version`` or ``unit``, or an entry without integer ``baseline`` and
+    ``teto``. Whether a ``teto`` above its ``baseline`` has a ``reason`` is
+    judged by ``check_budget``.
+    """
+    path = Path(path)
+    where = path.name
+    if not path.is_file():
+        raise BudgetError(f"{where}: budget file not found (create it with --write-baseline)")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise BudgetError(f"{where}: invalid JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise BudgetError(f"{where}: expected a JSON object")
+    if data.get("version") != BUDGET_VERSION:
+        raise BudgetError(f"{where}: unsupported version {data.get('version')!r}")
+    if data.get("unit") != BUDGET_UNIT:
+        raise BudgetError(
+            f"{where}: unit is {data.get('unit')!r}, this script measures "
+            f"{BUDGET_UNIT!r}; rewrite the baseline with --write-baseline --force"
+        )
+    entries = data.get("entries")
+    if not isinstance(entries, dict):
+        raise BudgetError(f"{where}: expected an 'entries' object")
+    for key, entry in entries.items():
+        if not isinstance(entry, dict):
+            raise BudgetError(f"{where}: entry '{key}' must be an object")
+        for field in ("baseline", "teto"):
+            if not isinstance(entry.get(field), int):
+                raise BudgetError(f"{where}: entry '{key}': '{field}' must be an integer")
+    return data
+
+
+def check_budget(measured: dict[str, int], budget: dict) -> list[str]:
+    """One ``FAIL`` line per problem, in budget order; empty when it holds.
+
+    - a measurement above its ``teto``:
+      ``FAIL <key>: <current> > teto <teto> (+<delta>)``;
+    - a ``teto`` above its ``baseline`` with no non-empty ``reason``: a
+      malformed budget, reported even if the key is no longer measured.
+
+    A measured key absent from the budget is not a failure, and a budget
+    entry that is not measured is not compared.
+    """
+    failures: list[str] = []
+    for key, entry in budget["entries"].items():
+        baseline, teto = entry["baseline"], entry["teto"]
+        reason = entry.get("reason")
+        if teto > baseline and not (isinstance(reason, str) and reason.strip()):
+            failures.append(
+                f"FAIL {key}: teto {teto} > baseline {baseline} needs a non-empty "
+                '"reason" (malformed budget)'
+            )
+        current = measured.get(key)
+        if current is not None and current > teto:
+            failures.append(f"FAIL {key}: {current} > teto {teto} (+{current - teto})")
+    return failures
+
+
+def write_baseline(path: Path, measured: dict[str, int], force: bool = False) -> None:
+    """Record *measured* as the budget: ``baseline == teto == measurement``.
+
+    The baseline is the pre-cut reference, so an existing file is never
+    replaced unless *force*. Raises ``BudgetError`` in that case.
+    """
+    path = Path(path)
+    if path.exists() and not force:
+        raise BudgetError(
+            f"{path.name} already exists; --force replaces it (rewrites every "
+            "baseline and teto from the current measurement)"
+        )
+    data = {
+        "version": BUDGET_VERSION,
+        "unit": BUDGET_UNIT,
+        "entries": {key: {"baseline": n, "teto": n} for key, n in measured.items()},
+    }
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
 def _missing_dependency() -> str | None:
     """An actionable message when a runtime dependency is absent, else None."""
     try:
@@ -345,22 +528,57 @@ def _missing_dependency() -> str | None:
     return None
 
 
-def main(argv: list[str]) -> int:
-    missing = _missing_dependency()
-    if missing:
-        print(f"error: {missing}", file=sys.stderr)
-        return 2
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="instruction_budget.py",
+        description="Measure the instruction cost of each preset and of the "
+        "pipeline path, and check it against the versioned budget.",
+    )
+    parser.add_argument(
+        "presets",
+        nargs="*",
+        metavar="PRESET",
+        help=f"presets to measure (default: {' '.join(DEFAULT_PRESETS)})",
+    )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if any measurement exceeds its teto in the budget",
+    )
+    mode.add_argument(
+        "--write-baseline",
+        action="store_true",
+        help="record the current measurement as baseline and teto "
+        "(refuses to overwrite an existing budget)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="with --write-baseline: overwrite an existing budget",
+    )
+    parser.add_argument(
+        "--budget",
+        type=Path,
+        default=BUDGET_FILE,
+        metavar="FILE",
+        help="budget file (default: docs/instruction-budget.json)",
+    )
+    args = parser.parse_args(argv)
+    if args.presets and (args.check or args.write_baseline):
+        parser.error("--check and --write-baseline cover the default presets: drop PRESET")
+    return args
 
+
+def _report(presets: list[str]) -> tuple[dict[str, dict[str, int]], dict | None, bool]:
+    """Print the per-preset blocks and the pipeline path block. Returns the
+    per-preset counts, the path measurement (None when it failed) and whether
+    anything failed."""
     failed = False
-    for preset in argv or list(DEFAULT_PRESETS):
-        if not (ROOT / "presets" / preset).is_dir():
-            print(f"FAIL {preset}: no such preset under {ROOT / 'presets'}")
-            failed = True
-            continue
+    counts: dict[str, dict[str, int]] = {}
+    for preset in presets:
         try:
-            with tempfile.TemporaryDirectory(prefix="instruction-budget-") as tmp:
-                install_preset(preset, Path(tmp))
-                counts = measure_always_loaded(Path(tmp))
+            counts[preset] = _measure_preset(preset)
         except (RuntimeError, ValueError) as exc:
             print(f"FAIL {preset}: {exc}")
             failed = True
@@ -368,22 +586,70 @@ def main(argv: list[str]) -> int:
 
         print(preset)
         for name in (*COMPONENTS, "total"):
-            print(f"  {name:<11}{counts[name]:>7}")
-        print(f"OK   {preset}: ~{counts['total']} tokens always loaded (chars / 4)")
+            print(f"  {name:<11}{counts[preset][name]:>7}")
+        print(f"OK   {preset}: ~{counts[preset]['total']} tokens always loaded (chars / 4)")
 
     try:
         path = measure_pipeline_path()
     except (RuntimeError, ValueError) as exc:
         print(f"FAIL pipeline path: {exc}")
-        failed = True
-    else:
-        print("pipeline path")
-        width = max(11, *(len(name) for name in path["stages"])) + 2
-        for name, tokens in (*path["stages"].items(), ("total", path["total"])):
-            print(f"  {name:<{width}}{tokens:>7}")
-        print(f"OK   pipeline path: ~{path['total']} tokens (chars / 4)")
+        return counts, None, True
 
-    return 1 if failed else 0
+    print("pipeline path")
+    width = max(11, *(len(name) for name in path["stages"])) + 2
+    for name, tokens in (*path["stages"].items(), ("total", path["total"])):
+        print(f"  {name:<{width}}{tokens:>7}")
+    print(f"OK   pipeline path: ~{path['total']} tokens (chars / 4)")
+    return counts, path, failed
+
+
+def _shown(path: Path) -> str:
+    """*path* relative to the framework root when it lives under it."""
+    try:
+        return Path(path).resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def main(argv: list[str]) -> int:
+    args = _parse_args(argv)
+    missing = _missing_dependency()
+    if missing:
+        print(f"error: {missing}", file=sys.stderr)
+        return 2
+
+    counts, path, failed = _report(args.presets or list(DEFAULT_PRESETS))
+    if not (args.check or args.write_baseline):
+        return 1 if failed else 0
+    if failed or path is None:
+        print("FAIL budget: not evaluated, a measurement above failed")
+        return 1
+
+    try:
+        measured = _flatten(counts, path, measure_skills())
+        if args.write_baseline:
+            write_baseline(args.budget, measured, force=args.force)
+            print(f"OK   budget: baseline written, {len(measured)} entries ({_shown(args.budget)})")
+            return 0
+        budget = load_budget(args.budget)
+    except (OSError, ValueError) as exc:
+        print(f"FAIL budget: {exc}")
+        return 1
+
+    failures = check_budget(measured, budget)
+    if failures:
+        print("\n".join(failures))
+        print(
+            f"     hint: cut the text, or raise the teto in {_shown(args.budget)} "
+            'with a non-empty "reason"'
+        )
+        return 1
+    checked = sum(1 for key in budget["entries"] if key in measured)
+    if not checked:
+        print("FAIL budget: no budget entry matches the current measurement")
+        return 1
+    print(f"OK   budget: {checked} entries within teto ({_shown(args.budget)})")
+    return 0
 
 
 if __name__ == "__main__":
