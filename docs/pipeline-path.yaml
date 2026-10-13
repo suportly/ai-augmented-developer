@@ -1,0 +1,55 @@
+# Pipeline path: the framework files the DEFAULT route reads, per stage of
+# `specify -> finish`. scripts/instruction_budget.py sums ceil(chars / 4) per
+# file and per stage and reports the total.
+#
+# What counts: whole files, read when the route reaches the stage: its
+# SKILL.md, the template it fills, the reviewer agent it dispatches, and the
+# skills it invokes along the way. A file read again at a later stage counts
+# again there (code-reviewer at implement and at requesting-code-review);
+# listing it twice in one stage is an error.
+#
+# What does NOT count: files read only on demand, such as the opt-in
+# task-context skill (skills/task-context/SKILL.md).
+#
+# How to update: paths are relative to the framework root. Add a file to the
+# stage that reads it when a skill or agent gains a default-route read, and
+# remove it when the read goes away. A cited file that does not exist fails
+# the measurement, so a rename or a deletion has to be mirrored here.
+
+stages:
+  - name: specify
+    files:
+      - skills/specify/SKILL.md
+      - templates/spec-template.md
+      - agents/spec-document-reviewer.md
+
+  - name: clarify
+    files:
+      - skills/clarify/SKILL.md
+
+  - name: plan
+    files:
+      - skills/plan/SKILL.md
+      - templates/plan-template.md
+      - constitution.md
+      - agents/plan-document-reviewer.md
+
+  - name: tasks
+    files:
+      - skills/tasks/SKILL.md
+      - templates/tasks-template.md
+
+  - name: implement
+    files:
+      - skills/implement/SKILL.md
+      - skills/test-driven-development/SKILL.md
+      - agents/code-reviewer.md
+
+  - name: requesting-code-review
+    files:
+      - skills/requesting-code-review/SKILL.md
+      - agents/code-reviewer.md
+
+  - name: finishing-a-branch
+    files:
+      - skills/finishing-a-branch/SKILL.md

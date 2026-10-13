@@ -1,4 +1,5 @@
-"""T007 — instruction budget: always-loaded cost per preset (spec 0030, Story 4).
+"""T007/T008 — instruction budget: always-loaded cost per preset and the
+pipeline path (spec 0030, Story 4).
 
 ``scripts/instruction_budget.py`` estimates "tokens" as ceil(chars / 4) (no
 tokenizer) and sums what the Claude Code platform loads without being
@@ -9,6 +10,11 @@ skills, commands and agents (a command's name is derived from its path:
 
 Unit tests drive ``measure_always_loaded`` against a hand-built project tree;
 the integration tests install real presets through the CLI route.
+
+T008 adds the pipeline path: ``docs/pipeline-path.yaml`` lists, per stage of
+``specify -> finish``, the framework files the default route reads;
+``measure_pipeline_path`` sums ceil(chars / 4) per file, per stage, and fails
+(strictly, unlike the optional ``AGENTS.md``) when a cited file is missing.
 """
 from __future__ import annotations
 
@@ -16,8 +22,10 @@ import importlib.util
 import math
 import os
 import pathlib
+import re
 import subprocess
 import sys
+import textwrap
 
 import pytest
 
@@ -339,6 +347,234 @@ def test_real_install_through_cli_route_is_measured(budget, tmp_path, preset):
     assert counts["rules"] < every_rule
 
 
+# --- unit: pipeline path (T008) -------------------------------------------
+
+
+def _framework(
+    tmp_path: pathlib.Path, path_yaml: str, files: dict[str, str] | None = None
+) -> pathlib.Path:
+    """A tiny framework tree: *files* on disk plus ``docs/pipeline-path.yaml``."""
+    framework = tmp_path / "framework"
+    framework.mkdir(exist_ok=True)
+    for rel, text in (files or {}).items():
+        _write(framework / rel, text)
+    _write(framework / "docs" / "pipeline-path.yaml", textwrap.dedent(path_yaml))
+    return framework
+
+
+def test_pipeline_path_sums_ceil_tokens_per_file_then_per_stage(budget, tmp_path):
+    framework = _framework(
+        tmp_path,
+        """\
+        stages:
+          - name: one
+            files: [a.md, d.md]
+          - name: two
+            files: [b.md, c.md]
+        """,
+        {"a.md": "a", "d.md": "d", "b.md": "b" * 5, "c.md": "c" * 9},
+    )
+
+    result = budget.measure_pipeline_path(framework)
+
+    # ceil per file (1 + 1 = 2), not ceil of the summed characters (2 / 4 = 1).
+    assert result["stages"] == {"one": 2, "two": 5}
+    assert result["files"] == {"a.md": 1, "d.md": 1, "b.md": 2, "c.md": 3}
+    assert result["total"] == 7 == sum(result["stages"].values())
+
+
+def test_pipeline_path_counts_characters_not_bytes(budget, tmp_path):
+    framework = _framework(
+        tmp_path,
+        "stages:\n  - name: s\n    files: [pt.md]\n",
+        {"pt.md": "ação"},  # 4 characters, 6 bytes
+    )
+    assert budget.measure_pipeline_path(framework)["total"] == 1
+
+
+def test_pipeline_path_preserves_the_order_of_the_file(budget, tmp_path):
+    framework = _framework(
+        tmp_path,
+        """\
+        stages:
+          - {name: zeta, files: [z.md, a.md]}
+          - {name: alpha, files: [m.md]}
+          - {name: mid, files: [b.md]}
+        """,
+        {name: "x" for name in ("z.md", "a.md", "m.md", "b.md")},
+    )
+
+    result = budget.measure_pipeline_path(framework)
+
+    assert list(result["stages"]) == ["zeta", "alpha", "mid"]
+    assert list(result["files"]) == ["z.md", "a.md", "m.md", "b.md"]
+
+
+def test_only_listed_files_count_so_conditional_references_stay_out(budget, tmp_path):
+    """The path is the list, not the directory: ``review-gate.md`` is read by
+    the default route and is cited; ``task-context.md`` sits on disk but is
+    conditional, so it is not."""
+    gate = "skills/requesting-code-review/references/review-gate.md"
+    framework = _framework(
+        tmp_path,
+        f"""\
+        stages:
+          - name: requesting-code-review
+            files: [skills/requesting-code-review/SKILL.md, {gate}]
+        """,
+        {
+            "skills/requesting-code-review/SKILL.md": "s" * 8,
+            gate: "g" * 40,
+            "skills/implement/references/task-context.md": "t" * 4000,
+        },
+    )
+
+    result = budget.measure_pipeline_path(framework)
+
+    assert result["files"] == {"skills/requesting-code-review/SKILL.md": 2, gate: 10}
+    assert result["total"] == 12
+
+
+def test_a_file_listed_in_two_stages_counts_in_both(budget, tmp_path):
+    """A file the route reads again at a later stage is paid for again (the
+    constitution at ``plan`` and at ``implement``): stage figures are what each
+    stage reads, so ``total`` is the sum of stages and can exceed the sum of
+    the distinct files. ``files`` lists each distinct file once, under one
+    spelling (``./constitution.md`` is ``constitution.md``)."""
+    framework = _framework(
+        tmp_path,
+        """\
+        stages:
+          - {name: plan, files: [constitution.md, plan.md]}
+          - {name: implement, files: ['./constitution.md']}
+        """,
+        {"constitution.md": "c" * 40, "plan.md": "p" * 8},
+    )
+
+    result = budget.measure_pipeline_path(framework)
+
+    assert result["stages"] == {"plan": 12, "implement": 10}
+    assert result["total"] == 22
+    assert result["files"] == {"constitution.md": 10, "plan.md": 2}
+
+
+def test_a_file_listed_twice_in_one_stage_is_rejected_whatever_the_spelling(
+    budget, tmp_path
+):
+    framework = _framework(
+        tmp_path,
+        "stages:\n  - {name: plan, files: ['./a.md', a.md]}\n",
+        {"a.md": "a"},
+    )
+    with pytest.raises(budget.PipelinePathError, match=r"'plan'.*a\.md.*more than once"):
+        budget.measure_pipeline_path(framework)
+
+
+def test_a_stage_name_listed_twice_is_rejected(budget, tmp_path):
+    framework = _framework(
+        tmp_path,
+        "stages:\n  - {name: plan, files: [a.md]}\n  - {name: plan, files: [a.md]}\n",
+        {"a.md": "a"},
+    )
+    with pytest.raises(budget.PipelinePathError, match="'plan'.*more than once"):
+        budget.measure_pipeline_path(framework)
+
+
+def test_a_cited_file_that_does_not_exist_fails_naming_it(budget, tmp_path):
+    """Unlike an optional ``AGENTS.md`` (0 when absent), a path file that
+    vanished must not silently shrink the budget."""
+    framework = _framework(
+        tmp_path,
+        """\
+        stages:
+          - name: plan
+            files: [skills/plan/SKILL.md, skills/gone/SKILL.md]
+        """,
+        {"skills/plan/SKILL.md": "plan"},
+    )
+
+    with pytest.raises(budget.PipelinePathError, match="does not exist or is not a file") as excinfo:
+        budget.measure_pipeline_path(framework)
+
+    message = str(excinfo.value)
+    assert "skills/gone/SKILL.md" in message
+    assert "'plan'" in message  # the stage that cites it
+
+
+def test_a_cited_directory_is_not_a_file(budget, tmp_path):
+    framework = _framework(
+        tmp_path, "stages:\n  - {name: plan, files: [skills]}\n", {"skills/x.md": "x"}
+    )
+    with pytest.raises(budget.PipelinePathError, match="does not exist or is not a file"):
+        budget.measure_pipeline_path(framework)
+
+
+def test_a_missing_path_file_fails_naming_it(budget, tmp_path):
+    with pytest.raises(budget.PipelinePathError, match="pipeline-path.yaml"):
+        budget.measure_pipeline_path(tmp_path / "empty-framework")
+
+
+def test_a_path_file_that_is_not_utf8_is_a_value_error(budget, tmp_path):
+    """No wrapper: ``main`` reports any ``ValueError`` as ``FAIL``, and a
+    ``UnicodeDecodeError`` is one."""
+    framework = _framework(tmp_path, "stages: []\n")
+    (framework / "docs" / "pipeline-path.yaml").write_bytes(b"stages: \xff\xfe\n")
+    with pytest.raises(ValueError):
+        budget.measure_pipeline_path(framework)
+
+
+def test_malformed_yaml_fails_clearly(budget, tmp_path):
+    framework = _framework(
+        tmp_path, "stages:\n  - {name: plan, files: [a.md\n", {"a.md": "a"}
+    )
+    with pytest.raises(budget.PipelinePathError, match="invalid YAML"):
+        budget.measure_pipeline_path(framework)
+
+
+@pytest.mark.parametrize(
+    ("path_yaml", "match"),
+    [
+        pytest.param("", "non-empty 'stages' list", id="empty-file"),
+        pytest.param("stages: []\n", "non-empty 'stages' list", id="stages-empty"),
+        pytest.param("stages:\n  - {name: plan}\n", "stage #1 needs", id="files-absent"),
+        pytest.param(
+            "stages:\n  - {name: plan, files: []}\n", "stage #1 needs", id="files-empty"
+        ),
+        pytest.param(
+            "stages:\n  - {name: plan, files: [3]}\n", "stage #1 needs", id="file-not-a-string"
+        ),
+    ],
+)
+def test_malformed_structure_fails_clearly(budget, tmp_path, path_yaml, match):
+    framework = _framework(tmp_path, path_yaml, {"a.md": "a"})
+    with pytest.raises(budget.PipelinePathError, match=match):
+        budget.measure_pipeline_path(framework)
+
+
+@pytest.mark.parametrize("cited", ["/etc/hosts", "../outside.md"])
+def test_cited_paths_must_stay_under_the_framework_root(budget, tmp_path, cited):
+    framework = _framework(
+        tmp_path, f"stages:\n  - {{name: plan, files: ['{cited}']}}\n", {"a.md": "a"}
+    )
+    with pytest.raises(budget.PipelinePathError, match="relative to the framework root"):
+        budget.measure_pipeline_path(framework)
+
+
+def test_real_pipeline_path_measures_the_framework_tree(budget):
+    """Strict: every cited file exists, or this raises. The invariants pin the
+    plan's decisions without re-parsing the YAML."""
+    result = budget.measure_pipeline_path()
+    files = result["files"]
+
+    assert result["total"] > 0
+    # requesting-code-review dispatches the code-reviewer agent, so it counts there.
+    assert result["stages"]["requesting-code-review"] >= (
+        files["skills/requesting-code-review/SKILL.md"] + files["agents/code-reviewer.md"]
+    )
+    # Conditional (opt-in) integration stays off the default route.
+    assert not [f for f in files if "task-context" in f]
+
+
 # --- CLI ------------------------------------------------------------------
 
 
@@ -349,6 +585,42 @@ def test_main_prints_one_block_per_preset_and_exits_zero(budget, capsys):
     for name in (*COMPONENTS, "total"):
         assert name in out
     assert "OK" in out
+
+
+def test_main_prints_the_pipeline_path_after_the_presets(budget, capsys):
+    assert budget.main(["lean"]) == 0
+    out = capsys.readouterr().out
+    result = budget.measure_pipeline_path()
+
+    assert out.index("OK   lean:") < out.index("OK   pipeline path:")
+    for name, tokens in result["stages"].items():
+        assert re.search(rf"^\s+{re.escape(name)}\s+{tokens}$", out, re.MULTILINE), name
+    assert f"OK   pipeline path: ~{result['total']} tokens (chars / 4)" in out
+
+
+def test_main_fails_with_exit_1_when_the_path_cites_a_missing_file(
+    budget, tmp_path, monkeypatch, capsys
+):
+    """Only the path is broken: the presets are stubbed to succeed so the
+    exit code and the FAIL line can only come from the path block."""
+    framework = _framework(
+        tmp_path, "stages:\n  - {name: plan, files: [skills/gone/SKILL.md]}\n"
+    )
+    real = budget.measure_pipeline_path
+    monkeypatch.setattr(budget, "install_preset", lambda preset, dest: None)
+    monkeypatch.setattr(
+        budget,
+        "measure_always_loaded",
+        lambda root: {**{name: 0 for name in COMPONENTS}, "total": 0},
+    )
+    monkeypatch.setattr(budget, "measure_pipeline_path", lambda *a, **k: real(framework))
+
+    assert budget.main(["lean"]) == 1
+
+    out = capsys.readouterr().out
+    assert "OK   lean:" in out
+    assert re.search(r"^FAIL pipeline path: .*skills/gone/SKILL\.md", out, re.MULTILINE)
+    assert "OK   pipeline path" not in out
 
 
 def test_install_preset_raises_for_an_unknown_preset(budget, tmp_path):

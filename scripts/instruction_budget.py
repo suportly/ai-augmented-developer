@@ -16,6 +16,12 @@ platform loads into context without being invoked:
   ``<namespace>:<stem>`` (``.claude/commands/aia/plan.md`` -> ``aia:plan``),
   so that path-derived name is counted unless the frontmatter sets one.
 
+The same report also carries the **pipeline path**: the framework files the
+default route reads from ``specify`` to ``finish``, as listed per stage in
+``docs/pipeline-path.yaml``. Unlike the always-loaded set it is not measured
+from an install but from that versioned list, and it is strict: a cited file
+that does not exist fails the measurement instead of counting as zero.
+
 "Tokens" are estimated as ``ceil(characters / 4)`` per file, with no
 tokenizer: deterministic, dependency-free, and good enough to track a
 budget. The figures are a relative gauge, not billing numbers.
@@ -24,9 +30,12 @@ Usage:
     scripts/instruction_budget.py                # lean and django-drf-react
     scripts/instruction_budget.py PRESET ...     # specific presets
 
+The pipeline path is always printed after the presets.
+
 Exit codes:
-    0 — every preset measured
-    1 — a preset is unknown or its install/measurement failed
+    0 — every preset and the pipeline path measured
+    1 — a preset is unknown or its install/measurement failed, or the
+        pipeline path file is malformed or cites a file that does not exist
     2 — missing runtime dependencies (pyyaml, aiadev and its click/rich)
 """
 from __future__ import annotations
@@ -55,6 +64,9 @@ COMPONENTS: tuple[str, ...] = (
 )
 
 CHARS_PER_TOKEN = 4
+
+#: The versioned list of files read per pipeline stage, under the framework root.
+PIPELINE_PATH_FILE = Path("docs") / "pipeline-path.yaml"
 
 
 def estimate_tokens(text: str) -> int:
@@ -168,6 +180,109 @@ def measure_always_loaded(project_root: Path) -> dict[str, int]:
     return counts
 
 
+class PipelinePathError(ValueError):
+    """The pipeline path file is missing or malformed, or cites a file that
+    does not exist. A ``ValueError``, so ``main`` reports it like any failed
+    measurement."""
+
+
+def _strict_file_tokens(root: Path, stage: str, file: str) -> int:
+    """Tokens of ``root / file``. Strict, unlike ``_file_tokens``: an absent
+    file is an error naming it, since a path entry that vanished would
+    otherwise shrink the budget without anyone noticing."""
+    path = root / file
+    if not path.is_file():
+        raise PipelinePathError(
+            f"stage '{stage}' cites {file}, which does not exist or is not a file"
+        )
+    return estimate_tokens(path.read_text(encoding="utf-8"))
+
+
+def _read_stages(path_file: Path) -> list[tuple[str, list[str]]]:
+    """``(stage name, cited files)`` in file order, validated.
+
+    Rejects what would make the path silently measure less, or count a file
+    twice: an absent or invalid file, a missing or empty ``stages`` or
+    ``files``, a repeated stage name, a file cited twice in one stage (however
+    spelled: ``./a.md`` is ``a.md``), and a cited path that is absolute or
+    climbs out of the framework root. A file cited by two *different* stages
+    is legitimate (see ``measure_pipeline_path``). Cited files come back in
+    their normalised POSIX spelling.
+    """
+    import yaml
+
+    if not path_file.is_file():
+        raise PipelinePathError(f"{path_file}: file not found")
+    try:
+        data = yaml.safe_load(path_file.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        detail = " ".join(str(exc).split())
+        raise PipelinePathError(f"{path_file}: invalid YAML: {detail}") from exc
+    where = path_file.name
+    stages = data.get("stages") if isinstance(data, dict) else None
+    if not isinstance(stages, list) or not stages:
+        raise PipelinePathError(f"{where}: expected a non-empty 'stages' list")
+
+    parsed: list[tuple[str, list[str]]] = []
+    for number, entry in enumerate(stages, start=1):
+        entry = entry if isinstance(entry, dict) else {}
+        name, files = entry.get("name"), entry.get("files")
+        if (
+            not isinstance(name, str)
+            or not isinstance(files, list)
+            or not files
+            or not all(isinstance(file, str) for file in files)
+        ):
+            raise PipelinePathError(
+                f"{where}: stage #{number} needs a 'name' string and a "
+                "non-empty 'files' list of strings"
+            )
+        if any(name == seen for seen, _ in parsed):
+            raise PipelinePathError(f"{where}: stage '{name}' is listed more than once")
+        cited: list[str] = []
+        for file in files:
+            if Path(file).is_absolute() or ".." in Path(file).parts:
+                raise PipelinePathError(
+                    f"{where}: stage '{name}': {file} must be relative to the "
+                    "framework root and stay under it"
+                )
+            normalised = Path(file).as_posix()
+            if normalised in cited:
+                raise PipelinePathError(
+                    f"{where}: stage '{name}' lists {normalised} more than once"
+                )
+            cited.append(normalised)
+        parsed.append((name, cited))
+    return parsed
+
+
+def measure_pipeline_path(root: Path = ROOT) -> dict:
+    """Tokens of the files the default route reads, per stage of the pipeline.
+
+    ``<root>/docs/pipeline-path.yaml`` lists, in order, ``{name, files}``
+    stages; each file is read from *root*. Returns::
+
+        {
+            "stages": {name: tokens, ...},   # file order
+            "files": {file: tokens, ...},    # every distinct file, once
+            "total": sum of the stage tokens,
+        }
+
+    A file cited by two stages counts in both: a stage's figure is what that
+    stage reads, so ``total`` can exceed the sum of ``files``. Raises
+    ``PipelinePathError``.
+    """
+    root = Path(root)
+    stages: dict[str, int] = {}
+    files: dict[str, int] = {}
+    for name, cited in _read_stages(root / PIPELINE_PATH_FILE):
+        for file in cited:
+            if file not in files:
+                files[file] = _strict_file_tokens(root, name, file)
+        stages[name] = sum(files[file] for file in cited)
+    return {"stages": stages, "files": files, "total": sum(stages.values())}
+
+
 def _load_installer():
     """Return ``(CliRunner, install_command)``.
 
@@ -255,6 +370,18 @@ def main(argv: list[str]) -> int:
         for name in (*COMPONENTS, "total"):
             print(f"  {name:<11}{counts[name]:>7}")
         print(f"OK   {preset}: ~{counts['total']} tokens always loaded (chars / 4)")
+
+    try:
+        path = measure_pipeline_path()
+    except (RuntimeError, ValueError) as exc:
+        print(f"FAIL pipeline path: {exc}")
+        failed = True
+    else:
+        print("pipeline path")
+        width = max(11, *(len(name) for name in path["stages"])) + 2
+        for name, tokens in (*path["stages"].items(), ("total", path["total"])):
+            print(f"  {name:<{width}}{tokens:>7}")
+        print(f"OK   pipeline path: ~{path['total']} tokens (chars / 4)")
 
     return 1 if failed else 0
 

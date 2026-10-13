@@ -121,7 +121,7 @@
 
 ### T008 — Orçamento: percurso do pipeline
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - create: `docs/pipeline-path.yaml`
