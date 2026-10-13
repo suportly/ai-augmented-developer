@@ -4,7 +4,7 @@
 
 **Branch:** `feature/0030-lean-pipeline`
 **Created:** 2026-10-13
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0030 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
 
@@ -47,7 +47,7 @@ As remoções desta spec têm razões distintas do custo de turnos, e cada uma �
 
 - `aiadev metrics --tokens` numa sessão real deduplica por `message.id`, inclui os transcripts de subagentes e separa o custo da thread principal do custo dos subagentes, agrupando estes por papel (implementação, revisão) quando a descrição do dispatch segue a convenção de prefixo que `implement` e `requesting-code-review` passam a adotar (`implement:` ou `review:`) e como não classificados nos demais; o total confere, dentro de 1%, com a deduplicação manual da mesma sessão. O custo é uma **aproximação** com pesos documentados (leitura de cache, escrita de cache, entrada, saída).
 - **Unidade e baseline:** "tokens" de instrução são estimados como caracteres ÷ 4 (sem tokenizador); o "percurso" é uma lista versionada de arquivos por etapa do pipeline. O baseline é registrado pela própria medição **antes** de qualquer corte, e o CI falha se o sempre-carregado ou o percurso crescerem acima dele. Meta: reduzir em ≥ 40% o sempre-carregado do preset `lean` e o percurso `specify → finish` em relação ao baseline (a auditoria estimou ~45%; a medição confirma ou corrige).
-- Fechar uma task (marcar `done`, `git add`, commit) é uma chamada em vez de três ou quatro, e o `preflight` devolve de uma vez os caminhos da feature, os documentos existentes, o template e o comando de teste.
+- Fechar uma task (marcar `done`, `git add`, commit) é uma chamada em vez de três ou quatro, e o `preflight` devolve de uma vez os caminhos da feature, os documentos existentes, o template e, quando detectável, o comando de teste.
 - Cobertura mecânica no `preflight implement`: cada cenário do `spec.md` é citado por ao menos uma task (diretamente ou pela story) e cada task cita um cenário, uma story ou um critério de sucesso nomeado (`Success criterion #N`, com N a ordem do bullet em Success criteria; citar uma story cobre todos os seus cenários, o que é uma checagem fraca por desenho e é aceito); a notação de cenário é `Story N scenario M` (a do template de tasks) e o legado `sc<N>` também vale; uma checklist com linha FAIL sem task dona bloqueia o `implement`.
 - Uma task de código tem um reviewer e a branch tem um review; task que só altera prosa em markdown sob `docs/` ou documentação raiz é auto-verificada (o baseline e a lista de percurso do orçamento nunca entram nesse tier). Os gates de evidência e de re-dispatch seguem valendo.
 - Cada gate listado em "O que não muda" tem um arquivo canônico declarado no `plan`, e um teste de comportamento falha se a frase do gate sumir desse arquivo.
@@ -74,7 +74,7 @@ Como tech lead, quero que `aiadev metrics --tokens` conte cada chamada uma vez e
 
 **Acceptance scenarios** (Given / When / Then, ≥ 3 per story):
 
-1. Given um transcript em que a mesma resposta aparece em vários eventos com o mesmo `message.id`, When rodo `aiadev metrics --tokens`, Then o `usage` dessa resposta é somado uma única vez, inclusive quando o mesmo `message.id` aparece em arquivos diferentes.
+1. Given um transcript em que a mesma resposta aparece em vários eventos com o mesmo `message.id`, When rodo `aiadev metrics --tokens`, Then o `usage` dessa resposta é somado uma única vez, com o maior valor de cada campo (o `usage` gravado durante o streaming é parcial e só cresce), inclusive quando o mesmo `message.id` aparece em arquivos diferentes.
 2. Given uma sessão com subagentes em `<sessão>/subagents/*.jsonl`, When rodo o comando, Then o relatório inclui o custo deles separado do da thread principal e agrupado por papel (implementação, revisão) quando o campo de descrição do `*.meta.json` segue a convenção de prefixo, ou "não classificado" quando não segue; o texto das mensagens nunca é lido para inferir o papel.
 3. Given uma sessão sem diretório `subagents/` ou com um `*.meta.json` ilegível, When rodo o comando, Then o relatório sai sem erro e informa quantos subagentes ficaram sem classificação.
 4. Given pesos de preço documentados, When o relatório é gerado, Then o total é um custo equivalente comparável entre sessões e o texto do relatório declara que é uma aproximação com esses pesos.
@@ -85,7 +85,7 @@ Como agente que executa `implement`, quero que preflight, leitura de template e 
 
 **Acceptance scenarios** (Given / When / Then, ≥ 3 per story):
 
-1. Given uma feature com `spec.md`, `plan.md` e `tasks.md`, When rodo `aiadev preflight <skill> --json`, Then recebo em uma saída os caminhos da feature, os documentos existentes, o caminho do template e o comando de teste detectado.
+1. Given uma feature com `spec.md`, `plan.md` e `tasks.md`, When rodo `aiadev preflight <skill> --feature <slug> --format json`, Then recebo em uma saída os caminhos da feature, os documentos existentes, o caminho do template e o comando de teste, quando o projeto tiver um detectável.
 2. Given uma task concluída e verificada, When rodo o comando de fechamento com a mensagem e os arquivos, Then o status vira `done`, os arquivos entram no commit e o commit é feito; se o commit falhar, o status volta a `pending`.
 3. Given um `spec.md` com um cenário que nenhuma task cita (nem diretamente nem pela story), When rodo o preflight de `implement`, Then ele falha apontando o cenário; o mesmo vale para uma task que não cita cenário, story nem critério de sucesso nomeado.
 4. Given uma checklist com linha FAIL sem task dona, When rodo o preflight de `implement`, Then ele bloqueia e lista a linha.
@@ -150,14 +150,15 @@ Decididas (cl-1 pelo mantenedor em 2026-10-13; cl-2 e cl-3 pela evidência do re
 - Medição: relatório de `aiadev metrics --tokens` (campos por papel e subagentes não classificados); pesos de custo documentados.
 - `docs/instruction-budget.json` (novo): baseline e tetos por skill e por preset; `docs/pipeline-path.yaml` (novo): arquivos lidos por etapa.
 - `templates/spec-template.md` e `src/aiadev/preflight.py`: nova seção `## Assumptions`, **opcional** (validada só quando presente e fora da lista de âncoras obrigatórias `SPEC_ANCHORS`, para que as specs existentes continuem válidas); `agents/spec-document-reviewer.md`: critério de premissas.
-- `src/aiadev/preflight.py` e `src/aiadev/commands/preflight.py`: saída `--json`, checagem de cobertura e bloqueio por checklist; `templates/tasks-template.md`: notação canônica de referência a cenário.
-- `src/aiadev/tasks_status.py`: fechamento de task com commit e rollback.
+- `src/aiadev/preflight.py` e `src/aiadev/commands/preflight.py`: saída `--format json`, checagem de cobertura e bloqueio por checklist; `templates/tasks-template.md`: notação canônica de referência a cenário.
+- `src/aiadev/tasks_status.py` e comando `aiadev tasks done`: fechamento de task com escrita atômica, commit e rollback.
 - Comando novo `aiadev next`, sobre o estado já calculado em `src/aiadev/pipeline_state.py`; `CLAUDE.md` e `templates/roadmap-template.md` deixam de citar `/aia:help`.
-- `src/aiadev/install_engine.py` e `src/aiadev/commands/sync.py`: remoção de arquivos que o framework deixou de distribuir (capacidade nova), com base em `src/aiadev/install_manifest.py`; possível mecanismo de extensão de skill por preset, a decidir no `plan`.
+- `src/aiadev/install_engine.py` e `src/aiadev/commands/sync.py`: remoção de arquivos que o framework deixou de distribuir (capacidade nova), com base em `src/aiadev/install_manifest.py`; instalação de arquivos de apoio de skill (`references/`), que também entrega o stack por preset.
 - `skills/implement/SKILL.md` e `skills/requesting-code-review/SKILL.md`: convenção de prefixo (`implement:`, `review:`) na descrição do dispatch, usada pela medição para classificar o papel; os reviewers de documento de `specify` e `plan` ficam fora da convenção e, portanto, não classificados.
 - `.aiadev/review.yaml`: formato mantido; passa a ser o único registro de review de branch.
 - `.claude/settings.json`: a chave `aiadev.terseMode` deixa de ser lida.
 - `CREDITS.md`: nota dos mecanismos adaptados do spec-kit e atualização da entrada do caveman (terse-mode removido).
+- Movida: skill `frontend-design` (React, MUI e Expo) do núcleo para o preset `django-drf-react`.
 - Removidos: `rules/terse-mode.md`, `schemas/terse-output.schema.json`, blocos de contrato terse nos `agents/`, skills `help` e `using-ai-augmented-developer` (e seus comandos), artefato review-context.md. O `skills/using-ai-augmented-developer/references/gemini-tools.md` é realocado para um caminho fora do diretório removido e o `GEMINI.md` passa a importá-lo de lá.
 
 <!-- section: Out-of-band effects -->
@@ -176,7 +177,7 @@ Decididas (cl-1 pelo mantenedor em 2026-10-13; cl-2 e cl-3 pela evidência do re
 - **Portabilidade:** as mesmas skills vão para Gemini, Codex, Cursor e OpenCode; compactar para modelos fortes pode reduzir a adesão em modelos menores. Mitigação: manter intactas as frases de gate e medir no Claude Code, sem prometer paridade.
 - **Review combinado dilui foco:** dois checklists em um dispatch podem perder achados. Gatilho de reversão: os defeitos encontrados no review de branch por feature subirem em relação ao baseline; então volta a dois reviewers por task.
 - **Benchmark curto subestima:** a reentrega de saída idêntica só aparece em sessões longas (aprendizado do PR #55); uma micro-feature de 3 tasks pode mostrar ganho de turnos e subestimar o de contexto acumulado.
-- **Testes que fixam a prosa:** mover texto para arquivos de referência quebra `tests/test_implement_skill_drift.py`, `tests/test_review_redispatch_skills.py`, `tests/test_zero_findings_halt_agents.py`, `tests/test_rules_paths.py` e outros; precisam virar asserções de comportamento, não ser apagados.
+- **Testes que fixam a prosa:** mover texto para arquivos de referência quebra `tests/test_implement_skill_drift.py`, `tests/test_review_redispatch_skills.py`, `tests/test_zero_findings_halt_agents.py`, e outros; precisam virar asserções de comportamento, não ser apagados.
 - **Conflito com a spec 0029:** ambas tocam `specify`, `plan` e `tasks`, e a 0029 lista como non-goal mudar o `implement`, que esta spec reestrutura; a ordem de merge precisa ser decidida no `plan`.
 - **CLI de fechamento como ponto único de falha:** se o fechamento de task falhar de forma nova, o caminho manual precisa continuar documentado.
 - **Spec 0020 (token-economy-checklist):** liga o terse-mode ao checklist de economia de tokens; a remoção precisa varrer esse artefato (`tests/test_token_economy_checklist.py`).
