@@ -17,7 +17,8 @@ Use this preset when:
 
 ## Pipeline
 
-`specify → clarify → plan → tasks → implement`
+`product → specify → clarify → plan → tasks → implement` (`product` runs
+once per project, or whenever the product context needs updating)
 
 Quality skills available: `test-driven-development`, `systematic-debugging`,
 `requesting-code-review`, `finishing-a-branch`, `analyze`, `checklist`,

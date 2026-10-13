@@ -8,6 +8,7 @@ Invoke the appropriate skill **before any action that writes code or state**. Cl
 
 | What you're doing | Skill to invoke |
 |---|---|
+| Project has no product context in `specs/_product/` yet (or it needs updating) | `product` |
 | User described a demand, no `spec.md` yet | `specify` |
 | `spec.md` has `[NEEDS CLARIFICATION]` markers | `clarify` |
 | Spec is clean, no `plan.md` yet | `plan` |
@@ -61,7 +62,7 @@ specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  imple
 
 ## Repository-local commands
 
-This repository is Markdown-heavy with Python-only tooling; it does not need the stack commands a Django or React project would. Everything below assumes a clean clone.
+This repository is Markdown-heavy with Python tooling (plus two TypeScript packages: `vscode-extension/` and `packages/smart-mcp-proxy/`); it does not need the stack commands a Django or React project would. Everything below assumes a clean clone.
 
 ```bash
 # Validate every SKILL.md against the schema

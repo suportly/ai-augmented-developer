@@ -4,6 +4,7 @@
 
 | Command | What it does | Next |
 |---|---|---|
+| `/aia:product` | Bootstrap or update the project's product context — mission, tech stack, roadmap — in s… | → specify |
 | `/aia:specify` | Turn a natural-language demand into a numbered spec.md under specs/<NNNN-slug>/. | → clarify / plan |
 | `/aia:clarify` | Surface [NEEDS CLARIFICATION] markers in spec.md (or plan.md) to the user, one at a tim… | → plan |
 | `/aia:plan` | Turn an approved spec.md into a plan.md (plus research, data-model, contracts as needed… | → tasks / clarify |

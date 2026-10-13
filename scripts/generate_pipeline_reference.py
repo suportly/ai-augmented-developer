@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # Canonical pipeline order — authoritative list for the Quick Reference.
 # Mirrors the table in root CLAUDE.md "What you're doing | Skill to invoke".
 PIPELINE: tuple[str, ...] = (
+    "product",
     "specify",
     "clarify",
     "plan",

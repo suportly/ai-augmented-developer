@@ -8,6 +8,7 @@ When you reference an `aiadev` pipeline command in a message to the user
 
 Use:
 
+- `/aia:product`
 - `/aia:specify`
 - `/aia:clarify`
 - `/aia:plan`

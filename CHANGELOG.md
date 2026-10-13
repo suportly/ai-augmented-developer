@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Spec **0023 — product-context**. A new **`product` skill** (`/aia:product`)
+  bootstraps or updates `specs/_product/{mission,tech-stack,roadmap}.md` by
+  cited inference from the repository (README, package files, agent files and
+  rules, the `aiadev:auto-stack` block): every claim it cannot support is left as a
+  `[NEEDS CLARIFICATION]` marker instead of invented, and secret files
+  (`.env`, credentials, keys) are never read. Three new templates —
+  `templates/mission-template.md`, `templates/tech-stack-template.md`,
+  `templates/roadmap-template.md` — give the artifacts a canonical shape.
+  `specify` now reads `mission.md` and `roadmap.md` when they exist: it cites
+  the matching roadmap item (`R<NNN>`) in the spec's Traceability section and
+  pauses for human input when the demand conflicts with a stated
+  out-of-scope boundary in the mission instead of silently proceeding.
+  `plan` now reads `tech-stack.md` to fill *Technical context*; a deviation
+  from the declared stack becomes an ADR, and a divergence between
+  `tech-stack.md` and the auto-detected `aiadev:auto-stack` block is
+  listed citing both sides, never resolved automatically. The quick reference
+  lists `product` before `specify`, reflecting its place at the front of the
+  pipeline. The course "Spec-Driven Development with Coding Agents"
+  (DeepLearning.AI, with JetBrains) inspired the underlying idea; see
+  `CREDITS.md` — only the idea was adapted, the skill and templates were
+  written from scratch.
+
+  **Why:** product context — what the product is for, what stack it's built
+  on, what's next — lived only in conversation history. Every `specify` and
+  every `plan` re-derived it from scratch, with no guarantee two runs agreed,
+  and no durable place to correct a wrong inference once made.
+
 ## [0.24.0] - 2026-09-16
 
 ### Removed

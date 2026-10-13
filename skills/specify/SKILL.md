@@ -7,6 +7,10 @@ metadata:
     inputs:
     - type: text
       description: Feature request in free-form natural language (issue, user quote, product brief).
+    - type: dir
+      path: specs/_product
+      description: Product context (mission.md, roadmap.md) read when present; specify behaves as today when absent.
+      optional: true
     outputs:
     - type: file
       path: specs/<NNNN-slug>/spec.md
@@ -35,7 +39,7 @@ Take a demand in plain language and produce a `spec.md` focused on **what** and 
 ## Loop
 
 1. **Create the artifact stub.** Compute the next `{{SPEC_ID}}` (4-digit, zero-padded, monotonic across `specs/`). The spec directory is `specs/<NNNN>-<slug>/` where `<NNNN>` is `{{SPEC_ID}}` and `<slug>` is the kebab-case feature slug. If `specs/<NNNN>-<slug>/spec.md` does not exist, copy it from `templates/spec-template.md` and fill `{{FEATURE_NAME}}`, `{{BRANCH}}`, `{{DATE}}`, `{{SPEC_ID}}`. `aiadev init --feature <name>` does all of this in one shot.
-2. **Read the demand.** Identify: primary problem, who feels it, the shape of a good outcome. Do not propose a solution yet.
+2. **Read the demand.** Identify: primary problem, who feels it, the shape of a good outcome. Do not propose a solution yet. If `specs/_product/mission.md` and/or `specs/_product/roadmap.md` exist, read them and cross-check the demand against them: (a) if the demand conflicts with an entry in the mission's *Out of scope* section, pause and surface the conflict to the user, citing the entry — same treatment as the premise-mismatch rule in step 3; do not paper over it with a `[NEEDS CLARIFICATION]` marker; (b) if a `roadmap.md` entry matches the demand, cite its `R<NNN>` id in the spec's *Traceability* section. If neither file exists, skip this and proceed exactly as before.
 3. **Reconnaissance.** For each app, service, or top-level surface mentioned in the demand that you have **not** already inspected this session: read its entry point file, read its auth/session module if it has one, and grep for the integration points the demand claims to use. Record findings in the spec's `<!-- section: Reconnaissance -->` block — one bullet per surface, each citing real on-disk paths in backticks (the validator checks every cited path for existence). For a single-surface change, use the explicit opt-out line documented in the template instead of bullets. **If the recon reveals that the demand's premise is structurally wrong on any surface (a flow that does not exist there), pause and surface the mismatch to the user before drafting any user story** — cite the specific file and line that contradicts the premise. Do not paper over a premise mismatch with `[NEEDS CLARIFICATION]` markers; that is a spec-validity problem, not a clarification problem.
 4. **Draft the Problem, Users, Success criteria, and Non-goals sections.** Keep each under 5 bullets.
 5. **Surface ambiguities inline.** Every unknown becomes a `[NEEDS CLARIFICATION:cl-N <precise question>]` marker with a **monotonically assigned** id within the spec (`cl-1`, `cl-2`, …). To compute the next id, count existing `cl-N` markers in the file and add 1. Do not reuse ids of removed markers; the next id is always `max(existing) + 1`. Do not invent answers.
@@ -49,6 +53,7 @@ Take a demand in plain language and produce a `spec.md` focused on **what** and 
 - Do not invent acceptance criteria to close clarification markers. Ambiguity is a signal, not a defect.
 - Do not skip the spec because "the feature is obvious". Article I is not waivable on feature work.
 - Do not draft user stories by analogy with another surface without recording a recon entry for the surface in question. Analogy-driven drafts are how premise errors leak past `clarify` into `implement`.
+- Do not invent a `roadmap.md` entry or `R<NNN>` id to satisfy Traceability. Cite one only if it genuinely matches the demand.
 
 ## Hand-off
 

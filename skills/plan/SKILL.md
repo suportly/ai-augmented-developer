@@ -7,6 +7,10 @@ metadata:
     inputs:
     - type: file
       path: specs/<branch>/spec.md
+    - type: dir
+      path: specs/_product
+      description: Declared stack decisions (tech-stack.md), read when present; plan behaves as today when absent.
+      optional: true
     outputs:
     - type: file
       path: specs/<branch>/plan.md
@@ -36,7 +40,7 @@ Write the implementation plan from a clean `spec.md`. The plan says **how** the 
 ## Loop
 
 1. **Copy the template.** `templates/plan-template.md` → `specs/<branch>/plan.md`. Fill the header placeholders.
-2. **Write the Summary** (one paragraph) and **Technical context** table from the active preset plus the spec's non-goals and performance budget.
+2. **Write the Summary** (one paragraph) and **Technical context** table from the active preset plus the spec's non-goals and performance budget. If `specs/_product/tech-stack.md` exists, fill Technical context from its declared Languages/Frameworks instead of guessing; a new language, framework, or dependency the plan introduces beyond what it declares becomes an entry in **Architecture decisions** with justification. Also compare its Languages/Frameworks with the `aiadev:auto-stack` block in `AGENTS.md` (when present) — the detected inventory — and list any language/framework divergence citing both sides, without choosing one; the human decides which is stale. Minor dependency differences stay out of this comparison. If `tech-stack.md` is absent, proceed exactly as before.
 3. **Fill the Constitution Check table.** One row per applicable article. For each: mark `PASS`, `FAIL`, or `N/A`, and give concrete evidence (file path, test name, or "no provider added"). If any article is `FAIL`, you **must** add a row to **Complexity tracking** with the waiver reason.
 4. **Add Architecture decisions.** Short ADR-style entries — decision, rationale, trade-off. One per non-trivial choice.
 5. **Project structure changes.** Diff-style listing of files to create, modify, or remove.
