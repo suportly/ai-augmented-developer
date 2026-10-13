@@ -21,6 +21,14 @@ same assistant message several times while streaming, always with the same
 Each ``message.id`` is therefore counted once, with the **maximum** of every
 ``usage`` field, so the result does not depend on which occurrence or which
 file is read first. An assistant event without ``message.id`` counts as unique.
+
+Subagents (spec ``0030-lean-pipeline``, Story 1): Claude Code writes the
+transcript of every subagent next to the session, under
+``<session-id>/subagents/``, as ``agent-<id>.jsonl`` (workflow agents nested
+under ``workflows/wf_<id>/``, next to a ``journal.jsonl`` that is not an
+agent transcript and is never read). Their usage is reported in
+``SessionTokens.subagents``, **separate** from the main thread's figures, and
+goes through the same ``message.id`` deduplication, including across files.
 """
 
 from __future__ import annotations
@@ -50,6 +58,22 @@ class ToolUsage:
 
 
 @dataclasses.dataclass
+class SubagentTokens:
+    """Usage of one subagent transcript (``agent-<agent_id>.jsonl``)."""
+
+    agent_id: str
+    turns: int = 0
+    input_tokens: int = 0
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
+    output_tokens: int = 0
+
+    @property
+    def total_input_tokens(self) -> int:
+        return self.input_tokens + self.cache_creation_tokens + self.cache_read_tokens
+
+
+@dataclasses.dataclass
 class SessionTokens:
     session_id: str
     file: str
@@ -65,6 +89,7 @@ class SessionTokens:
     sidechain_turns: int = 0
     models: List[str] = dataclasses.field(default_factory=list)
     by_tool: Dict[str, ToolUsage] = dataclasses.field(default_factory=dict)
+    subagents: List[SubagentTokens] = dataclasses.field(default_factory=list)
 
     @property
     def total_input_tokens(self) -> int:
@@ -72,6 +97,7 @@ class SessionTokens:
 
     def to_dict(self) -> Dict[str, Any]:
         d = dataclasses.asdict(self)
+        d.pop("subagents")  # not serialized yet: the report formats (T005) own that shape
         d["total_input_tokens"] = self.total_input_tokens
         d["by_tool"] = {k: dataclasses.asdict(v) for k, v in sorted(self.by_tool.items())}
         return d
@@ -98,6 +124,17 @@ class TokenReport:
                 agg = t.by_tool.setdefault(name, ToolUsage())
                 agg.calls += u.calls
                 agg.result_chars += u.result_chars
+        return t
+
+    @property
+    def subagent_totals(self) -> SubagentTokens:
+        """Sum of every session's subagents, kept apart from ``totals`` (main thread only)."""
+        t = SubagentTokens(agent_id="TOTAL")
+        for s in self.sessions:
+            for a in s.subagents:
+                t.turns += a.turns
+                for name in _TOKEN_FIELDS:
+                    setattr(t, name, getattr(t, name) + getattr(a, name))
         return t
 
     def to_dict(self) -> Dict[str, Any]:
@@ -239,14 +276,86 @@ def _read_transcript(path: pathlib.Path) -> Tuple[SessionTokens, Dict[str, _Mess
     return session, messages
 
 
-def read_session(path: pathlib.Path) -> SessionTokens:
-    """Aggregate one transcript file. Never raises on malformed lines.
+# What one transcript file contributed before deduplication: the file's
+# totals so far plus its usage per ``message.id``.
+_Claim = Tuple[SessionTokens, Dict[str, _MessageUsage]]
 
-    Each ``message.id`` is counted once, with the maximum of every usage field.
+
+def _count_once(claims: List[_Claim]) -> None:
+    """Add each ``message.id`` once, at its maximum, to the first claim that carries it.
+
+    The result depends on the order of ``claims`` (who gets the message) but
+    not on which occurrence or file is read first (the value is the maximum).
+    """
+    best: Dict[str, _MessageUsage] = {}
+    for _, messages in claims:
+        for message_id, usage in messages.items():
+            seen = best.get(message_id)
+            best[message_id] = seen.merged(usage) if seen is not None else usage
+    counted: set = set()
+    for target, messages in claims:
+        for message_id in messages:
+            if message_id not in counted:
+                counted.add(message_id)
+                _add_message(target, best[message_id])
+
+
+def _subagent_files(session_path: pathlib.Path) -> List[pathlib.Path]:
+    """``agent-*.jsonl`` anywhere under ``<dir>/<session-stem>/subagents``, sorted.
+
+    Only that name pattern counts: the ``journal.jsonl`` that workflows keep
+    next to their agents is not a transcript and is never opened.
+    """
+    root = session_path.parent / session_path.stem / "subagents"
+    try:
+        if not root.is_dir():
+            return []
+        return sorted(p for p in root.rglob("agent-*.jsonl") if p.is_file())
+    except OSError:
+        return []
+
+
+def _read_subagents(session_path: pathlib.Path) -> List[_Claim]:
+    """Parse the subagent transcripts next to ``session_path``, skipping any that cannot be opened.
+
+    A subagent's turns are sidechain by location, so the per-event
+    ``isSidechain`` flag is cleared: it must not leak into a main-thread
+    message that shares the ``message.id`` and make it count as a sidechain turn.
+    """
+    claims: List[_Claim] = []
+    for path in _subagent_files(session_path):
+        try:
+            transcript, messages = _read_transcript(path)
+        except OSError:
+            continue
+        claims.append(
+            (transcript, {mid: dataclasses.replace(usage, sidechain=False) for mid, usage in messages.items()})
+        )
+    return claims
+
+
+def _attach_subagents(session: SessionTokens, agents: List[SessionTokens]) -> None:
+    """Record each agent's deduplicated usage on ``session.subagents``, apart from its own figures."""
+    for agent in agents:
+        if agent.turns == 0:
+            continue  # nothing countable: garbage file, or every message was counted elsewhere
+        agent_id = agent.session_id.removeprefix("agent-")
+        usage = {name: getattr(agent, name) for name in _TOKEN_FIELDS}
+        session.subagents.append(SubagentTokens(agent_id=agent_id, turns=agent.turns, **usage))
+        session.sidechain_turns += agent.turns
+
+
+def read_session(path: pathlib.Path) -> SessionTokens:
+    """Aggregate one transcript file and the subagents stored next to it.
+
+    Never raises on malformed lines. Each ``message.id`` is counted once, with
+    the maximum of every usage field; the session's own figures are the main
+    thread only, and its subagents' usage is in ``subagents``.
     """
     session, messages = _read_transcript(path)
-    for message in messages.values():
-        _add_message(session, message)
+    agents = _read_subagents(path)
+    _count_once([(session, messages)] + agents)  # the main thread claims first
+    _attach_subagents(session, [agent for agent, _ in agents])
     return session
 
 
@@ -256,30 +365,31 @@ def build_token_report(transcripts_dir: pathlib.Path) -> TokenReport:
     A ``message.id`` that appears in more than one file is counted once, with
     the maximum of each usage field across files, and attributed to the
     session that started first (ties broken by session id), so the figures do
-    not depend on the order files are read.
+    not depend on the order files are read. The same holds for subagent
+    transcripts (``<session>/subagents/**/agent-*.jsonl``), which are found
+    from each session file and reported in ``SessionTokens.subagents``; main
+    threads claim a repeated id before any subagent does, so the main-thread
+    turns never depend on the subagents.
 
     Returns an empty report when the directory does not exist; the CLI
     decides how to report that.
     """
-    parsed: List[Tuple[SessionTokens, Dict[str, _MessageUsage]]] = []
+    parsed: List[Tuple[SessionTokens, Dict[str, _MessageUsage], List[_Claim]]] = []
     if transcripts_dir.is_dir():
-        parsed = [_read_transcript(path) for path in sorted(transcripts_dir.glob("*.jsonl"))]
+        for path in sorted(transcripts_dir.glob("*.jsonl")):
+            session, messages = _read_transcript(path)
+            parsed.append((session, messages, _read_subagents(path)))
     parsed.sort(key=lambda p: (p[0].started_at or "", p[0].session_id))
 
-    best: Dict[str, _MessageUsage] = {}
-    for _, messages in parsed:
-        for message_id, usage in messages.items():
-            seen = best.get(message_id)
-            best[message_id] = seen.merged(usage) if seen is not None else usage
+    claims: List[_Claim] = [(session, messages) for session, messages, _ in parsed]
+    for _, _, agents in parsed:
+        claims.extend(agents)
+    _count_once(claims)
 
     sessions: List[SessionTokens] = []
-    counted: set = set()
-    for session, messages in parsed:
-        for message_id in messages:
-            if message_id not in counted:
-                counted.add(message_id)
-                _add_message(session, best[message_id])
-        if session.turns == 0 and session.tool_calls == 0:
+    for session, _, agents in parsed:
+        _attach_subagents(session, [agent for agent, _ in agents])
+        if session.turns == 0 and session.tool_calls == 0 and not session.subagents:
             continue
         sessions.append(session)
     return TokenReport(transcripts_dir=str(transcripts_dir), sessions=sessions)

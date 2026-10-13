@@ -38,7 +38,7 @@
 
 ### T002 — Ler subagentes em subagents/ (recursivo)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`
@@ -89,6 +89,7 @@
 - **Acceptance:**
   - [ ] Teste vermelho: o texto separa thread principal e subagentes por papel, mostra "não classificados" e a nota de aproximação; o JSON ganha chaves sem remover as existentes.
   - [ ] Corpo de `tool_result` continua ausente da saída.
+  - [ ] Carry-over da T002: reescrever a linha "Subagent (sidechain) turns included: N" de `format_text` (hoje enganosa: os turnos de subagentes não entram no TOTAL) e serializar `SessionTokens.subagents` e `TokenReport.subagent_totals` (`to_dict()` ainda os omite).
   - [ ] Commit message: `feat(metrics): T005 custo por papel em metrics --tokens`.
 
 ### T006 — Total confere com a dedupe independente

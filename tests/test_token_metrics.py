@@ -40,6 +40,21 @@ def pinned_dir(tmp_path: pathlib.Path) -> pathlib.Path:
     return target
 
 
+@pytest.fixture()
+def subagent_dir(tmp_path: pathlib.Path) -> pathlib.Path:
+    """``with_subagents/`` staged in tmp: ``sess-main`` plus ``agent-aaa``, nested ``agent-bbb`` and a journal.
+
+    Main thread: 2 turns, input 15 / cache_w 100 / cache_r 100 / output 150,
+    one Bash tool result of 2 chars. Subagents: aaa (2 turns, 5 / 200 / 200 /
+    50), bbb under ``workflows/wf_x`` (2 turns, 5 / 50 / 300 / 50). The
+    sibling ``journal.jsonl`` carries 9999-token assistant events that must
+    never be read.
+    """
+    target = tmp_path / "with_subagents"
+    shutil.copytree(FIXTURES / "with_subagents", target)
+    return target
+
+
 def _assistant(
     ts: str,
     *,
@@ -65,8 +80,17 @@ def _assistant(
 
 
 def _write_transcript(path: pathlib.Path, events: List[Dict[str, Any]]) -> pathlib.Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
     return path
+
+
+def _write_agent(
+    root: pathlib.Path, session: str, relative: str, events: List[Dict[str, Any]]
+) -> pathlib.Path:
+    """Write ``<root>/<session>/subagents/<relative>`` the way Claude Code lays it out."""
+    flagged = [dict(e, isSidechain=True) for e in events]
+    return _write_transcript(root / session / "subagents" / relative, flagged)
 
 
 # ---------------------------------------------------------------------
@@ -254,6 +278,251 @@ def test_cli_tokens_json_counts_duplicated_message_once(tmp_path: pathlib.Path) 
     data = json.loads(result.output)
     assert data["totals"]["turns"] == 2
     assert data["totals"]["output_tokens"] == 214 + 40
+
+
+# ---------------------------------------------------------------------
+# Spec 0030, Story 1 sc2/sc3 — subagents under <session>/subagents/
+# ---------------------------------------------------------------------
+
+
+def _agents(session: tm.SessionTokens) -> Dict[str, tm.SubagentTokens]:
+    return {a.agent_id: a for a in session.subagents}
+
+
+def test_subagent_usage_is_reported_separately_from_main(subagent_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(subagent_dir)
+    assert [s.session_id for s in report.sessions] == ["sess-main"]
+    main = report.sessions[0]
+
+    # Main-thread figures stay main-thread only.
+    assert main.turns == 2
+    assert (main.input_tokens, main.cache_creation_tokens, main.cache_read_tokens, main.output_tokens) == (
+        15,
+        100,
+        100,
+        150,
+    )
+    assert main.tool_calls == 1 and main.tool_result_chars == 2  # the subagent's tool result is not counted
+    assert report.totals.turns == 2 and report.totals.output_tokens == 150
+
+    # Each subagent has its own figures, found by the agent-<id>.jsonl file name.
+    agents = _agents(main)
+    assert sorted(agents) == ["aaa", "bbb"]
+    aaa, bbb = agents["aaa"], agents["bbb"]
+    assert (aaa.turns, aaa.input_tokens, aaa.cache_creation_tokens, aaa.cache_read_tokens, aaa.output_tokens) == (
+        2,
+        5,
+        200,
+        200,
+        50,
+    )
+    assert (bbb.turns, bbb.input_tokens, bbb.cache_creation_tokens, bbb.cache_read_tokens, bbb.output_tokens) == (
+        2,
+        5,
+        50,
+        300,
+        50,
+    )
+
+    # Report-level subagent sum, separate from the main-thread totals.
+    sub = report.subagent_totals
+    assert sub.turns == 4
+    assert (sub.input_tokens, sub.cache_creation_tokens, sub.cache_read_tokens, sub.output_tokens) == (
+        10,
+        250,
+        500,
+        100,
+    )
+    assert sub.total_input_tokens == 760
+
+    # sidechain_turns is no longer zero: it is the number of subagent turns.
+    assert main.sidechain_turns == 4
+    assert report.totals.sidechain_turns == 4
+
+
+def test_nested_workflow_agents_are_included_and_journal_is_ignored(subagent_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(subagent_dir)
+    agents = _agents(report.sessions[0])
+    assert "bbb" in agents  # subagents/workflows/wf_x/agent-bbb.jsonl
+    assert "journal" not in agents
+    assert not any("journal" in a.agent_id for a in report.sessions[0].subagents)
+    # journal.jsonl holds 9999-token assistant events: none of them may leak into the sums.
+    sub = report.subagent_totals
+    assert sub.output_tokens == 100 and sub.input_tokens == 10
+    assert sub.turns == 4
+
+
+def test_read_session_includes_the_subagents_next_to_it(subagent_dir: pathlib.Path) -> None:
+    s = tm.read_session(subagent_dir / "sess-main.jsonl")
+    assert sorted(_agents(s)) == ["aaa", "bbb"]
+    assert s.turns == 2 and s.sidechain_turns == 4
+
+
+def test_session_without_subagents_dir_has_empty_subagents(pinned_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(pinned_dir)
+    assert [s.session_id for s in report.sessions] == ["s2", "s1"]
+    assert all(s.subagents == [] for s in report.sessions)
+    assert report.subagent_totals.turns == 0
+    assert report.subagent_totals.total_input_tokens == 0
+    assert tm.read_session(FIXTURES / "s1.jsonl").subagents == []
+
+
+def test_session_with_empty_subagents_dir_is_fine(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=10)],
+    )
+    (tmp_path / "s" / "subagents").mkdir(parents=True)
+    report = tm.build_token_report(tmp_path)
+    assert report.sessions[0].subagents == []
+    assert report.sessions[0].sidechain_turns == 0
+
+
+def test_message_id_repeated_between_main_and_subagent_counts_once(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_assistant("2026-09-16T10:00:01.000Z", message_id="msg_X", output=1, inp=3)],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            _assistant("2026-09-16T10:00:02.000Z", message_id="msg_X", output=214, inp=3),
+            _assistant("2026-09-16T10:00:03.000Z", message_id="msg_Y", output=9),
+        ],
+    )
+    report = tm.build_token_report(tmp_path)
+    main = report.sessions[0]
+    # msg_X belongs to the main thread (at its maximum); the subagent keeps only msg_Y.
+    assert main.turns == 1 and main.output_tokens == 214 and main.input_tokens == 3
+    sub = report.subagent_totals
+    assert sub.turns == 1 and sub.output_tokens == 9
+    assert report.totals.turns + sub.turns == 2  # X once, Y once
+    assert main.sidechain_turns == 1
+
+
+def test_message_id_repeated_between_two_subagents_counts_once(tmp_path: pathlib.Path) -> None:
+    def build(root: pathlib.Path, first: str, second: str) -> tm.TokenReport:
+        _write_transcript(
+            root / "s.jsonl",
+            [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)],
+        )
+        _write_agent(
+            root,
+            "s",
+            f"{first}.jsonl",
+            [
+                _assistant("2026-09-16T10:00:01.000Z", message_id="msg_S", output=1, inp=3),
+                _assistant("2026-09-16T10:00:02.000Z", message_id="msg_P", output=5),
+            ],
+        )
+        _write_agent(
+            root,
+            "s",
+            f"workflows/wf_x/{second}.jsonl",
+            [
+                _assistant("2026-09-16T10:00:03.000Z", message_id="msg_S", output=214, inp=3),
+                _assistant("2026-09-16T10:00:04.000Z", message_id="msg_Q", output=7),
+            ],
+        )
+        return tm.build_token_report(root)
+
+    one = build(tmp_path / "one", "agent-a", "agent-b")
+    two = build(tmp_path / "two", "agent-b", "agent-a")
+    for report in (one, two):
+        sub = report.subagent_totals
+        assert sub.turns == 3  # S, P, Q - S counted once
+        assert sub.output_tokens == 214 + 5 + 7  # S at its maximum, not 1 + 214
+        assert sub.input_tokens == 3
+        assert report.totals.turns == 1
+    # The figures do not depend on which file is read first.
+    assert one.subagent_totals == two.subagent_totals
+
+
+def test_subagent_streaming_partials_dedupe_inside_one_file(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=1, inp=3, cache_w=500),
+            _assistant("2026-09-16T10:00:02.000Z", message_id="msg_A", output=214, inp=3, cache_w=500),
+            _assistant("2026-09-16T10:00:03.000Z", message_id=None, output=40, inp=7),
+        ],
+    )
+    (agent,) = tm.build_token_report(tmp_path).sessions[0].subagents
+    assert agent.agent_id == "a"
+    assert agent.turns == 2
+    assert agent.output_tokens == 214 + 40
+    assert agent.input_tokens == 3 + 7
+    assert agent.cache_creation_tokens == 500
+
+
+def test_unreadable_or_garbage_subagent_files_are_skipped(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)],
+    )
+    _write_agent(
+        tmp_path, "s", "agent-ok.jsonl", [_assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=5)]
+    )
+    # Would count (99 output tokens) if it were read; the patched reader refuses it below.
+    _write_agent(
+        tmp_path, "s", "agent-locked.jsonl", [_assistant("2026-09-16T10:00:02.000Z", message_id="msg_L", output=99)]
+    )
+    agents_dir = tmp_path / "s" / "subagents"
+    (agents_dir / "agent-garbage.jsonl").write_bytes(b"not json\n{broken\n\xff\xfe\x00\n[1, 2]\n")
+    (agents_dir / "agent-dir.jsonl").mkdir()  # a directory that happens to match the pattern
+
+    real_read = tm._read_transcript
+
+    def read_or_deny(path: pathlib.Path) -> Any:
+        if path.name == "agent-locked.jsonl":  # deterministic stand-in for chmod 000 (a no-op as root)
+            raise PermissionError(13, "Permission denied", str(path))
+        return real_read(path)
+
+    monkeypatch.setattr(tm, "_read_transcript", read_or_deny)
+    report = tm.build_token_report(tmp_path)
+
+    agents = _agents(report.sessions[0])
+    assert "ok" in agents and agents["ok"].output_tokens == 5
+    assert "garbage" not in agents and "dir" not in agents
+    assert "locked" not in agents
+    assert report.sessions[0].turns == 1
+
+
+def test_subagents_path_that_is_a_regular_file_is_ignored(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=10),
+            _assistant("2026-09-16T10:00:02.000Z", message_id="msg_B", output=20),
+        ],
+    )
+    (tmp_path / "s").mkdir()
+    (tmp_path / "s" / "subagents").write_text("not a directory\n", encoding="utf-8")  # a file, not a dir
+
+    report = tm.build_token_report(tmp_path)
+    main = report.sessions[0]
+    assert main.subagents == []
+    assert main.turns == 2 and main.output_tokens == 30
+    assert main.sidechain_turns == 0
+    assert report.subagent_totals.turns == 0
+    assert tm.read_session(tmp_path / "s.jsonl").subagents == []
+
+
+def test_subagent_text_and_tool_results_never_surface(subagent_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(subagent_dir)
+    for rendered in (repr(report), tm.format_text(report), tm.format_json(report)):
+        assert "subagent-secret-body" not in rendered
+        assert "workflow step" not in rendered
 
 
 # ---------------------------------------------------------------------
