@@ -301,7 +301,9 @@ def install(
         if render_hook is not None:
             rendered = render_hook(role, name, rendered)
 
-        target = platform_module.resolve_target(role, name, install_root, scope=scope)
+        target = _resolve_artifact_target(
+            platform_module, role, name, install_root, scope
+        )
         _write_one_target(
             target,
             rendered,
@@ -405,6 +407,31 @@ def _ensure_gitignore_entry(project_root: Path) -> None:
     gitignore.write_text(_USER_TOML_GITIGNORE_LINE + "\n", encoding="utf-8")
 
 
+def _resolve_artifact_target(
+    platform_module,
+    role: str,
+    name: str,
+    install_root: Path,
+    scope: str,
+) -> Path:
+    """Return the destination of one collected artifact.
+
+    Everything goes through the platform handler's ``resolve_target``,
+    except a skill's ``references/`` file (spec 0030, plan D1): its name
+    is ``<skill>/references/<rel>`` and it lands next to that skill's
+    installed ``SKILL.md`` — the handler only knows where ``SKILL.md``
+    goes, so the reference reuses its directory. No platform handler
+    changes: each already maps role ``skill`` to ``.../<skill>/SKILL.md``.
+    """
+    if role == "skill" and "/" in name:
+        skill, _, relative = name.partition("/")
+        skill_file = platform_module.resolve_target(
+            role, skill, install_root, scope=scope
+        )
+        return skill_file.parent / relative
+    return platform_module.resolve_target(role, name, install_root, scope=scope)
+
+
 def _collect_artifacts(
     framework_root: Path | None,
     platform_module,
@@ -418,6 +445,11 @@ def _collect_artifacts(
     constitution), then command → agent → skill; within each role,
     alphabetical.
 
+    Each skill's ``references/**/*.md`` (see
+    :func:`_collect_skill_references`) travel as role ``skill`` entries
+    named ``<skill>/references/<rel>``, so they share the skill's
+    scope filter, manifest role and write/skip/conflict path.
+
     The trailing ``verbatim`` flag tells the engine whether to run
     variable substitution. Framework-generic artifacts are copied
     verbatim because their ``{{UPPER_SNAKE}}`` tokens are runtime
@@ -430,6 +462,11 @@ def _collect_artifacts(
             merged[(role, name)] = (role, name, source_path, True)
     for role, name, source_path in platform_module.iter_preset_artifacts(preset_path):
         merged[(role, name)] = (role, name, source_path, False)
+    # Already resolved framework-vs-preset per key by the collector.
+    for role, name, source_path, verbatim in _collect_skill_references(
+        framework_root, preset_path
+    ):
+        merged[(role, name)] = (role, name, source_path, verbatim)
     return sorted(
         merged.values(),
         key=lambda t: (_ROLE_PRIORITY.get(t[0], 99), t[1]),

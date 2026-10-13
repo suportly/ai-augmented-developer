@@ -8,6 +8,7 @@ conflicts, uninstall with force) has a dedicated test.
 """
 from __future__ import annotations
 
+import hashlib
 import pathlib
 
 import pytest
@@ -40,8 +41,27 @@ def _wrapper_file(project_root: pathlib.Path) -> pathlib.Path:
     return project_root / "CLAUDE.md"
 
 
+# platform -> where that platform keeps ``<skill>/SKILL.md`` (the layout
+# the handlers produce); a reference must land in the same skill directory.
+_SKILLS_DIR = {
+    "claude_code": ".claude/skills",
+    "codex": ".codex/skills",
+    "gemini": ".gemini/skills",
+    "cursor": ".cursor/skills",
+    "opencode": ".opencode/skills",
+}
+
+
 def _skill_file(project_root: pathlib.Path, name: str) -> pathlib.Path:
     return project_root / ".claude" / "skills" / name / "SKILL.md"
+
+
+def _reference_file(
+    project_root: pathlib.Path, platform: str = "claude_code"
+) -> pathlib.Path:
+    """The mini-preset's ``hello-world/references/stack.md`` once installed."""
+    skills_dir = project_root / _SKILLS_DIR[platform]
+    return skills_dir / "hello-world" / "references" / "stack.md"
 
 
 def _manifest_file(project_root: pathlib.Path) -> pathlib.Path:
@@ -97,7 +117,12 @@ class TestFreshInstall:
     def test_report_lists_every_new_file(self, tmp_path: pathlib.Path) -> None:
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         assert sorted(p.name for p in report.written) == sorted(
-            [_agent_file(tmp_path).name, _wrapper_file(tmp_path).name, "SKILL.md"]
+            [
+                _agent_file(tmp_path).name,
+                _wrapper_file(tmp_path).name,
+                "SKILL.md",
+                "stack.md",
+            ]
         )
         assert report.skipped == []
         assert report.conflicts == []
@@ -114,7 +139,7 @@ class TestReInstall:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
         assert report.written == []
-        assert len(report.skipped) == 3
+        assert len(report.skipped) == 4  # + the skill's references/stack.md
         assert report.conflicts == []
 
     def test_new_values_rewrite_files(self, tmp_path: pathlib.Path) -> None:
@@ -122,9 +147,19 @@ class TestReInstall:
         updated = {**VARIABLES, "GREETING": "Bonjour"}
         report = install(FIXTURES, tmp_path, updated, now="2026-04-14T13:00:00Z")
         # AGENTS.md + SKILL.md pick up new content; the CLAUDE.md wrapper
-        # is variable-independent and stays a skip.
+        # and references/stack.md (which only uses PROJECT_NAME) are
+        # GREETING-independent and stay skips.
         assert len(report.written) == 2
         assert "Bonjour" in _agent_file(tmp_path).read_text(encoding="utf-8")
+
+    def test_changed_variable_rewrites_the_reference(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
+        updated = {**VARIABLES, "PROJECT_NAME": "Other App"}
+        report = install(FIXTURES, tmp_path, updated, now="2026-04-14T13:00:00Z")
+        assert _reference_file(tmp_path) in report.written
+        assert "Other App" in _reference_file(tmp_path).read_text(encoding="utf-8")
 
     def test_reinstall_preserves_previous_values_for_unspecified_keys(
         self, tmp_path: pathlib.Path
@@ -160,6 +195,16 @@ class TestConflicts:
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
         assert _agent_file(tmp_path) in report.conflicts
         assert _agent_file(tmp_path).read_text(encoding="utf-8") == "edited by user\n"
+
+    def test_hand_edited_reference_is_reported_as_conflict(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
+        _reference_file(tmp_path).write_text("edited by user\n", encoding="utf-8")
+
+        report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
+        assert _reference_file(tmp_path) in report.conflicts
+        assert _reference_file(tmp_path).read_text(encoding="utf-8") == "edited by user\n"
 
     def test_force_overwrites_hand_edited_file(self, tmp_path: pathlib.Path) -> None:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
@@ -198,10 +243,13 @@ class TestDryRun:
             mode=InstallMode.DRY_RUN,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.written) == 4
+        assert _reference_file(tmp_path) in report.written
         assert not _agent_file(tmp_path).exists()
         assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
+        assert not _reference_file(tmp_path).exists()
         assert not _manifest_file(tmp_path).exists()
 
 
@@ -233,7 +281,8 @@ class TestUnresolvedPlaceholders:
             allow_unresolved=True,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.written) == 4
         assert "GREETING" in report.unresolved
         # The literal {{GREETING}} survives in the output.
         agent_text = _agent_file(tmp_path).read_text(encoding="utf-8")
@@ -255,10 +304,12 @@ class TestUninstall:
             mode=InstallMode.UNINSTALL,
         )
         assert report.ok
-        assert len(report.removed) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.removed) == 4
         assert not _agent_file(tmp_path).exists()
         assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
+        assert not _reference_file(tmp_path).exists()
         assert not _manifest_file(tmp_path).exists()
 
     def test_uninstall_without_prior_install_is_noop(
@@ -342,6 +393,16 @@ class TestUserScope:
         # No CLAUDE.md at home root or project root.
         assert not (fake_home / "CLAUDE.md").exists()
         assert not (project / "CLAUDE.md").exists()
+
+    def test_user_scope_installs_references_with_their_skill(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "unused-project"
+        project.mkdir()
+        install(FIXTURES, project, VARIABLES, scope="user", now="2026-04-14T12:00:00Z")
+        reference = fake_home / ".claude" / "skills" / "hello-world" / "references" / "stack.md"
+        assert "Demo App" in reference.read_text(encoding="utf-8")
+        assert not (project / ".claude").exists()
 
     def test_user_scope_manifest_is_under_home(
         self, fake_home: pathlib.Path, tmp_path: pathlib.Path
@@ -575,3 +636,70 @@ class TestCollectSkillReferences:
     def test_missing_roots_yield_nothing(self, tmp_path: pathlib.Path) -> None:
         # No framework root, and a preset without a skills/ directory.
         assert _collect_skill_references(None, tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# Skill references/ installation (spec 0030 Story 4 sc3, plan D1)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("platform", sorted(_SKILLS_DIR))
+class TestInstallSkillReferences:
+    """What varies per handler: the destination and the manifest entry."""
+
+    def test_preset_reference_lands_next_to_the_skill_and_is_recorded(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        report = install(
+            FIXTURES, tmp_path, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z"
+        )
+
+        reference = _reference_file(tmp_path, platform)
+        assert (reference.parent.parent / "SKILL.md").is_file()
+        assert reference in report.written
+        text = reference.read_text(encoding="utf-8")
+        assert "Demo App" in text  # {{PROJECT_NAME}} substituted
+        assert find_unresolved(text) == []
+
+        record = load_manifest(_manifest_file(tmp_path)).find_preset("mini")
+        assert record is not None
+        entry = next(f for f in record.files if f.path.endswith("references/stack.md"))
+        assert entry.path == reference.relative_to(tmp_path).as_posix()
+        assert entry.role == "skill"
+        assert entry.sha256 == hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def test_uninstall_removes_the_reference_and_empty_directories(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z")
+        reference = _reference_file(tmp_path, platform)
+
+        report = install(
+            FIXTURES, tmp_path, VARIABLES, platform=platform, mode=InstallMode.UNINSTALL
+        )
+
+        assert reference in report.removed
+        assert not reference.parent.exists()  # references/
+        assert not (tmp_path / _SKILLS_DIR[platform]).exists()  # skill dirs went too
+
+
+def test_framework_reference_is_copied_verbatim(tmp_path: pathlib.Path) -> None:
+    # Guards the ``verbatim`` flag of framework references: their
+    # ``{{UPPER_SNAKE}}`` tokens are runtime markers, never substituted.
+    framework = tmp_path / "framework"
+    skill = _make_skill(framework, "alpha")
+    body = "Runtime markers stay: {{TASK_ID}} and {{PROJECT_NAME}}\n"
+    _write(skill / "references" / "guide.md", body)
+    project = tmp_path / "project"
+
+    report = install(
+        FIXTURES,
+        project,
+        VARIABLES,
+        framework_root=framework,
+        now="2026-04-14T12:00:00Z",
+    )
+
+    installed = project / _SKILLS_DIR["claude_code"] / "alpha" / "references" / "guide.md"
+    assert installed.read_text(encoding="utf-8") == body
+    assert report.unresolved == []

@@ -166,16 +166,11 @@
 
 ### T011 — Instalar references/ ao lado do SKILL.md em todas as plataformas
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T010
 - **Files:**
   - modify: `src/aiadev/install_engine.py`
-  - test: `tests/test_install_engine.py`
-  - test: `tests/test_install_claude_code.py`
-  - test: `tests/test_install_codex.py`
-  - test: `tests/test_install_gemini.py`
-  - test: `tests/test_install_cursor.py`
-  - test: `tests/test_install_opencode.py`
+  - test: `tests/test_install_engine.py` (classe parametrizada pelas 5 plataformas; os arquivos `test_install_<plataforma>.py` só testam contrato de handler e não chamam `install()`)
 - **Spec scenarios:** Story 4 scenario 3
 - **Acceptance:**
   - [ ] Teste vermelho por plataforma: o arquivo cai em `<destino da skill>/references/<arquivo>` e entra no manifesto com role `skill` e sha256.
@@ -192,7 +187,8 @@
   - test: `tests/test_install_engine.py`
 - **Spec scenarios:** Story 4 scenario 2
 - **Acceptance:**
-  - [ ] Teste vermelho: `references/` de preset passa por `substitute`/`find_unresolved`; `{{TOKEN}}` não resolvido falha com mensagem que cita o arquivo; os do framework seguem verbatim.
+  - [ ] Teste vermelho: `references/` de preset passa por `substitute`/`find_unresolved`; `{{TOKEN}}` não resolvido falha com mensagem que cita o arquivo (hoje a mensagem lista só as chaves). A verbatim dos do framework já tem teste da T011 (`test_framework_reference_is_copied_verbatim`): não repetir.
+  - [ ] Carry-over da revisão da T011: `install()` escreve arquivos durante o laço e só levanta o erro de placeholders no fim, sem salvar o manifesto — uma execução que falha deixa `SKILL.md` (e references) no disco sem rastreio e a re-execução os acusa como conflito. Validar os placeholders de TODOS os artefatos antes de escrever o primeiro (falha sem efeito colateral), com teste que prova que nada foi escrito.
   - [ ] Commit message: `feat(install): T012 substituição de variáveis em references de preset`.
 
 ### T013 — Remover órfãos pela regra de hash
