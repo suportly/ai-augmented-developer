@@ -78,7 +78,7 @@
 
 ### T005 — Relatório de tokens por papel (texto e JSON)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - modify: `src/aiadev/commands/metrics.py`

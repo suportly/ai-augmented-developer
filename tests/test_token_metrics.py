@@ -13,6 +13,7 @@ import dataclasses
 import json
 import os
 import pathlib
+import re
 import shutil
 from typing import Any, Dict, List, Optional
 
@@ -924,17 +925,13 @@ def test_cost_is_kept_per_subagent_and_in_the_report_totals(tmp_path: pathlib.Pa
     assert (sub.cache_write_5m_tokens, sub.cache_write_1h_tokens) == (50, 0)
 
 
-def test_cost_is_not_serialized_yet(pinned_dir: pathlib.Path, subagent_dir: pathlib.Path) -> None:
-    """The report formats own the cost's shape (T005): until then the JSON and text are unchanged."""
-    for directory in (pinned_dir, subagent_dir):
-        report = tm.build_token_report(directory)
-        rendered = tm.format_text(report) + tm.format_json(report)
-        for needle in ("equivalent_cost", "cache_write_5m", "cache_write_1h"):
-            assert needle not in rendered
-        for session in [*report.sessions, report.totals]:
-            assert "cache_write_5m_tokens" not in session.to_dict()
-            assert "cache_write_1h_tokens" not in session.to_dict()
-    expected_keys = {
+# ---------------------------------------------------------------------
+# Spec 0030, Story 1 sc2/sc4 — report formats: subagents by role, cost, JSON keys
+# ---------------------------------------------------------------------
+
+# The per-session JSON keys before spec 0030: the report may gain keys, never lose these.
+_LEGACY_SESSION_KEYS = frozenset(
+    {
         "session_id",
         "file",
         "started_at",
@@ -951,7 +948,323 @@ def test_cost_is_not_serialized_yet(pinned_dir: pathlib.Path, subagent_dir: path
         "by_tool",
         "total_input_tokens",
     }
-    assert set(tm.build_token_report(pinned_dir).totals.to_dict()) == expected_keys
+)
+_LEGACY_REPORT_KEYS = frozenset({"transcripts_dir", "sessions", "totals"})
+_SUBAGENT_JSON_KEYS = {
+    "agent_id",
+    "role",
+    "turns",
+    "input_tokens",
+    "cache_creation_tokens",
+    "cache_read_tokens",
+    "output_tokens",
+    "equivalent_cost",
+}
+
+
+def _role_rows(text: str) -> Dict[str, List[str]]:
+    """Cells of the "Subagents by role" block, by row label (the label itself dropped)."""
+    lines = text.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("Subagents by role"))
+    rows: Dict[str, List[str]] = {}
+    for line in lines[start + 1 :]:
+        if not line.strip():
+            break
+        cells = line.split()
+        if cells[0] in ("implement", "review", "unclassified", "TOTAL"):
+            rows[cells[0]] = cells[1:]
+    return rows
+
+
+def _json(directory: pathlib.Path) -> Dict[str, Any]:
+    return json.loads(tm.format_json(tm.build_token_report(directory)))
+
+
+def test_cost_and_subagents_are_serialized_without_the_tier_fields(
+    pinned_dir: pathlib.Path, subagent_dir: pathlib.Path
+) -> None:
+    """The JSON gains keys (cost, subagents) and keeps every old one; the tier split stays internal."""
+    for directory in (pinned_dir, subagent_dir):
+        report = tm.build_token_report(directory)
+        rendered = tm.format_text(report) + tm.format_json(report)
+        assert "equivalent_cost" in rendered
+        for needle in ("cache_write_5m_tokens", "cache_write_1h_tokens"):
+            assert needle not in rendered
+        for session in [*report.sessions, report.totals]:
+            assert "cache_write_5m_tokens" not in session.to_dict()
+            assert "cache_write_1h_tokens" not in session.to_dict()
+
+    data = _json(pinned_dir)
+    assert _LEGACY_REPORT_KEYS <= set(data)
+    for session in data["sessions"]:
+        assert set(session) == _LEGACY_SESSION_KEYS | {"equivalent_cost", "subagents"}
+        assert session["subagents"] == []
+    # The totals row is the main thread only: its subagents live at the report level.
+    assert set(data["totals"]) == _LEGACY_SESSION_KEYS | {"equivalent_cost"}
+    assert data["totals"]["total_input_tokens"] == 3120  # unchanged, pinned
+
+
+def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) -> None:
+    data = _json(subagent_dir)
+    assert set(data) == _LEGACY_REPORT_KEYS | {
+        "subagent_totals",
+        "subagents_by_role",
+        "unclassified_subagents",
+        "total_equivalent_cost",
+        "cost_model",
+    }
+
+    # main thread: 1.0*15 + 1.25*100 + 0.1*100 + 5.0*150
+    assert data["sessions"][0]["equivalent_cost"] == data["totals"]["equivalent_cost"] == 900.0
+    assert data["sessions"][0]["turns"] == 2  # main thread only, as before
+
+    usage = {"turns": 4, "input_tokens": 10, "cache_creation_tokens": 250, "cache_read_tokens": 500, "output_tokens": 100}
+    assert data["subagent_totals"] == {"agents": 2, "equivalent_cost": 872.5, **usage}
+    assert data["total_equivalent_cost"] == 900.0 + 872.5
+
+    by_role = data["subagents_by_role"]
+    assert set(by_role) == {"implement", "review", "unclassified"}
+    assert by_role["implement"] == {
+        "agents": 1,
+        "turns": 2,
+        "input_tokens": 5,
+        "cache_creation_tokens": 200,
+        "cache_read_tokens": 200,
+        "output_tokens": 50,
+        "equivalent_cost": 525.0,
+    }
+    assert by_role["review"]["agents"] == 1 and by_role["review"]["equivalent_cost"] == 347.5
+    assert by_role["unclassified"]["agents"] == 0 and by_role["unclassified"]["equivalent_cost"] == 0
+    assert data["unclassified_subagents"] == 0
+
+    agents = {a["agent_id"]: a for a in data["sessions"][0]["subagents"]}
+    assert sorted(agents) == ["aaa", "bbb"]
+    assert set(agents["aaa"]) == _SUBAGENT_JSON_KEYS
+    assert agents["aaa"]["role"] == "implement" and agents["bbb"]["role"] == "review"
+    assert agents["aaa"]["equivalent_cost"] == 525.0  # 1.0*5 + 1.25*200 + 0.1*200 + 5.0*50
+    assert agents["bbb"]["equivalent_cost"] == 347.5  # 1.0*5 + 1.25*50 + 0.1*300 + 5.0*50
+
+
+def test_json_declares_the_cost_as_an_approximation_with_its_weights(subagent_dir: pathlib.Path) -> None:
+    model = _json(subagent_dir)["cost_model"]
+    assert model["approximation"] is True
+    assert model["unit"] == "equivalent_input_tokens"
+    assert model["weights"] == {
+        "input": tm.WEIGHT_INPUT,
+        "output": tm.WEIGHT_OUTPUT,
+        "cache_read": tm.WEIGHT_CACHE_READ,
+        "cache_write_5m": tm.WEIGHT_CACHE_WRITE_5M,
+        "cache_write_1h": tm.WEIGHT_CACHE_WRITE_1H,
+    }
+
+
+def test_json_by_role_sums_to_the_subagent_totals_across_sessions(tmp_path: pathlib.Path) -> None:
+    for session, started in (("s1", "2026-09-16T10:00:00.000Z"), ("s2", "2026-09-17T10:00:00.000Z")):
+        _write_transcript(
+            tmp_path / f"{session}.jsonl", [_assistant(started, message_id=f"msg_{session}", output=1)]
+        )
+        for agent in ("a", "b"):
+            _write_agent(
+                tmp_path,
+                session,
+                f"agent-{agent}.jsonl",
+                [_assistant(started, message_id=f"msg_{session}_{agent}", output=3, inp=2)],
+            )
+    _write_meta(tmp_path, "a", {"description": "implement: T001"}, session="s1")
+    _write_meta(tmp_path, "b", {"description": "review: branch"}, session="s1")
+    _write_meta(tmp_path, "a", {"description": "implement: T002"}, session="s2")
+    _write_meta(tmp_path, "b", {"description": "no convention"}, session="s2")
+
+    data = _json(tmp_path)
+    by_role = data["subagents_by_role"]
+    assert {role: by_role[role]["agents"] for role in by_role} == {"implement": 2, "review": 1, "unclassified": 1}
+    assert data["unclassified_subagents"] == 1
+    for field in ("agents", "turns", "input_tokens", "output_tokens", "equivalent_cost"):
+        assert sum(r[field] for r in by_role.values()) == pytest.approx(data["subagent_totals"][field])
+    assert data["subagent_totals"]["agents"] == 4
+    assert data["total_equivalent_cost"] == pytest.approx(
+        data["totals"]["equivalent_cost"] + data["subagent_totals"]["equivalent_cost"]
+    )
+
+
+def test_text_separates_the_main_thread_from_the_subagents_by_role(subagent_dir: pathlib.Path) -> None:
+    text = tm.format_text(tm.build_token_report(subagent_dir))
+
+    # What the pinned format already had is still there, and still the main thread only.
+    assert "Sessions: 1" in text
+    assert "tool_chars" in text
+    assert "Total input tokens (input + cache_w + cache_r): 215" in text  # 15 + 100 + 100
+    main_total = next(line for line in text.splitlines() if line.startswith("TOTAL")).split()
+    assert main_total[1:] == ["2", "15", "100", "100", "150", "1", "2"]  # turns, tokens, tools, tool_chars
+
+    # The subagents come apart by role: agents, turns, input, cache_w, cache_r, output, cost.
+    assert "Subagents by role" in text
+    rows = _role_rows(text)
+    assert rows["implement"] == ["1", "2", "5", "200", "200", "50", "525.00"]
+    assert rows["review"] == ["1", "2", "5", "50", "300", "50", "347.50"]
+    assert rows["unclassified"] == ["0", "0", "0", "0", "0", "0", "0.00"]
+    assert rows["TOTAL"] == ["2", "4", "10", "250", "500", "100", "872.50"]
+    assert "Unclassified subagents: 0" in text
+
+    # Main thread, subagents and the sum are three different numbers.
+    assert "main thread 900.00" in text
+    assert "subagents 872.50" in text
+    assert "total 1,772.50" in text
+    assert "Top tools by result chars" in text and "Bash" in text
+
+
+def test_text_has_no_misleading_sidechain_line_and_says_subagents_are_separate(
+    subagent_dir: pathlib.Path, pinned_dir: pathlib.Path
+) -> None:
+    text = tm.format_text(tm.build_token_report(subagent_dir))
+    assert "Subagent (sidechain) turns included" not in text  # subagent turns are not in the TOTAL row
+    (line,) = [ln for ln in text.splitlines() if ln.startswith("Subagent turns:")]
+    assert "Subagent turns: 4 " in line and "reported separately" in line
+
+    # A legacy main transcript that flags its own turns as sidechain still counts them in the TOTAL.
+    legacy = tm.format_text(tm.build_token_report(pinned_dir))
+    assert "Subagent (sidechain) turns included" not in legacy
+    assert "Subagent turns:" not in legacy
+    (note,) = [ln for ln in legacy.splitlines() if "Sidechain-flagged" in ln]
+    assert "included in TOTAL" in note and note.rstrip().endswith("1")
+
+
+def test_text_declares_the_cost_an_approximation_and_states_the_weights(subagent_dir: pathlib.Path) -> None:
+    text = tm.format_text(tm.build_token_report(subagent_dir))
+    assert "approximation" in text
+    for needle in ("cache read 0.1x", "input 1.0x", "output 5.0x", "cache write 1.25x (5 min)", "2.0x (1 h)"):
+        assert needle in text
+
+
+def test_text_weights_come_from_the_constants_not_from_literals(
+    subagent_dir: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(tm, "WEIGHT_OUTPUT", 7.5)
+    monkeypatch.setattr(tm, "WEIGHT_CACHE_WRITE_1H", 3.0)
+    report = tm.build_token_report(subagent_dir)
+    text = tm.format_text(report)
+    assert "output 7.5x" in text and "3.0x (1 h)" in text
+    assert "output 5.0x" not in text and "2.0x (1 h)" not in text
+    weights = json.loads(tm.format_json(report))["cost_model"]["weights"]
+    assert weights["output"] == 7.5 and weights["cache_write_1h"] == 3.0
+
+
+def test_unclassified_row_is_not_fed_by_the_subagent_totals_pseudo_agent(tmp_path: pathlib.Path) -> None:
+    """Only classified subagents exist: the TOTAL pseudo-agent's default role must not feed a row."""
+    _session_with_agents(tmp_path, ["a", "b"])
+    _write_meta(tmp_path, "a", {"description": "implement: T001"})
+    _write_meta(tmp_path, "b", {"description": "review: T001"})
+    report = tm.build_token_report(tmp_path)
+    rows = _role_rows(tm.format_text(report))
+    assert rows["implement"][0] == "1" and rows["review"][0] == "1"
+    assert rows["unclassified"][0] == "0" and rows["unclassified"][1] == "0"
+    assert rows["TOTAL"][0] == "2"
+    assert report.to_dict()["subagents_by_role"]["unclassified"]["agents"] == 0
+    assert report.to_dict()["unclassified_subagents"] == 0
+
+
+def test_text_counts_unclassified_subagents_and_never_prints_the_description(tmp_path: pathlib.Path) -> None:
+    _session_with_agents(tmp_path, ["a", "b", "c", "d"])
+    _write_meta(tmp_path, "a", {"description": "implement: T001 d3scr1pt10n-secret"})
+    _write_meta(tmp_path, "b", {"description": "Explore the repo d3scr1pt10n-secret"})
+    _write_meta(tmp_path, "c", "{not json")
+    # "d" has no meta.json at all
+    text = tm.format_text(tm.build_token_report(tmp_path))
+    assert "Unclassified subagents: 3" in text
+    assert _role_rows(text)["unclassified"][0] == "3"
+    assert "d3scr1pt10n-secret" not in text + tm.format_json(tm.build_token_report(tmp_path))
+
+
+def test_report_without_subagents_says_zero_unclassified_and_still_has_the_cost_note(
+    pinned_dir: pathlib.Path,
+) -> None:
+    text = tm.format_text(tm.build_token_report(pinned_dir))
+    assert "Unclassified subagents: 0" in text
+    assert _role_rows(text)["TOTAL"] == ["0", "0", "0", "0", "0", "0", "0.00"]
+    assert "main thread 2,105.00" in text  # s1 1970 + s2 135
+    assert "approximation" in text
+
+
+def test_tool_result_bodies_stay_out_of_text_and_json(subagent_dir: pathlib.Path, pinned_dir: pathlib.Path) -> None:
+    for directory, secret in ((subagent_dir, "subagent-secret-body"), (pinned_dir, "aaaaaaaaaa")):
+        report = tm.build_token_report(directory)
+        for rendered in (tm.format_text(report), tm.format_json(report), repr(report.to_dict())):
+            assert secret not in rendered
+
+
+def test_cli_tokens_text_and_json_report_subagents_by_role(subagent_dir: pathlib.Path) -> None:
+    runner = CliRunner()
+    text = runner.invoke(main, ["metrics", "--tokens", "--transcripts-dir", str(subagent_dir)])
+    assert text.exit_code == 0, text.output
+    assert "Subagents by role" in text.output and "approximation" in text.output
+    assert _role_rows(text.output)["implement"][0] == "1"
+
+    a = runner.invoke(
+        main, ["metrics", "--tokens", "--transcripts-dir", str(subagent_dir), "--format", "json"]
+    )
+    b = runner.invoke(
+        main, ["metrics", "--tokens", "--transcripts-dir", str(subagent_dir), "--format", "json"]
+    )
+    assert a.exit_code == 0, a.output
+    assert a.output == b.output  # still byte-stable
+    data = json.loads(a.output)
+    assert data["subagents_by_role"]["review"]["agents"] == 1
+    assert data["cost_model"]["approximation"] is True
+    assert data["totals"]["total_input_tokens"] == 215  # the old keys keep their meaning
+
+
+def test_cli_tokens_reports_unclassified_without_error_for_a_broken_meta_json(tmp_path: pathlib.Path) -> None:
+    """Story 1 sc3: no ``subagents/`` dir, or an unreadable ``*.meta.json``, exits 0 and counts."""
+    _session_with_agents(tmp_path, ["a"])
+    _write_meta(tmp_path, "a", "[" * 1000)
+    runner = CliRunner()
+    broken = runner.invoke(main, ["metrics", "--tokens", "--transcripts-dir", str(tmp_path)])
+    assert broken.exit_code == 0, broken.output
+    assert "Unclassified subagents: 1" in broken.output
+
+    plain = tmp_path / "plain"
+    _write_transcript(plain / "s.jsonl", [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)])
+    none = runner.invoke(main, ["metrics", "--tokens", "--transcripts-dir", str(plain)])
+    assert none.exit_code == 0, none.output
+    assert "Unclassified subagents: 0" in none.output
+
+
+# ---------------------------------------------------------------------
+# Carry-over from T003 — a line nested deeper than the interpreter limit
+# ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "poison",
+    [
+        "[" * 1_000_000,  # RecursionError in the C scanner
+        '{"a":' * 200_000,  # the same, through objects
+        '{"message": {"usage": {"output_tokens": 1' + "0" * 5000 + "}}}",  # ValueError: > 4300-digit int
+    ],
+    ids=["array-depth", "object-depth", "huge-int"],
+)
+def test_a_pathological_transcript_line_is_skipped_not_fatal(tmp_path: pathlib.Path, poison: str) -> None:
+    good = [
+        _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=10),
+        _assistant("2026-09-16T10:00:03.000Z", message_id="msg_B", output=20),
+    ]
+    main_path = tmp_path / "s.jsonl"
+    main_path.write_text(
+        json.dumps(good[0]) + "\n" + poison + "\n" + json.dumps(good[1]) + "\n", encoding="utf-8"
+    )
+    agent = tmp_path / "s" / "subagents" / "agent-a.jsonl"
+    agent.parent.mkdir(parents=True)
+    agent.write_text(
+        poison + "\n" + json.dumps(_assistant("2026-09-16T10:00:04.000Z", message_id="msg_C", output=5)) + "\n",
+        encoding="utf-8",
+    )
+
+    session = tm.read_session(main_path)  # must not raise
+    assert session.turns == 2 and session.output_tokens == 30
+    report = tm.build_token_report(tmp_path)  # must not raise either
+    assert report.totals.turns == 2
+    assert [a.output_tokens for a in report.sessions[0].subagents] == [5]
+    assert "Sessions: 1" in tm.format_text(report)
 
 
 # ---------------------------------------------------------------------
@@ -1005,3 +1318,161 @@ def test_cli_tokens_default_dir_derives_from_cwd(tmp_path: pathlib.Path, monkeyp
         os.chdir(cwd)
     assert result.exit_code == 0, result.output
     assert "Sessions: 1" in result.output
+
+
+# ---------------------------------------------------------------------
+# Quality review of T005 — implausible usage values, table alignment
+# ---------------------------------------------------------------------
+
+_MAX_PLAUSIBLE = 2**63 - 1  # a usage field at or above 2**63 is not a token count
+
+
+@pytest.mark.parametrize(
+    "huge",
+    [10**308, 10**309, int("1" + "0" * 400), int("9" * 4299)],
+    ids=["1e308", "1e309", "401-digits", "4299-digits"],
+)
+def test_an_implausibly_large_usage_value_counts_as_zero_and_never_aborts_the_report(
+    tmp_path: pathlib.Path, huge: int
+) -> None:
+    """Below the 4300-digit parser limit but beyond float range: ``WEIGHT * huge`` raised OverflowError.
+
+    Two 10**308 values are each convertible to float; their sum is not.
+    """
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=7, inp=huge, cache_r=huge),
+            _assistant("2026-09-16T10:00:02.000Z", message_id="msg_B", output=huge, inp=huge, cache_w=huge),
+            _assistant("2026-09-16T10:00:03.000Z", message_id="msg_C", output=0, inp=3),
+        ],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            _assistant("2026-09-16T10:00:04.000Z", message_id="msg_D", output=2, inp=huge),
+            _assistant("2026-09-16T10:00:05.000Z", message_id="msg_E", output=huge, inp=huge),
+        ],
+    )
+    report = tm.build_token_report(tmp_path)  # must not raise
+    text = tm.format_text(report)  # nor must the formats, which read equivalent_cost
+    data = json.loads(tm.format_json(report))
+
+    main = report.sessions[0]
+    assert main.turns == 3  # the message is still a turn; only the implausible field is dropped
+    assert (main.input_tokens, main.cache_creation_tokens, main.cache_read_tokens, main.output_tokens) == (3, 0, 0, 7)
+    assert main.equivalent_cost == 3 + 5 * 7
+    (agent,) = main.subagents
+    assert (agent.turns, agent.input_tokens, agent.output_tokens) == (2, 0, 2)
+    assert data["totals"]["equivalent_cost"] == 38.0
+    assert data["subagent_totals"]["equivalent_cost"] == 10.0
+    assert data["total_equivalent_cost"] == 48.0
+    assert "main thread 38.00" in text and "total 48.00" in text
+
+
+@pytest.mark.parametrize(
+    ("value", "counted"),
+    [
+        (_MAX_PLAUSIBLE, _MAX_PLAUSIBLE),  # the largest value that is still a token count
+        (2**63, 0),
+        (-1, 0),
+        (-5, 0),
+        (0, 0),
+    ],
+)
+def test_usage_value_bounds(tmp_path: pathlib.Path, value: int, counted: int) -> None:
+    path = _write_transcript(
+        tmp_path / "s.jsonl", [_assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=0, inp=value)]
+    )
+    session = tm.read_session(path)
+    assert session.input_tokens == counted
+    assert session.turns == 1
+    assert session.equivalent_cost == pytest.approx(float(counted))  # finite: never an OverflowError
+
+
+def test_the_tier_detail_goes_through_the_same_bound(tmp_path: pathlib.Path) -> None:
+    event = _assistant(
+        "2026-09-16T10:00:01.000Z",
+        message_id="msg_A",
+        output=0,
+        cache_w=100,
+        detail=_tiers(five_minute=10**400, one_hour=10**309),
+    )
+    path = _write_transcript(tmp_path / "s.jsonl", [event])
+    session = tm.read_session(path)  # must not raise
+    # both tier values are implausible -> 0; the 100 written tokens fall back to the 5-minute rate
+    assert session.equivalent_cost == 125.0
+
+
+def _numbers_by_end(line: str) -> List[int]:
+    """Right edge (end offset) of every whitespace-separated cell of ``line``."""
+    return [m.end() for m in re.finditer(r"\S+", line)]
+
+
+def test_subagent_table_stays_aligned_with_large_sums(tmp_path: pathlib.Path) -> None:
+    """Widths come from the cells: 12,345,678 / 98,765,432 / 1,234,567,890 must not push a column."""
+    _write_transcript(
+        tmp_path / "s.jsonl", [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)]
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            _assistant(
+                "2026-09-16T10:00:01.000Z",
+                message_id="msg_A",
+                inp=12_345_678,
+                cache_w=98_765_432,
+                cache_r=1_234_567_890,
+                output=123_456_789,
+            )
+        ],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-b.jsonl",
+        [_assistant("2026-09-16T10:00:02.000Z", message_id="msg_B", inp=7, cache_w=3, cache_r=1, output=2)],
+    )
+    _write_meta(tmp_path, "a", {"description": "implement: T001"})
+    _write_meta(tmp_path, "b", {"description": "review: T001"})
+    text = tm.format_text(tm.build_token_report(tmp_path))
+
+    lines = text.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("Subagents by role"))
+    header, rule, *rows = lines[start + 1 : start + 1 + 7]  # header, rule, 3 roles, rule, TOTAL
+    assert header.split() == ["role", "agents", "turns", "input", "cache_w", "cache_r", "output", "cost"]
+    assert set(rule) == {"-"}
+    data_rows = [row for row in rows if set(row) != {"-"}]
+    assert [row.split()[0] for row in data_rows] == ["implement", "review", "unclassified", "TOTAL"]
+    # Every line has the same length, and every right-aligned column ends where its header ends.
+    assert len({len(line) for line in [header, rule, *rows]}) == 1
+    header_ends = _numbers_by_end(header)
+    for row in data_rows:
+        assert len(row.split()) == 8
+        assert _numbers_by_end(row)[1:] == header_ends[1:]
+        assert not row.startswith(" ")  # the role label is flush left
+    # And the big numbers are all there, comma-grouped.
+    assert "12,345,678" in text and "98,765,432" in text and "1,234,567,890" in text and "123,456,789" in text
+
+
+def test_a_role_outside_the_convention_is_counted_as_unclassified_once(tmp_path: pathlib.Path) -> None:
+    """``by_role`` and ``unclassified_subagents`` have a single definition of 'unclassified'."""
+    session = tm.SessionTokens(
+        session_id="s",
+        file="s.jsonl",
+        subagents=[
+            tm.SubagentTokens(agent_id="a", turns=1, output_tokens=4, role=tm.ROLE_IMPLEMENT),
+            tm.SubagentTokens(agent_id="b", turns=1, output_tokens=6, role="explore"),  # not produced by the reader
+            tm.SubagentTokens(agent_id="c", turns=1, output_tokens=8, role=tm.ROLE_UNCLASSIFIED),
+        ],
+    )
+    report = tm.TokenReport(transcripts_dir=str(tmp_path), sessions=[session])
+    assert report.unclassified_subagents == 2
+    by_role = report.subagents_by_role
+    assert by_role[tm.ROLE_UNCLASSIFIED].agents == 2 and by_role[tm.ROLE_UNCLASSIFIED].output_tokens == 14
+    assert by_role[tm.ROLE_IMPLEMENT].agents == 1
+    assert sum(r.agents for r in by_role.values()) == report.subagent_count == 3

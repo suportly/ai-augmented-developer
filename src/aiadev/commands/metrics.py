@@ -134,8 +134,11 @@ def _resolve_feature(workspace: pathlib.Path, slug: str) -> Optional[pathlib.Pat
     default=False,
     help=(
         "Relatório de tokens por sessão do Claude Code (spec 0022), lido dos "
-        "transcripts locais em ~/.claude/projects/<slug do cwd>/. Só contagens; "
-        "nunca imprime conteúdo de mensagens. Sai com 2 se não houver transcripts."
+        "transcripts locais em ~/.claude/projects/<slug do cwd>/, com os "
+        "subagentes por papel (implement/review/unclassified) à parte da thread "
+        "principal e um custo equivalente aproximado (pesos documentados em "
+        "docs/metrics.md). Só contagens; nunca imprime conteúdo de mensagens. "
+        "Sai com 2 se não houver transcripts."
     ),
 )
 @click.option(

@@ -12,8 +12,11 @@ answers a tool carries ``tool_result`` blocks keyed by ``tool_use_id``.
 This module is **read-only** and never sends anything anywhere. It also
 never surfaces message text: only counts and sizes leave this module
 (Article VI, Privacy by design). The parser is tolerant — every field it
-does not find counts as zero — because the transcript format evolves
-between Claude Code versions.
+does not find, or finds as something other than a plausible token count
+(not an integer, negative, or at least 2**63), counts as zero — because the
+transcript format evolves between Claude Code versions. A transcript line that
+is not valid JSON (or is nested too deeply, or carries an integer past the
+interpreter's digit limit) is skipped without being counted.
 
 Deduplication (spec ``0030-lean-pipeline``, Story 1): Claude Code writes the
 same assistant message several times while streaming, always with the same
@@ -43,6 +46,15 @@ Cost (spec ``0030-lean-pipeline``, Story 1, plan D7): ``equivalent_cost`` on
 ``subagent_totals``) weights the four usage components with the ``WEIGHT_*``
 constants below and sums them, in "equivalent input tokens". It is an
 **approximation** for comparing sessions with each other, not a price.
+
+Report (spec ``0030-lean-pipeline``, Story 1, plan D7): the text and JSON
+formats keep the main thread (the session rows and ``totals``) apart from the
+subagents, which are summed per role (``TokenReport.subagents_by_role``) by
+iterating ``SessionTokens.subagents``. Both formats declare the cost an
+approximation and state the weights, read from the ``WEIGHT_*`` constants. The
+JSON only ever gains keys; the cache-write tier fields stay internal and only
+``equivalent_cost`` leaves this module. Neither format carries a subagent
+description or any message or tool-result text.
 """
 
 from __future__ import annotations
@@ -74,6 +86,7 @@ class ToolUsage:
 ROLE_IMPLEMENT = "implement"
 ROLE_REVIEW = "review"
 ROLE_UNCLASSIFIED = "unclassified"
+ROLES = (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_UNCLASSIFIED)
 
 # Cost weights (plan D7): the price of each usage component relative to a plain
 # input token, so a cost reads as "equivalent input tokens". One documented set
@@ -114,6 +127,33 @@ class _EquivalentCost:
         return round(total, 2)
 
 
+def _usage_dict(usage: Any) -> Dict[str, Any]:
+    """The JSON shape shared by every subagent figure: turns, the four usage fields and the cost."""
+    return {
+        "turns": usage.turns,
+        "input_tokens": usage.input_tokens,
+        "cache_creation_tokens": usage.cache_creation_tokens,
+        "cache_read_tokens": usage.cache_read_tokens,
+        "output_tokens": usage.output_tokens,
+        "equivalent_cost": usage.equivalent_cost,
+    }
+
+
+def cost_model() -> Dict[str, Any]:
+    """The documented cost weights, as the JSON report declares them (read at call time)."""
+    return {
+        "approximation": True,
+        "unit": "equivalent_input_tokens",
+        "weights": {
+            "input": WEIGHT_INPUT,
+            "output": WEIGHT_OUTPUT,
+            "cache_read": WEIGHT_CACHE_READ,
+            "cache_write_5m": WEIGHT_CACHE_WRITE_5M,
+            "cache_write_1h": WEIGHT_CACHE_WRITE_1H,
+        },
+    }
+
+
 @dataclasses.dataclass
 class SubagentTokens(_EquivalentCost):
     """Usage of one subagent transcript (``agent-<agent_id>.jsonl``).
@@ -135,6 +175,27 @@ class SubagentTokens(_EquivalentCost):
     @property
     def total_input_tokens(self) -> int:
         return self.input_tokens + self.cache_creation_tokens + self.cache_read_tokens
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Id, role and usage only: the description the role came from is never kept."""
+        return {"agent_id": self.agent_id, "role": self.role, **_usage_dict(self)}
+
+
+@dataclasses.dataclass
+class RoleTokens(_EquivalentCost):
+    """The subagents of one role, summed over a report (``TokenReport.subagents_by_role``)."""
+
+    agents: int = 0
+    turns: int = 0
+    input_tokens: int = 0
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
+    output_tokens: int = 0
+    cache_write_5m_tokens: int = 0
+    cache_write_1h_tokens: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"agents": self.agents, **_usage_dict(self)}
 
 
 @dataclasses.dataclass
@@ -166,11 +227,14 @@ class SessionTokens(_EquivalentCost):
 
     def to_dict(self) -> Dict[str, Any]:
         d = dataclasses.asdict(self)
-        # not serialized yet: the report formats (T005) own the shape of these
-        for name in ("subagents", "cache_write_5m_tokens", "cache_write_1h_tokens"):
+        # The tier split also holds the cache writes the transcript does not break down
+        # (see the cost rule above), so only ``equivalent_cost`` is exposed.
+        for name in ("cache_write_5m_tokens", "cache_write_1h_tokens"):
             d.pop(name)
         d["total_input_tokens"] = self.total_input_tokens
         d["by_tool"] = {k: dataclasses.asdict(v) for k, v in sorted(self.by_tool.items())}
+        d["equivalent_cost"] = self.equivalent_cost
+        d["subagents"] = [a.to_dict() for a in self.subagents]
         return d
 
 
@@ -209,18 +273,63 @@ class TokenReport:
     @property
     def unclassified_subagents(self) -> int:
         """How many subagents have no role: no convention prefix, or no readable ``meta.json``."""
-        return sum(1 for s in self.sessions for a in s.subagents if a.role == ROLE_UNCLASSIFIED)
+        return self.subagents_by_role[ROLE_UNCLASSIFIED].agents
+
+    @property
+    def subagent_count(self) -> int:
+        return sum(len(s.subagents) for s in self.sessions)
+
+    @property
+    def subagents_by_role(self) -> Dict[str, RoleTokens]:
+        """Every session's subagents summed per role; all of ``ROLES`` are present, zero when empty.
+
+        Built by iterating the subagents themselves: the ``role`` of the
+        ``subagent_totals`` pseudo-agent says nothing and is never consulted.
+        A role outside ``ROLES`` counts as unclassified.
+        """
+        by_role = {role: RoleTokens() for role in ROLES}
+        for s in self.sessions:
+            for a in s.subagents:
+                r = by_role[a.role if a.role in by_role else ROLE_UNCLASSIFIED]
+                r.agents += 1
+                r.turns += a.turns
+                for name in _TOKEN_FIELDS:
+                    setattr(r, name, getattr(r, name) + getattr(a, name))
+        return by_role
+
+    @property
+    def total_equivalent_cost(self) -> float:
+        """Main thread plus subagents: the figure to compare between sessions."""
+        return round(self.totals.equivalent_cost + self.subagent_totals.equivalent_cost, 2)
 
     def to_dict(self) -> Dict[str, Any]:
+        totals = self.totals.to_dict()
+        totals.pop("subagents")  # the totals row is the main thread; subagents sit at the report level
         return {
             "transcripts_dir": self.transcripts_dir,
             "sessions": [s.to_dict() for s in self.sessions],
-            "totals": self.totals.to_dict(),
+            "totals": totals,
+            "subagent_totals": {"agents": self.subagent_count, **_usage_dict(self.subagent_totals)},
+            "subagents_by_role": {role: r.to_dict() for role, r in self.subagents_by_role.items()},
+            "unclassified_subagents": self.unclassified_subagents,
+            "total_equivalent_cost": self.total_equivalent_cost,
+            "cost_model": cost_model(),
         }
 
 
+# A usage field is a token count, so a negative value, or one at or above 2**63
+# (nine orders of magnitude past any real context), is not one and counts as 0
+# like any other field the parser cannot trust. Without the bound an integer of a
+# few hundred digits survives ``json.loads`` (the interpreter only refuses more
+# than 4300 digits) and then overflows ``float`` in ``equivalent_cost``, which
+# would abort the whole report.
+_MAX_TOKENS = 2**63 - 1
+
+
 def _int(value: Any) -> int:
-    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= _MAX_TOKENS:
+        return value
+    return 0
 
 
 def _result_chars(content: Any) -> int:
@@ -304,7 +413,9 @@ def _iter_lines(path: pathlib.Path) -> Iterable[Dict[str, Any]]:
                 continue
             try:
                 data = json.loads(raw)
-            except json.JSONDecodeError:
+            except (ValueError, RecursionError):
+                # ValueError: JSONDecodeError, and the int digit limit (a >4300-digit number);
+                # RecursionError: a line nested deeper than the interpreter allows.
                 continue
             if isinstance(data, dict):
                 yield data
@@ -527,8 +638,79 @@ def _fmt(n: int) -> str:
     return f"{n:,}"
 
 
+def _fmt_cost(cost: float) -> str:
+    return f"{cost:,.2f}"
+
+
+def _fmt_weight(weight: float) -> str:
+    return f"{float(weight)}x"
+
+
+_ROLE_COLUMNS = ("role", "agents", "turns", "input", "cache_w", "cache_r", "output", "cost")
+
+
+def _role_cells(label: str, agents: int, usage: Any) -> List[str]:
+    """The cells of one row, in ``_ROLE_COLUMNS`` order."""
+    return [
+        label,
+        str(agents),
+        str(usage.turns),
+        _fmt(usage.input_tokens),
+        _fmt(usage.cache_creation_tokens),
+        _fmt(usage.cache_read_tokens),
+        _fmt(usage.output_tokens),
+        _fmt_cost(usage.equivalent_cost),
+    ]
+
+
+def _subagent_lines(report: TokenReport) -> List[str]:
+    """The "Subagents by role" block: one row per role, a total and the unclassified count.
+
+    Each column is as wide as its widest cell (header included), so the sums
+    of a long session cannot push a column out of line.
+    """
+    rows = [_role_cells(role, usage.agents, usage) for role, usage in report.subagents_by_role.items()]
+    total = _role_cells("TOTAL", report.subagent_count, report.subagent_totals)
+    widths = [max(len(name), len(total[i]), *(len(r[i]) for r in rows)) for i, name in enumerate(_ROLE_COLUMNS)]
+
+    def render(cells: Iterable[str]) -> str:
+        # the label is flush left, the numbers flush right
+        return " ".join(c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths)))
+
+    header = render(_ROLE_COLUMNS)
+    rule = "-" * len(header)
+    lines = ["Subagents by role (separate from the main thread above):", header, rule]
+    lines.extend(render(r) for r in rows)
+    lines.extend([rule, render(total)])
+    lines.append(
+        f"Unclassified subagents: {report.unclassified_subagents} "
+        '(description without an "implement:" or "review:" prefix, or no readable meta.json)'
+    )
+    return lines
+
+
+def _cost_lines(report: TokenReport) -> List[str]:
+    """Main thread, subagents and their sum, then the approximation note with the weights."""
+    w = cost_model()["weights"]
+    return [
+        "Equivalent cost (approximation): "
+        f"main thread {_fmt_cost(report.totals.equivalent_cost)} | "
+        f"subagents {_fmt_cost(report.subagent_totals.equivalent_cost)} | "
+        f"total {_fmt_cost(report.total_equivalent_cost)}",
+        "The cost is an approximation to compare sessions, not a price: each token is weighted as "
+        f"cache read {_fmt_weight(w['cache_read'])}, input {_fmt_weight(w['input'])}, "
+        f"output {_fmt_weight(w['output'])}, "
+        f"cache write {_fmt_weight(w['cache_write_5m'])} (5 min) / {_fmt_weight(w['cache_write_1h'])} (1 h); "
+        "a cache write without tier detail counts as 5 min.",
+    ]
+
+
 def format_text(report: TokenReport, top_tools: int = 8) -> str:
-    """Human-readable table: one row per session, then totals and top tools by chars."""
+    """Human-readable report: the main thread per session, its totals, the subagents by role, the cost, top tools.
+
+    The session table and its TOTAL row are the main thread only; subagents are
+    never folded into them (they have their own block below).
+    """
     lines: List[str] = []
     lines.append(f"Transcripts: {report.transcripts_dir}")
     lines.append(f"Sessions: {len(report.sessions)}")
@@ -552,8 +734,20 @@ def format_text(report: TokenReport, top_tools: int = 8) -> str:
     )
     lines.append("")
     lines.append(f"Total input tokens (input + cache_w + cache_r): {_fmt(t.total_input_tokens)}")
-    if t.sidechain_turns:
-        lines.append(f"Subagent (sidechain) turns included: {t.sidechain_turns}")
+    # ``sidechain_turns`` adds two different things: main-transcript turns flagged
+    # ``isSidechain`` (they are in the TOTAL row) and subagent turns (they are not).
+    subagent_turns = report.subagent_totals.turns
+    if t.sidechain_turns - subagent_turns:
+        lines.append(
+            "Sidechain-flagged turns inside the main transcripts (included in TOTAL): "
+            f"{t.sidechain_turns - subagent_turns}"
+        )
+    if subagent_turns:
+        lines.append(f"Subagent turns: {subagent_turns} (reported separately below; not in the TOTAL row)")
+    lines.append("")
+    lines.extend(_subagent_lines(report))
+    lines.append("")
+    lines.extend(_cost_lines(report))
     if t.by_tool:
         lines.append("")
         lines.append(f"Top tools by result chars (chars entering context):")
