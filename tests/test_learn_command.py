@@ -1,6 +1,7 @@
 """T005–T008, T010 — the `aiadev learn` CLI command (spec 0018)."""
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import pathlib
@@ -8,6 +9,7 @@ import pathlib
 from click.testing import CliRunner
 
 from aiadev.cli import main
+from aiadev.commands.learn import _DEFAULT_SINCE_DAYS
 
 
 def _write_log(spec_dir: pathlib.Path, entries: list[dict]) -> None:
@@ -28,10 +30,21 @@ def _entry(ts, reviewer, verdict, task_id="branch-review", note=""):
     }
 
 
+def _recent(days_ago: int, clock: str) -> str:
+    """ISO timestamp ``days_ago`` days before today at ``clock``.
+
+    Fixture entries are dated relative to ``date.today()`` — the same clock
+    the command reads — so they stay inside its default 90-day window
+    whenever the suite runs.
+    """
+    day = datetime.date.today() - datetime.timedelta(days=days_ago)
+    return f"{day.isoformat()}T{clock}Z"
+
+
 def _reviewer_fails(reviewer, note="prose"):
     return [
-        _entry("2026-07-01T10:00:00Z", reviewer, "CHANGES_REQUESTED", note=note),
-        _entry("2026-07-01T10:30:00Z", reviewer, "APPROVED"),
+        _entry(_recent(2, "10:00:00"), reviewer, "CHANGES_REQUESTED", note=note),
+        _entry(_recent(2, "10:30:00"), reviewer, "APPROVED"),
     ]
 
 
@@ -43,8 +56,8 @@ def _build_workspace(tmp_path: pathlib.Path) -> pathlib.Path:
     _write_log(
         specs / "0003-c",
         [
-            _entry("2026-07-02T09:00:00Z", "code-reviewer", "CHANGES_REQUESTED", task_id="T007"),
-            _entry("2026-07-02T09:30:00Z", "code-reviewer", "APPROVED", task_id="T007"),
+            _entry(_recent(1, "09:00:00"), "code-reviewer", "CHANGES_REQUESTED", task_id="T007"),
+            _entry(_recent(1, "09:30:00"), "code-reviewer", "APPROVED", task_id="T007"),
         ],
     )
     return ws
@@ -58,6 +71,27 @@ def _invoke(ws: pathlib.Path, args: list[str]):
         return runner.invoke(main, ["learn", *args])
     finally:
         os.chdir(before)
+
+
+# --- regression: fixture dates ----------------------------------------------
+
+
+def test_fixture_entries_fall_inside_the_default_window(tmp_path) -> None:
+    """Regression: the fixture used fixed 2026-07 dates, so every test that
+    relies on the default 90-day window started failing once the calendar
+    moved past them. The fixture must stay inside the window on any day."""
+    ws = _build_workspace(tmp_path)
+    today = datetime.date.today()
+    oldest_allowed = today - datetime.timedelta(days=_DEFAULT_SINCE_DAYS)
+    stamps = [
+        json.loads(line)["timestamp"]
+        for log in sorted(ws.rglob(".review-log.jsonl"))
+        for line in log.read_text(encoding="utf-8").splitlines()
+    ]
+    assert stamps, "sanity: the fixture must write review entries"
+    for stamp in stamps:
+        day = datetime.date.fromisoformat(stamp[:10])
+        assert oldest_allowed < day <= today, f"{stamp} is outside the default window"
 
 
 # --- T005 -------------------------------------------------------------------
