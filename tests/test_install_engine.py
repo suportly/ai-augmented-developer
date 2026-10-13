@@ -15,6 +15,7 @@ import pytest
 from aiadev.install_engine import (
     InstallError,
     InstallMode,
+    _collect_skill_references,
     install,
 )
 from aiadev.install_manifest import Manifest, load as load_manifest
@@ -408,3 +409,169 @@ class TestMisconfiguration:
         (preset_dir / "preset.yaml").write_text("- a\n- b\n", encoding="utf-8")
         with pytest.raises(InstallError, match="mapping"):
             install(preset_dir, tmp_path / "project", VARIABLES)
+
+
+# ---------------------------------------------------------------------------
+# Skill references/ collection (spec 0030 Story 4, plan D1)
+# ---------------------------------------------------------------------------
+
+
+def _write(path: pathlib.Path, text: str = "# ref\n") -> pathlib.Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _make_skill(root: pathlib.Path, name: str, *, skill_md: bool = True) -> pathlib.Path:
+    """Create ``<root>/skills/<name>/`` (with a minimal SKILL.md unless told not to)."""
+    skill_dir = root / "skills" / name
+    skill_dir.mkdir(parents=True)
+    if skill_md:
+        _write(skill_dir / "SKILL.md", f"---\nname: {name}\n---\n")
+    return skill_dir
+
+
+class TestCollectSkillReferences:
+    def test_framework_reference_is_collected_verbatim(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        ref = _write(skill / "references" / "guide.md")
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/guide.md", ref, True)
+        ]
+
+    def test_preset_reference_is_collected_not_verbatim(self) -> None:
+        # The mini-preset ships hello-world/references/stack.md.
+        collected = _collect_skill_references(None, FIXTURES)
+
+        assert collected == [
+            (
+                "skill",
+                "hello-world/references/stack.md",
+                FIXTURES / "skills" / "hello-world" / "references" / "stack.md",
+                False,
+            )
+        ]
+
+    def test_preset_wins_on_same_skill_and_relative_path(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        framework = tmp_path / "framework"
+        fw_skill = _make_skill(framework, "alpha")
+        _write(fw_skill / "references" / "shared.md", "framework\n")
+        fw_only = _write(fw_skill / "references" / "fw-only.md")
+        preset = tmp_path / "preset"
+        pr_skill = _make_skill(preset, "alpha")
+        pr_shared = _write(pr_skill / "references" / "shared.md", "preset\n")
+        pr_only = _write(pr_skill / "references" / "pr-only.md")
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/fw-only.md", fw_only, True),
+            ("skill", "alpha/references/pr-only.md", pr_only, False),
+            ("skill", "alpha/references/shared.md", pr_shared, False),
+        ]
+
+    def test_ignores_everything_that_is_not_a_markdown_reference(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        kept = _write(skill / "references" / "kept.md")
+        _write(skill / "references" / ".DS_Store", "junk")
+        _write(skill / "references" / "notes.txt", "plain text")
+        (skill / "references" / "folder.md").mkdir()  # a directory named like a file
+        _write(skill / "notes.md")  # markdown beside SKILL.md, not under references/
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/kept.md", kept, True)
+        ]
+
+    def test_skill_without_skill_md_is_ignored(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        orphan = _make_skill(framework, "orphan", skill_md=False)
+        _write(orphan / "references" / "lost.md")
+        preset = tmp_path / "preset"
+        pr_orphan = _make_skill(preset, "orphan-preset", skill_md=False)
+        _write(pr_orphan / "references" / "lost.md")
+
+        assert _collect_skill_references(framework, preset) == []
+
+    def test_preset_references_only_extend_a_framework_skill(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # Plan D1/D11: a preset delivers stack guidance WITHOUT replacing
+        # the generic SKILL.md — only references/ in the preset.
+        framework = tmp_path / "framework"
+        _make_skill(framework, "alpha")
+        preset = tmp_path / "preset"
+        stack = _write(
+            _make_skill(preset, "alpha", skill_md=False) / "references" / "stack.md"
+        )
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/stack.md", stack, False)
+        ]
+
+    def test_order_is_deterministic(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        # Created out of alphabetical order on purpose.
+        for skill_name, rel in (
+            ("zeta", "references/z.md"),
+            ("alpha", "references/b.md"),
+            ("alpha", "references/a/c.md"),
+            ("alpha", "references/a.md"),
+            ("mid", "references/m.md"),
+        ):
+            skill = framework / "skills" / skill_name
+            if not skill.exists():
+                _make_skill(framework, skill_name)
+            _write(skill / rel)
+        preset = tmp_path / "preset"
+        pr_skill = _make_skill(preset, "beta")
+        _write(pr_skill / "references" / "p.md")
+
+        first = _collect_skill_references(framework, preset)
+        second = _collect_skill_references(framework, preset)
+
+        names = [name for (_role, name, _path, _verbatim) in first]
+        assert names == sorted(names)
+        assert names == [
+            "alpha/references/a.md",
+            "alpha/references/a/c.md",
+            "alpha/references/b.md",
+            "beta/references/p.md",
+            "mid/references/m.md",
+            "zeta/references/z.md",
+        ]
+        assert first == second
+
+    def test_symlink_pointing_outside_the_skills_tree_is_not_followed(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        outside = tmp_path / "outside"
+        secret = _write(outside / "secret.md", "do not install me\n")
+        _write(outside / "dir" / "nested.md")
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        kept = _write(skill / "references" / "kept.md")
+        refs = skill / "references"
+        try:
+            (refs / "leak.md").symlink_to(secret)
+            (refs / "leakdir").symlink_to(outside / "dir", target_is_directory=True)
+        except OSError:  # pragma: no cover - platform without symlink support
+            pytest.skip("symlinks not supported on this platform")
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/kept.md", kept, True)
+        ]
+
+    def test_missing_roots_yield_nothing(self, tmp_path: pathlib.Path) -> None:
+        # No framework root, and a preset without a skills/ directory.
+        assert _collect_skill_references(None, tmp_path) == []

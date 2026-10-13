@@ -436,6 +436,54 @@ def _collect_artifacts(
     )
 
 
+def _collect_skill_references(
+    framework_root: Path | None,
+    preset_path: Path,
+) -> list[tuple[str, str, Path, bool]]:
+    """Collect every skill's ``references/**/*.md`` from framework and preset.
+
+    Companion to :func:`_collect_artifacts`, which only yields each
+    ``SKILL.md`` (spec 0030, plan D1). Entries are ``("skill",
+    "<skill>/<relative-path>", source_path, verbatim)``: framework first
+    (``verbatim=True``), then the preset's (``verbatim=False``), the
+    preset winning on the same key; sorted by name.
+
+    * A skill counts when ``SKILL.md`` exists for its name in the
+      framework **or** the preset (the union ``_collect_artifacts``
+      installs), and its ``references/`` is read from either root. So a
+      preset can ship only ``skills/<n>/references/stack.md`` and extend
+      the generic skill without replacing it; a ``references/`` whose
+      skill has no ``SKILL.md`` anywhere is skipped, not installed as an
+      orphan.
+    * A symlink whose target resolves outside the ``skills/`` tree is not
+      followed.
+    """
+    roots: list[tuple[Path, bool]] = []
+    for root, verbatim in ((framework_root, True), (preset_path, False)):
+        if root is not None and (root / "skills").is_dir():
+            roots.append((root / "skills", verbatim))
+    installed = {
+        skill_dir.name
+        for skills_dir, _verbatim in roots
+        for skill_dir in skills_dir.iterdir()
+        if (skill_dir / "SKILL.md").is_file()
+    }
+    merged: dict[str, tuple[str, str, Path, bool]] = {}
+    for skills_dir, verbatim in roots:
+        boundary = skills_dir.resolve()
+        for skill_dir in skills_dir.iterdir():
+            if skill_dir.name not in installed:
+                continue
+            for path in (skill_dir / "references").rglob("*"):
+                if path.suffix != ".md" or not path.is_file():
+                    continue
+                if not path.resolve().is_relative_to(boundary):
+                    continue
+                name = f"{skill_dir.name}/{path.relative_to(skill_dir).as_posix()}"
+                merged[name] = ("skill", name, path, verbatim)
+    return sorted(merged.values(), key=lambda t: t[1])
+
+
 def _perform_uninstall(
     install_root: Path,
     manifest: Manifest,

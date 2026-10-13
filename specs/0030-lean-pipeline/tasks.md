@@ -152,15 +152,15 @@
 
 ### T010 — Coletar references/ de skill (framework e preset)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/install_engine.py`
-  - create: `tests/fixtures/mini-preset/skills/demo/references/stack.md`
+  - create: `tests/fixtures/mini-preset/skills/hello-world/references/stack.md`
   - test: `tests/test_install_engine.py`
 - **Spec scenarios:** Story 4 scenario 2, scenario 3
 - **Acceptance:**
-  - [ ] Teste vermelho: `_collect_artifacts` devolve `references/**/*.md` de uma skill do framework e de uma skill do preset como role `skill`, nome `<skill>/<rel>`; outros arquivos (ex. `.DS_Store`) são ignorados.
+  - [ ] Teste vermelho: uma função de coleta própria (`_collect_skill_references`) devolve `references/**/*.md` de uma skill do framework e de uma skill do preset como role `skill`, nome `<skill>/<rel>`, com `verbatim` True (framework) e False (preset); outros arquivos (ex. `.DS_Store`) são ignorados. `_collect_artifacts` e o fluxo de `install()` ficam intactos nesta task (a T011 liga a coleta ao fluxo).
   - [ ] Preset com a mesma `<skill>/<rel>` do framework vence.
   - [ ] Commit message: `feat(install): T010 coleta references/ de skills`.
 
@@ -180,6 +180,7 @@
 - **Acceptance:**
   - [ ] Teste vermelho por plataforma: o arquivo cai em `<destino da skill>/references/<arquivo>` e entra no manifesto com role `skill` e sha256.
   - [ ] Uninstall remove esses arquivos e limpa diretórios vazios.
+  - [ ] Carry-over da T010: o fixture `mini-preset` ganhou `skills/hello-world/references/stack.md` (com `{{PROJECT_NAME}}`); toda instalação do mini-preset passa a escrever um arquivo a mais, então atualizar as contagens `len(report.written)`, `len(report.removed)` e `len(report.skipped)` em `tests/test_install_engine.py` (~linhas 116, 125, 200, 235, 257) e provar a substituição de variáveis no arquivo de referência.
   - [ ] Commit message: `feat(install): T011 instala references/ de skills nas 5 plataformas`.
 
 ### T012 — Placeholders em references de preset
