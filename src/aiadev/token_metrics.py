@@ -37,6 +37,12 @@ tolerated; the colon is required). That prefix is the **only** source of the
 role: message text and ``agentType`` are never consulted, and the description
 itself is not kept, only the derived role. A missing, unreadable or malformed
 ``meta.json``, or any other description, makes the subagent ``unclassified``.
+
+Cost (spec ``0030-lean-pipeline``, Story 1, plan D7): ``equivalent_cost`` on
+``SessionTokens`` and ``SubagentTokens`` (so also on ``TokenReport.totals`` and
+``subagent_totals``) weights the four usage components with the ``WEIGHT_*``
+constants below and sums them, in "equivalent input tokens". It is an
+**approximation** for comparing sessions with each other, not a price.
 """
 
 from __future__ import annotations
@@ -69,12 +75,51 @@ ROLE_IMPLEMENT = "implement"
 ROLE_REVIEW = "review"
 ROLE_UNCLASSIFIED = "unclassified"
 
+# Cost weights (plan D7): the price of each usage component relative to a plain
+# input token, so a cost reads as "equivalent input tokens". One documented set
+# for every model; there are no per-model weights.
+WEIGHT_INPUT = 1.0
+WEIGHT_OUTPUT = 5.0
+WEIGHT_CACHE_READ = 0.1
+WEIGHT_CACHE_WRITE_5M = 1.25
+WEIGHT_CACHE_WRITE_1H = 2.0
+# Cache writes come in two price tiers. ``usage.cache_creation`` splits
+# ``cache_creation_input_tokens`` into ``ephemeral_5m_input_tokens`` and
+# ``ephemeral_1h_input_tokens``. Per message, after the max-per-field merge:
+#   - tokens the detail puts in a tier are weighted at that tier's rate;
+#   - ``cache_creation_input_tokens`` the detail does not account for (no
+#     detail at all, a tier missing, or a detail that sums to less than the
+#     total) are weighted at WEIGHT_CACHE_WRITE_5M;
+#   - a detail that sums to more than the total wins: the detail is weighted
+#     as it says and the remainder is zero, never negative.
+
+
+class _EquivalentCost:
+    """Mixin: ``equivalent_cost`` from the usage fields of the dataclass it is mixed into."""
+
+    @property
+    def equivalent_cost(self) -> float:
+        """Weighted sum of the usage, in equivalent input tokens (an approximation).
+
+        Rounded to two decimals: every weight has at most two, so the exact
+        result has too and rounding only removes float noise (0.1 * 3).
+        """
+        total = (
+            WEIGHT_INPUT * self.input_tokens
+            + WEIGHT_CACHE_READ * self.cache_read_tokens
+            + WEIGHT_OUTPUT * self.output_tokens
+            + WEIGHT_CACHE_WRITE_5M * self.cache_write_5m_tokens
+            + WEIGHT_CACHE_WRITE_1H * self.cache_write_1h_tokens
+        )
+        return round(total, 2)
+
 
 @dataclasses.dataclass
-class SubagentTokens:
+class SubagentTokens(_EquivalentCost):
     """Usage of one subagent transcript (``agent-<agent_id>.jsonl``).
 
     ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW`` or ``ROLE_UNCLASSIFIED``.
+    The cache-write tier fields mean what they do on ``SessionTokens``.
     """
 
     agent_id: str
@@ -83,6 +128,8 @@ class SubagentTokens:
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     output_tokens: int = 0
+    cache_write_5m_tokens: int = 0
+    cache_write_1h_tokens: int = 0
     role: str = ROLE_UNCLASSIFIED
 
     @property
@@ -91,7 +138,7 @@ class SubagentTokens:
 
 
 @dataclasses.dataclass
-class SessionTokens:
+class SessionTokens(_EquivalentCost):
     session_id: str
     file: str
     started_at: Optional[str] = None
@@ -101,6 +148,11 @@ class SessionTokens:
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     output_tokens: int = 0
+    # Cache writes by price tier (see the cost rule above). ``cache_creation_tokens``
+    # stays the transcript's total; ``..._5m_`` also holds whatever of it the tier
+    # detail does not break down, so 5m + 1h >= cache_creation_tokens.
+    cache_write_5m_tokens: int = 0
+    cache_write_1h_tokens: int = 0
     tool_calls: int = 0
     tool_result_chars: int = 0
     sidechain_turns: int = 0
@@ -114,7 +166,9 @@ class SessionTokens:
 
     def to_dict(self) -> Dict[str, Any]:
         d = dataclasses.asdict(self)
-        d.pop("subagents")  # not serialized yet: the report formats (T005) own that shape
+        # not serialized yet: the report formats (T005) own the shape of these
+        for name in ("subagents", "cache_write_5m_tokens", "cache_write_1h_tokens"):
+            d.pop(name)
         d["total_input_tokens"] = self.total_input_tokens
         d["by_tool"] = {k: dataclasses.asdict(v) for k, v in sorted(self.by_tool.items())}
         return d
@@ -130,10 +184,8 @@ class TokenReport:
         t = SessionTokens(session_id="TOTAL", file="")
         for s in self.sessions:
             t.turns += s.turns
-            t.input_tokens += s.input_tokens
-            t.cache_creation_tokens += s.cache_creation_tokens
-            t.cache_read_tokens += s.cache_read_tokens
-            t.output_tokens += s.output_tokens
+            for name in _TOKEN_FIELDS:
+                setattr(t, name, getattr(t, name) + getattr(s, name))
             t.tool_calls += s.tool_calls
             t.tool_result_chars += s.tool_result_chars
             t.sidechain_turns += s.sidechain_turns
@@ -183,28 +235,51 @@ def _result_chars(content: Any) -> int:
     return 0
 
 
-_TOKEN_FIELDS = ("input_tokens", "cache_creation_tokens", "cache_read_tokens", "output_tokens")
+_TOKEN_FIELDS = (
+    "input_tokens",
+    "cache_creation_tokens",
+    "cache_read_tokens",
+    "output_tokens",
+    "cache_write_5m_tokens",
+    "cache_write_1h_tokens",
+)
 
 
 @dataclasses.dataclass
 class _MessageUsage:
-    """``usage`` of one assistant message, named after the ``SessionTokens`` fields."""
+    """``usage`` of one assistant message, named after the ``SessionTokens`` fields.
+
+    The two ``cache_write_*`` fields hold the transcript's tier detail as
+    written (``usage.cache_creation``) until ``resolved()`` is applied.
+    """
 
     input_tokens: int = 0
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     output_tokens: int = 0
+    cache_write_5m_tokens: int = 0
+    cache_write_1h_tokens: int = 0
     sidechain: bool = False
 
     @classmethod
     def from_event(cls, usage: Dict[str, Any], sidechain: bool) -> "_MessageUsage":
+        detail = usage.get("cache_creation")
+        if not isinstance(detail, dict):
+            detail = {}
         return cls(
             input_tokens=_int(usage.get("input_tokens")),
             cache_creation_tokens=_int(usage.get("cache_creation_input_tokens")),
             cache_read_tokens=_int(usage.get("cache_read_input_tokens")),
             output_tokens=_int(usage.get("output_tokens")),
+            cache_write_5m_tokens=_int(detail.get("ephemeral_5m_input_tokens")),
+            cache_write_1h_tokens=_int(detail.get("ephemeral_1h_input_tokens")),
             sidechain=sidechain,
         )
+
+    def resolved(self) -> "_MessageUsage":
+        """Price the cache writes the tier detail does not account for at the 5-minute rate."""
+        rest = max(0, self.cache_creation_tokens - self.cache_write_5m_tokens - self.cache_write_1h_tokens)
+        return dataclasses.replace(self, cache_write_5m_tokens=self.cache_write_5m_tokens + rest)
 
     def merged(self, other: "_MessageUsage") -> "_MessageUsage":
         """Field-wise maximum: streaming ``usage`` only grows, so max == final."""
@@ -213,6 +288,7 @@ class _MessageUsage:
 
 
 def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
+    message = message.resolved()  # after the max-merge: the tier detail may only show up in a later partial
     session.turns += 1
     if message.sidechain:
         session.sidechain_turns += 1

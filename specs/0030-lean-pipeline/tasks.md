@@ -65,7 +65,7 @@
 
 ### T004 — Pesos e custo equivalente documentados
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`

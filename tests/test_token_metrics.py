@@ -65,7 +65,9 @@ def _assistant(
     inp: int = 0,
     cache_w: int = 0,
     cache_r: int = 0,
+    detail: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    """One assistant event; ``detail`` is the ``usage.cache_creation`` object (absent when ``None``)."""
     message: Dict[str, Any] = {
         "model": "claude-opus-5",
         "usage": {
@@ -76,6 +78,8 @@ def _assistant(
         },
         "content": [{"type": "text", "text": "x"}],
     }
+    if detail is not None:
+        message["usage"]["cache_creation"] = detail
     if message_id is not None:
         message["id"] = message_id
     return {"type": "assistant", "timestamp": ts, "message": message}
@@ -684,6 +688,270 @@ def test_subagent_description_text_never_surfaces(subagent_dir: pathlib.Path) ->
         assert "description-secret-marker" not in rendered
     for agent in report.sessions[0].subagents:
         assert "description-secret-marker" not in repr(dataclasses.asdict(agent))
+
+
+# ---------------------------------------------------------------------
+# Spec 0030, Story 1 sc4 — documented weights and equivalent cost
+# ---------------------------------------------------------------------
+
+
+def _tiers(five_minute: Optional[int] = None, one_hour: Optional[int] = None) -> Dict[str, int]:
+    """A ``usage.cache_creation`` object in the shape Claude Code writes; omitted tiers are absent."""
+    detail: Dict[str, int] = {}
+    if five_minute is not None:
+        detail["ephemeral_5m_input_tokens"] = five_minute
+    if one_hour is not None:
+        detail["ephemeral_1h_input_tokens"] = one_hour
+    return detail
+
+
+def _cost(tmp_path: pathlib.Path, *events: Dict[str, Any]) -> float:
+    """Equivalent cost of a main-thread transcript made of ``events``."""
+    path = _write_transcript(tmp_path / "cost.jsonl", list(events))
+    return tm.read_session(path).equivalent_cost
+
+
+def test_weights_are_named_documented_constants() -> None:
+    assert tm.WEIGHT_CACHE_READ == 0.1
+    assert tm.WEIGHT_INPUT == 1.0
+    assert tm.WEIGHT_OUTPUT == 5.0
+    assert tm.WEIGHT_CACHE_WRITE_5M == 1.25
+    assert tm.WEIGHT_CACHE_WRITE_1H == 2.0
+
+
+def test_equivalent_cost_weights_the_four_usage_components(tmp_path: pathlib.Path) -> None:
+    event = _assistant(
+        "2026-09-16T10:00:01.000Z",
+        message_id="msg_A",
+        inp=100,
+        cache_r=1000,
+        output=10,
+        cache_w=100,
+        detail=_tiers(five_minute=40, one_hour=60),
+    )
+    # 1.0*100 + 0.1*1000 + 5.0*10 + 1.25*40 + 2.0*60
+    assert _cost(tmp_path, event) == 100 + 100 + 50 + 50 + 120 == 420
+
+
+def test_cache_write_without_tier_detail_is_weighted_at_the_5m_rate(tmp_path: pathlib.Path) -> None:
+    event = _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=0, cache_w=1000)
+    assert _cost(tmp_path, event) == 1250  # 1.25 * cache_creation_input_tokens
+
+
+def test_equivalent_cost_of_pinned_fixtures_is_comparable_across_sessions(pinned_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(pinned_dir)
+    by_id = {s.session_id: s for s in report.sessions}
+    # s1: input 20, cache_w 1000 (no detail), cache_r 2000, output 100
+    assert by_id["s1"].equivalent_cost == 20 + 1250 + 200 + 500 == 1970
+    # s2: input 100, output 7
+    assert by_id["s2"].equivalent_cost == 100 + 35 == 135
+    assert report.totals.equivalent_cost == 1970 + 135
+    assert report.totals.equivalent_cost == pytest.approx(sum(s.equivalent_cost for s in report.sessions))
+
+
+def test_cost_of_an_empty_session_is_zero() -> None:
+    assert tm.SessionTokens(session_id="x", file="x.jsonl").equivalent_cost == 0
+    assert tm.SubagentTokens(agent_id="x").equivalent_cost == 0
+
+
+def test_cost_is_rounded_to_strip_float_noise(tmp_path: pathlib.Path) -> None:
+    # 0.1 * 3 == 0.30000000000000004 and 0.1 * 1234567 == 123456.70000000001 in binary floats;
+    # every weight has <= 2 decimals, so rounding to 2 decimals is exact and keeps totals comparable.
+    one = _assistant("2026-10-13T10:00:00Z", message_id="m1", output=0, cache_r=3)
+    assert _cost(tmp_path, one) == 0.3
+    big = _assistant("2026-10-13T10:00:00Z", message_id="m2", output=0, cache_r=1234567)
+    assert _cost(tmp_path / "big", big) == 123456.7
+
+
+@pytest.mark.parametrize(
+    ("cache_w", "detail", "expected"),
+    [
+        # detail breaks all of it down: 1.25*40 + 2.0*60
+        (100, _tiers(five_minute=40, one_hour=60), 50 + 120),
+        # real transcripts: everything is 1h and 5m + 1h == cache_creation_input_tokens
+        (100, _tiers(five_minute=0, one_hour=100), 200),
+        # only one tier present: the other counts as 0 and the remainder is weighted at 1.25
+        (100, _tiers(one_hour=60), 120 + 1.25 * 40),
+        (100, _tiers(five_minute=40), 50 + 1.25 * 60),
+        # detail covers less than the total: the remainder is weighted at 1.25
+        (100, _tiers(five_minute=20, one_hour=30), 25 + 60 + 1.25 * 50),
+        # detail covers more than the total: trust the detail, the remainder never goes negative
+        (100, _tiers(five_minute=300, one_hour=0), 375),
+        (100, _tiers(five_minute=60, one_hour=60), 75 + 120),
+        # an empty detail object says nothing: same as no detail
+        (100, {}, 125),
+        # detail without a total: weight what the detail says
+        (0, _tiers(five_minute=10, one_hour=10), 12.5 + 20),
+    ],
+)
+def test_cache_write_rule_when_detail_and_total_disagree(
+    tmp_path: pathlib.Path, cache_w: int, detail: Dict[str, int], expected: float
+) -> None:
+    event = _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=0, cache_w=cache_w, detail=detail)
+    assert _cost(tmp_path, event) == expected
+
+
+@pytest.mark.parametrize(
+    "detail",
+    [None, "5m", [1, 2], 7, True, {"ephemeral_5m_input_tokens": "9", "ephemeral_1h_input_tokens": None}],
+    ids=["null", "string", "list", "int", "bool", "non-int-values"],
+)
+def test_malformed_cache_creation_detail_falls_back_to_the_total(tmp_path: pathlib.Path, detail: Any) -> None:
+    event = _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=0, cache_w=100)
+    event["message"]["usage"]["cache_creation"] = detail
+    assert _cost(tmp_path, event) == 125  # 1.25 * cache_creation_input_tokens
+
+
+def test_tier_detail_follows_the_max_per_field_dedupe_across_partials(tmp_path: pathlib.Path) -> None:
+    """Streaming repeats one message.id; 5m and 1h are kept at their maximum, counted once."""
+    first = _assistant(
+        "2026-09-16T10:00:01.000Z",
+        message_id="msg_A",
+        output=1,
+        cache_w=500,
+        detail=_tiers(five_minute=300, one_hour=0),
+    )
+    last = _assistant(
+        "2026-09-16T10:00:02.000Z",
+        message_id="msg_A",
+        output=214,
+        cache_w=500,
+        detail=_tiers(five_minute=100, one_hour=200),
+    )
+    # max per field: 5m = 300 (from the first), 1h = 200 (from the last); the remainder is 0
+    expected = 5 * 214 + 1.25 * 300 + 2.0 * 200
+    assert _cost(tmp_path, first, last) == expected
+    assert _cost(tmp_path, last, first) == expected  # independent of the order of the partials
+
+    session = tm.read_session(tmp_path / "cost.jsonl")
+    assert session.turns == 1
+    assert (session.cache_write_5m_tokens, session.cache_write_1h_tokens) == (300, 200)
+
+
+def test_tier_detail_arriving_late_replaces_the_5m_fallback_instead_of_adding_to_it(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A partial without the detail must not make the final message pay 1.25x on top of its 1h write."""
+    partial = _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=1, cache_w=100)
+    final = _assistant(
+        "2026-09-16T10:00:02.000Z", message_id="msg_A", output=9, cache_w=100, detail=_tiers(one_hour=100)
+    )
+    assert _cost(tmp_path, partial, final) == 5 * 9 + 2.0 * 100
+
+
+def test_cost_counts_a_message_repeated_across_main_and_subagent_once(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _assistant(
+                "2026-09-16T10:00:01.000Z",
+                message_id="msg_X",
+                output=1,
+                cache_w=100,
+                detail=_tiers(five_minute=0, one_hour=100),
+            )
+        ],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            _assistant(
+                "2026-09-16T10:00:02.000Z",
+                message_id="msg_X",
+                output=10,
+                cache_w=100,
+                detail=_tiers(five_minute=0, one_hour=100),
+            )
+        ],
+    )
+    report = tm.build_token_report(tmp_path)
+    # msg_X is the main thread's, at its maximum; the subagent keeps nothing, so it is not reported.
+    assert report.sessions[0].equivalent_cost == 5 * 10 + 2.0 * 100
+    assert report.sessions[0].subagents == []
+    assert report.subagent_totals.equivalent_cost == 0
+
+
+def test_cost_is_kept_per_subagent_and_in_the_report_totals(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _assistant(
+                "2026-09-16T10:00:00.000Z",
+                message_id="msg_M",
+                inp=10,
+                output=2,
+                cache_w=100,
+                detail=_tiers(five_minute=0, one_hour=100),
+            )
+        ],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "agent-a.jsonl",
+        [
+            # msg_A is written twice while streaming: counted once at its maximum
+            _assistant("2026-09-16T10:00:01.000Z", message_id="msg_A", output=1, cache_r=1000),
+            _assistant(
+                "2026-09-16T10:00:02.000Z",
+                message_id="msg_A",
+                output=20,
+                cache_r=1000,
+                cache_w=40,
+                detail=_tiers(five_minute=40, one_hour=0),
+            ),
+        ],
+    )
+    _write_agent(
+        tmp_path,
+        "s",
+        "workflows/wf_x/agent-b.jsonl",
+        [_assistant("2026-09-16T10:00:03.000Z", message_id="msg_B", inp=50, output=4, cache_w=10)],
+    )
+    report = tm.build_token_report(tmp_path)
+    main = report.sessions[0]
+    agents = _agents(main)
+
+    assert main.equivalent_cost == 10 + 10 + 200  # 1.0*10 + 5.0*2 + 2.0*100
+    assert agents["a"].equivalent_cost == 100 + 100 + 50  # 0.1*1000 + 5.0*20 + 1.25*40
+    assert agents["b"].equivalent_cost == 50 + 20 + 12.5  # 1.0*50 + 5.0*4 + 1.25*10
+    # The report keeps main thread and subagents apart, and each total is the sum of its parts.
+    assert report.totals.equivalent_cost == main.equivalent_cost
+    sub = report.subagent_totals
+    assert sub.equivalent_cost == pytest.approx(agents["a"].equivalent_cost + agents["b"].equivalent_cost)
+    assert (sub.cache_write_5m_tokens, sub.cache_write_1h_tokens) == (50, 0)
+
+
+def test_cost_is_not_serialized_yet(pinned_dir: pathlib.Path, subagent_dir: pathlib.Path) -> None:
+    """The report formats own the cost's shape (T005): until then the JSON and text are unchanged."""
+    for directory in (pinned_dir, subagent_dir):
+        report = tm.build_token_report(directory)
+        rendered = tm.format_text(report) + tm.format_json(report)
+        for needle in ("equivalent_cost", "cache_write_5m", "cache_write_1h"):
+            assert needle not in rendered
+        for session in [*report.sessions, report.totals]:
+            assert "cache_write_5m_tokens" not in session.to_dict()
+            assert "cache_write_1h_tokens" not in session.to_dict()
+    expected_keys = {
+        "session_id",
+        "file",
+        "started_at",
+        "ended_at",
+        "turns",
+        "input_tokens",
+        "cache_creation_tokens",
+        "cache_read_tokens",
+        "output_tokens",
+        "tool_calls",
+        "tool_result_chars",
+        "sidechain_turns",
+        "models",
+        "by_tool",
+        "total_input_tokens",
+    }
+    assert set(tm.build_token_report(pinned_dir).totals.to_dict()) == expected_keys
 
 
 # ---------------------------------------------------------------------
