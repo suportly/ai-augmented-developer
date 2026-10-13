@@ -66,3 +66,51 @@ Deixar o agente avançar pelas features prontas do roadmap sem vigiar cada uma e
 - **Depends on:**
 
 Fazer `specify`, `plan` e `tasks` passarem o trabalho só pelos arquivos, para que nada decidido na conversa fique fora dos artefatos revisados. Fontes: specs/0029-artifact-only-handoffs/spec.md:1,16 (Draft, :7); a 0023 aparece só como relacionada em :118.
+
+### R008 — Pipeline enxuto: menos turnos, menos texto e medição correta de custo
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:**
+
+Reduzir o custo por feature (turnos da thread principal e dispatches de revisão pesam mais que o texto das skills) sem remover nenhum gate, e corrigir a medição que hoje soma usage por evento e ignora subagentes, para que todo ganho seja provado por custo por feature e nunca por "tokens salvos". Inclui os gates mecânicos novos (cobertura cenário→task e bloqueio por checklist no preflight de implement), a triagem em specify e clarify, o conteúdo de stack movido para os presets, a remoção, pelo sync, de arquivos que o framework deixou de distribuir e a remoção do terse-mode, das skills help e using-ai-augmented-developer e do review-context.md. Fontes: src/aiadev/token_metrics.py:153-159 (usage somado por evento, sem dedupe por message.id); skills/implement/SKILL.md:74,233 (seções condicionais e gate de re-dispatch repetido); skills/requesting-code-review/SKILL.md:29-31 (review-context.md); comparação com github/spec-kit@6c62e10.
+
+### R009 — Faixa rápida: spec compacto e lane de bug para mudanças pequenas
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:** R008
+
+Dar às mudanças pequenas e a correções de bug um caminho com um único spec.md, TDD mantido e um revisor, em vez do pipeline completo — o que exige emenda do Art. I, que hoje só dispensa typo, revert e `hotfix:`. Fontes: constitution.md:25-27; presets/lean e extensions/bug de github/spec-kit@6c62e10 como referência.
+
+### R010 — Modo `converge` no `analyze`: gaps viram tasks anexadas
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:** R008
+
+Transformar gaps entre código e spec/plan/tasks em tasks rastreáveis anexadas ao tasks.md, em vez de só reportá-los; a checagem mecânica cenário→task nasce em R008 e aqui alimenta o modo converge. Fontes: skills/analyze/SKILL.md (hoje só reporta); github/spec-kit@6c62e10 templates/commands/converge.md.
+
+### R011 — Feature ativa independente do nome da branch
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:**
+
+Permitir worktrees e branches criadas por agentes sem renomear para `feature/<slug>`, hoje exigido pelo preflight. Fontes: src/aiadev/preflight.py:188 (_git_current_branch); github/spec-kit@6c62e10 scripts/bash/common.sh (.specify/feature.json).
+
+### R012 — Waves paralelas de tasks independentes
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:** R008
+
+Reduzir tempo de relógio executando juntas as tasks sem dependência e com arquivos disjuntos — só se a medição de R008 mostrar que o custo por tarefa não sobe. Fontes: templates/tasks-template.md:24-25 (Depends on e Files por task); implement hoje é serial (skills/implement/SKILL.md:44).
+
+### R013 — Catálogo remoto com camada de confiança
+
+- **Status:** planned
+- **Spec:**
+- **Depends on:**
+
+Antes de aceitar presets e extensões de um catálogo remoto, exigir HTTPS, pin de sha256 e limites de download, porque eles carregam prompts executáveis. Fontes: src/aiadev/extensions.py:170-172 (`git clone --depth 1` de URL sem pin); github/spec-kit@6c62e10 docs/reference/extensions.md.
