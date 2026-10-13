@@ -95,7 +95,7 @@
 
 ### T006 — Total confere com a dedupe independente
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `tests/test_token_metrics_manual_rule.py`

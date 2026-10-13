@@ -89,6 +89,55 @@ duas sessões, é somado uma vez e atribuído à sessão que começou primeiro (
 thread principal reclama antes de qualquer subagente). Um evento sem
 `message.id` conta como único.
 
+### Conferir o total à mão
+
+A mesma regra, escrita à parte, é a evidência de que o total do relatório está
+certo (Art. IV; critério de sucesso #1 do spec 0030, que tolera 1%). Sobre os
+arquivos da sessão, sem importar nada de `aiadev`:
+
+```python
+import json, pathlib, sys
+
+root = pathlib.Path(sys.argv[1])  # o mesmo --transcripts-dir
+keys = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
+mains = sorted(root.glob("*.jsonl"))
+files = mains + [p for m in mains for p in sorted((root / m.stem).glob("subagents/**/agent-*.jsonl"))]
+best, loose = {}, dict.fromkeys(keys, 0)
+for path in files:  # cada sessão e os agent-*.jsonl dela; journal.jsonl fica de fora
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        message = event.get("message") if event.get("type") == "assistant" else None
+        usage = message.get("usage") if isinstance(message, dict) else None
+        if not isinstance(usage, dict):
+            continue
+        if message.get("id"):  # com message.id: o maior valor de cada campo
+            kept = best.setdefault(message["id"], dict.fromkeys(keys, 0))
+            for k in keys:
+                kept[k] = max(kept[k], usage.get(k) or 0)
+        else:  # sem message.id: evento único, soma direto
+            for k in keys:
+                loose[k] += usage.get(k) or 0
+print({k: sum(m[k] for m in best.values()) + loose[k] for k in keys})
+```
+
+Compare com `totals` **mais** `subagent_totals` de `aiadev metrics --tokens
+--format json`, campo a campo (`cache_creation_input_tokens` e
+`cache_read_input_tokens` são `cache_creation_tokens` e `cache_read_tokens` no
+JSON; `input_tokens` e `output_tokens` não mudam). A soma é a comparável, não
+cada parte: um `message.id` repetido entre a thread principal e um subagente é
+atribuído à thread principal, e o trecho acima não faz essa divisão. Os campos
+de `usage` fora do normal (negativos, não inteiros) o leitor trata como 0; o
+trecho supõe inteiros comuns, como os de uma sessão real.
+
+O teste `tests/test_token_metrics_manual_rule.py` faz essa conferência sobre
+transcripts gerados com sementes fixas (ids repetidos com `usage` parcial,
+eventos sem id, duas sessões, subagentes aninhados, um `journal.jsonl` e um
+`subagents/` sem sessão ao lado, que não contam) e exige igualdade exata, mais
+rígida que o 1% do spec.
+
 ### Subagentes e papel
 
 Os transcripts de subagentes ficam em `<sessão>/subagents/**/agent-*.jsonl`
