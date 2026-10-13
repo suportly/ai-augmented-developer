@@ -14,6 +14,13 @@ never surfaces message text: only counts and sizes leave this module
 (Article VI, Privacy by design). The parser is tolerant — every field it
 does not find counts as zero — because the transcript format evolves
 between Claude Code versions.
+
+Deduplication (spec ``0030-lean-pipeline``, Story 1): Claude Code writes the
+same assistant message several times while streaming, always with the same
+``message.id`` and a ``usage`` that only grows (``output_tokens`` 1, then 214).
+Each ``message.id`` is therefore counted once, with the **maximum** of every
+``usage`` field, so the result does not depend on which occurrence or which
+file is read first. An assistant event without ``message.id`` counts as unique.
 """
 
 from __future__ import annotations
@@ -21,7 +28,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import pathlib
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 def slug_for(workspace: pathlib.Path) -> str:
@@ -117,6 +124,43 @@ def _result_chars(content: Any) -> int:
     return 0
 
 
+_TOKEN_FIELDS = ("input_tokens", "cache_creation_tokens", "cache_read_tokens", "output_tokens")
+
+
+@dataclasses.dataclass
+class _MessageUsage:
+    """``usage`` of one assistant message, named after the ``SessionTokens`` fields."""
+
+    input_tokens: int = 0
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
+    output_tokens: int = 0
+    sidechain: bool = False
+
+    @classmethod
+    def from_event(cls, usage: Dict[str, Any], sidechain: bool) -> "_MessageUsage":
+        return cls(
+            input_tokens=_int(usage.get("input_tokens")),
+            cache_creation_tokens=_int(usage.get("cache_creation_input_tokens")),
+            cache_read_tokens=_int(usage.get("cache_read_input_tokens")),
+            output_tokens=_int(usage.get("output_tokens")),
+            sidechain=sidechain,
+        )
+
+    def merged(self, other: "_MessageUsage") -> "_MessageUsage":
+        """Field-wise maximum: streaming ``usage`` only grows, so max == final."""
+        values = {f: max(getattr(self, f), getattr(other, f)) for f in _TOKEN_FIELDS}
+        return _MessageUsage(sidechain=self.sidechain or other.sidechain, **values)
+
+
+def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
+    session.turns += 1
+    if message.sidechain:
+        session.sidechain_turns += 1
+    for name in _TOKEN_FIELDS:
+        setattr(session, name, getattr(session, name) + getattr(message, name))
+
+
 def _iter_lines(path: pathlib.Path) -> Iterable[Dict[str, Any]]:
     with path.open("r", encoding="utf-8", errors="replace") as fh:
         for raw in fh:
@@ -131,9 +175,16 @@ def _iter_lines(path: pathlib.Path) -> Iterable[Dict[str, Any]]:
                 yield data
 
 
-def read_session(path: pathlib.Path) -> SessionTokens:
-    """Aggregate one transcript file. Never raises on malformed lines."""
+def _read_transcript(path: pathlib.Path) -> Tuple[SessionTokens, Dict[str, _MessageUsage]]:
+    """Parse one transcript file without counting messages that carry a ``message.id``.
+
+    Returns the session (tool results, models, timestamps and the usage of
+    events *without* ``message.id`` already applied) and the per-``message.id``
+    maximum usage, not yet added to the session so that the caller can
+    deduplicate ids that repeat across files. Never raises on malformed lines.
+    """
     session = SessionTokens(session_id=path.stem, file=path.name)
+    messages: Dict[str, _MessageUsage] = {}
     tool_names: Dict[str, str] = {}
     models: List[str] = []
     for event in _iter_lines(path):
@@ -153,13 +204,13 @@ def read_session(path: pathlib.Path) -> SessionTokens:
         if kind == "assistant":
             usage = message.get("usage")
             if isinstance(usage, dict):
-                session.turns += 1
-                if event.get("isSidechain") is True:
-                    session.sidechain_turns += 1
-                session.input_tokens += _int(usage.get("input_tokens"))
-                session.cache_creation_tokens += _int(usage.get("cache_creation_input_tokens"))
-                session.cache_read_tokens += _int(usage.get("cache_read_input_tokens"))
-                session.output_tokens += _int(usage.get("output_tokens"))
+                current = _MessageUsage.from_event(usage, sidechain=event.get("isSidechain") is True)
+                message_id = message.get("id")
+                if isinstance(message_id, str) and message_id:
+                    seen = messages.get(message_id)
+                    messages[message_id] = seen.merged(current) if seen is not None else current
+                else:
+                    _add_message(session, current)  # no id: counts as a unique event
             model = message.get("model")
             if isinstance(model, str) and model and not model.startswith("<") and model not in models:
                 models.append(model)
@@ -185,23 +236,52 @@ def read_session(path: pathlib.Path) -> SessionTokens:
                 usage_by_tool.calls += 1
                 usage_by_tool.result_chars += chars
     session.models = models
+    return session, messages
+
+
+def read_session(path: pathlib.Path) -> SessionTokens:
+    """Aggregate one transcript file. Never raises on malformed lines.
+
+    Each ``message.id`` is counted once, with the maximum of every usage field.
+    """
+    session, messages = _read_transcript(path)
+    for message in messages.values():
+        _add_message(session, message)
     return session
 
 
 def build_token_report(transcripts_dir: pathlib.Path) -> TokenReport:
     """Aggregate every ``*.jsonl`` under ``transcripts_dir``, oldest session first.
 
+    A ``message.id`` that appears in more than one file is counted once, with
+    the maximum of each usage field across files, and attributed to the
+    session that started first (ties broken by session id), so the figures do
+    not depend on the order files are read.
+
     Returns an empty report when the directory does not exist; the CLI
     decides how to report that.
     """
-    sessions: List[SessionTokens] = []
+    parsed: List[Tuple[SessionTokens, Dict[str, _MessageUsage]]] = []
     if transcripts_dir.is_dir():
-        for path in sorted(transcripts_dir.glob("*.jsonl")):
-            session = read_session(path)
-            if session.turns == 0 and session.tool_calls == 0:
-                continue
-            sessions.append(session)
-    sessions.sort(key=lambda s: (s.started_at or "", s.session_id))
+        parsed = [_read_transcript(path) for path in sorted(transcripts_dir.glob("*.jsonl"))]
+    parsed.sort(key=lambda p: (p[0].started_at or "", p[0].session_id))
+
+    best: Dict[str, _MessageUsage] = {}
+    for _, messages in parsed:
+        for message_id, usage in messages.items():
+            seen = best.get(message_id)
+            best[message_id] = seen.merged(usage) if seen is not None else usage
+
+    sessions: List[SessionTokens] = []
+    counted: set = set()
+    for session, messages in parsed:
+        for message_id in messages:
+            if message_id not in counted:
+                counted.add(message_id)
+                _add_message(session, best[message_id])
+        if session.turns == 0 and session.tool_calls == 0:
+            continue
+        sessions.append(session)
     return TokenReport(transcripts_dir=str(transcripts_dir), sessions=sessions)
 
 

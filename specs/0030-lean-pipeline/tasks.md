@@ -24,7 +24,7 @@
 
 ### T001 — Dedupe por message.id com maior valor por campo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`
