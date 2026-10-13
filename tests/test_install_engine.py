@@ -22,7 +22,6 @@ from aiadev.install_engine import (
 )
 from aiadev.install_manifest import (
     InstalledFile,
-    Manifest,
     compute_sha256,
     load as load_manifest,
     save as save_manifest,
@@ -801,10 +800,29 @@ def _ship_v2_without(preset: pathlib.Path, *dropped: tuple[str, str]) -> None:
         (preset / source).unlink()
 
 
-def _tracked_paths(project: pathlib.Path) -> set[str]:
+def _record_files(project: pathlib.Path) -> list[InstalledFile]:
+    """The mini preset's recorded files, in order, repeats included."""
     record = load_manifest(_manifest_file(project)).find_preset("mini")
     assert record is not None
-    return {f.path for f in record.files}
+    return list(record.files)
+
+
+def _tracked_files(project: pathlib.Path) -> dict[str, str]:
+    """Manifest record of the mini preset as ``{path: sha256}``."""
+    return {f.path: f.sha256 for f in _record_files(project)}
+
+
+def _tracked_paths(project: pathlib.Path) -> set[str]:
+    return set(_tracked_files(project))
+
+
+def _rewrite_record(project: pathlib.Path, rewrite) -> None:
+    """Replace the mini preset's recorded files with ``rewrite(files)``."""
+    manifest = load_manifest(_manifest_file(project))
+    record = manifest.find_preset("mini")
+    assert record is not None
+    record.files[:] = rewrite(list(record.files))
+    save_manifest(manifest, _manifest_file(project))
 
 
 class TestStaleFiles:
@@ -939,11 +957,8 @@ class TestManifestPathContainment:
         preset, project = _installed_v1(tmp_path)
         victim = _write(tmp_path / "victim.txt", "not ours\n")  # beside the project
         recorded = "../victim.txt" if escape == "relative" else str(victim)
-        manifest = load_manifest(_manifest_file(project))
-        record = manifest.find_preset("mini")
-        assert record is not None
-        record.files.append(InstalledFile(recorded, compute_sha256(victim), "rule"))
-        save_manifest(manifest, _manifest_file(project))
+        forged = InstalledFile(recorded, compute_sha256(victim), "rule")
+        _rewrite_record(project, lambda files: [*files, forged])
         _ship_v2_without(preset, _RULE)  # a legitimate stale file goes too
 
         report = install(
@@ -964,3 +979,125 @@ class TestManifestPathContainment:
         assert len(report.preserved) == (0 if mode is InstallMode.UNINSTALL else 1)
         if mode is InstallMode.INSTALL:
             assert recorded not in _tracked_paths(project)
+
+
+# ---------------------------------------------------------------------------
+# Removal bounded to the current platform (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+
+def _rich_preset(tmp_path: pathlib.Path) -> pathlib.Path:
+    """The mini preset plus a rule, a command, an agent, a constitution and MCP servers.
+
+    Every managed root then has an occupant, including the ones a platform
+    spells differently (gemini ``.toml`` commands, cursor ``.mdc`` rules,
+    each platform's own MCP file).
+    """
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    _write(preset / "constitution.md", "# Constitution\n")
+    _write(preset / "mcps.yaml", "servers:\n  demo:\n    command: npx\n    args: [demo]\n")
+    _write(preset / "rules" / "terse-mode.md", "# Terse mode\n")
+    _write(preset / "commands" / "ship.md", "---\ndescription: Ship.\n---\nShip $ARGUMENTS\n")
+    _write(preset / "agents" / "reviewer.md", "# Reviewer\n")
+    return preset
+
+
+class TestRetirementIsBoundedToTheCurrentPlatform:
+    @pytest.mark.parametrize(
+        ("first", "second"), [("claude_code", "cursor"), ("gemini", "codex")]
+    )
+    def test_installing_another_platform_keeps_the_first_and_a_later_sync_is_clean(
+        self, tmp_path: pathlib.Path, first: str, second: str
+    ) -> None:
+        preset = _rich_preset(tmp_path)
+        project = tmp_path / "project"
+        install(preset, project, VARIABLES, platform=first, now="2026-04-14T12:00:00Z")
+        before = _tracked_files(project)
+        assert len(before) >= 6
+
+        report = install(
+            preset, project, VARIABLES, platform=second, now="2026-04-14T13:00:00Z"
+        )
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert all((project / path).is_file() for path in before)
+        assert _reference_file(project, second).is_file()
+        after = _tracked_files(project)
+        assert {path: after[path] for path in before} == before  # carried as recorded
+
+        # What ``sync --platform <first>`` does next: nothing to write or fix.
+        again = install(
+            preset, project, VARIABLES, platform=first, now="2026-04-14T14:00:00Z"
+        )
+
+        assert again.removed == [] and again.preserved == []
+        assert set(again.skipped) == {project / path for path in before}
+        assert _tracked_files(project) == after
+
+    @pytest.mark.parametrize("platform", sorted(_SKILLS_DIR))
+    def test_dropping_every_source_retires_every_file_and_only_those(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        # Probes the managed roots of each handler against everything it
+        # installs: a root too narrow leaves an orphan behind, one too wide
+        # (the install root itself) reaches the user's file below.
+        preset = _rich_preset(tmp_path)
+        project = tmp_path / "project"
+        install(preset, project, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z")
+        installed = _tracked_files(project)
+        mine = _write(project / "src" / "app.py", "print('mine')\n")
+        sha = compute_sha256(mine)
+        forged = [InstalledFile(path, sha, "rule") for path in ("src/app.py", "src/./app.py")]
+        _rewrite_record(project, lambda files: [*files, *forged])
+        for source in ("rules", "commands", "agents", "skills"):
+            shutil.rmtree(preset / source)
+        for source in ("CLAUDE.md", "constitution.md", "mcps.yaml"):
+            (preset / source).unlink()
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            platform=platform,
+            force=True,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert report.ok and report.preserved == []
+        assert {p.relative_to(project).as_posix() for p in report.removed} == set(installed)
+        assert mine.read_text(encoding="utf-8") == "print('mine')\n"
+        # Carried over once, whatever its spelling.
+        assert [(f.path, f.sha256) for f in _record_files(project)] == [("src/app.py", sha)]
+        left = {p.relative_to(project).as_posix() for p in project.rglob("*") if p.is_file()}
+        # Besides the manifest, the install also leaves its own stubs.
+        assert left - {".aiadev/installed.yaml", ".gitignore", "_aiadev/team.toml"} == {
+            "src/app.py"
+        }
+
+    @pytest.mark.parametrize(
+        ("alias", "replaces_record"),
+        [("docs/../AGENTS.md", False), ("./AGENTS.md", True)],
+        ids=["beside-the-record", "instead-of-the-record"],
+    )
+    def test_alias_of_a_shipped_file_is_neither_retired_nor_duplicated(
+        self, tmp_path: pathlib.Path, alias: str, replaces_record: bool
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        sha = compute_sha256(_agent_file(project))
+        _rewrite_record(
+            project,
+            lambda files: [
+                *(f for f in files if not (replaces_record and f.path == "AGENTS.md")),
+                InstalledFile(alias, sha, "agent_file"),
+            ],
+        )
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert _agent_file(project).is_file()
+        paths = [f.path for f in _record_files(project)]
+        assert paths.count("AGENTS.md") == 1 and alias not in paths

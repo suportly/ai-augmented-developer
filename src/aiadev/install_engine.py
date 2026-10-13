@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import os
 import posixpath
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -153,6 +154,17 @@ def _to_rel(target: Path, install_root: Path) -> str:
     return str(target.relative_to(install_root)).replace("\\", "/")
 
 
+def _normalize_rel(rel: str) -> str:
+    """Spell a manifest path the way the engine writes one (:func:`_to_rel`).
+
+    Forward slashes with ``.`` and ``..`` collapsed, lexically. It is the
+    key every previous-record entry is compared by, so an alias of a
+    shipped file (``./AGENTS.md``) in a hand-edited manifest is that file,
+    not a second one.
+    """
+    return posixpath.normpath(rel.replace("\\", "/"))
+
+
 def _inside_root(install_root: Path, rel: str) -> Path | None:
     """Return ``install_root / rel`` if the manifest entry stays inside the root.
 
@@ -167,7 +179,7 @@ def _inside_root(install_root: Path, rel: str) -> Path | None:
     windows = PureWindowsPath(rel)
     if windows.drive or windows.root:  # also catches POSIX "/abs"
         return None
-    parts = PurePosixPath(posixpath.normpath(rel.replace("\\", "/"))).parts
+    parts = PurePosixPath(_normalize_rel(rel)).parts
     if not parts or parts[0] == "..":
         return None
     return install_root.joinpath(*parts)
@@ -275,7 +287,10 @@ def install(
     longer ships are retired by the same hash rule as uninstall: unedited
     ones are removed (:attr:`InstallReport.removed`), hand-edited ones are
     kept and listed in :attr:`InstallReport.preserved` — never a conflict,
-    and ``force`` does not delete them.
+    and ``force`` does not delete them. Only paths under this platform's
+    managed roots (:func:`_managed_roots`) are candidates; the rest of the
+    previous record, such as another platform's files, is carried over
+    untouched and stays tracked.
 
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
@@ -305,7 +320,12 @@ def install(
         return _perform_uninstall(install_root, manifest, existing, preset_name, force)
 
     report = InstallReport(preset_name=preset_name, mode=mode)
-    previous_by_path = {f.path: f for f in existing.files} if existing else {}
+    previous = (
+        [replace(f, path=_normalize_rel(f.path)) for f in existing.files]
+        if existing
+        else []
+    )
+    previous_by_path = {f.path: f for f in previous}
     recorded_files: list[InstalledFile] = []
 
     artifacts = _collect_artifacts(framework_root, platform_module, preset_path)
@@ -401,8 +421,12 @@ def install(
                     )
 
     # Files this preset used to ship but no longer does would otherwise
-    # drop out of the manifest and stay on disk, silently orphaned.
-    stale, carried = _split_previous(existing, recorded_files, scope, platform_module)
+    # drop out of the manifest and stay on disk, silently orphaned. What
+    # this platform does not manage is carried over instead, so the record
+    # keeps tracking the other platforms' files.
+    stale, carried = _split_previous(
+        previous, recorded_files, install_root, scope, platform_module
+    )
     _retire_stale_files(stale, install_root=install_root, mode=mode, report=report)
     recorded_files.extend(carried)
 
@@ -433,31 +457,86 @@ def install(
 
 
 def _split_previous(
-    existing: InstalledPreset | None,
+    previous: list[InstalledFile],
     recorded_files: list[InstalledFile],
+    install_root: Path,
     scope: str,
     platform_module,
 ) -> tuple[list[InstalledFile], list[InstalledFile]]:
     """Split the previous record into ``(stale, carried)`` entries.
 
-    Entries this run wrote, skipped or kept in conflict are still shipped,
-    so they are in neither list. Of the rest, those whose role the handler
-    cannot install under ``--scope user`` were never this run's business
-    and are carried; everything else is stale.
+    ``previous`` has its paths in :func:`_normalize_rel` form, which is
+    also the form of ``recorded_files``, so one path is one entry: the
+    entry this run recorded wins and a repeat of a path is dropped. Each
+    entry the run did not handle is then:
+
+    * stale when it points outside ``install_root`` (the retire step lists
+      it as preserved and drops it from the manifest) or under a root the
+      current platform manages (:func:`_managed_roots`): the framework
+      stopped shipping it;
+    * carried otherwise. Another platform's files, a project install's
+      ``AGENTS.md`` seen from ``--scope user`` or any path the handler
+      never writes are never this run's business: they stay on disk and in
+      the record. A forged entry outside those roots is carried, never
+      touched; inside them it is subject to the hash rule like any
+      recorded file.
     """
-    if existing is None:
+    if not previous:
         return [], []
-    handled = {f.path for f in recorded_files}
+    seen = {f.path for f in recorded_files}
+    managed = _managed_roots(platform_module, install_root, scope)
     stale: list[InstalledFile] = []
     carried: list[InstalledFile] = []
-    for entry in existing.files:
-        if entry.path in handled:
+    for entry in previous:
+        if entry.path in seen:
             continue
-        if scope == "user" and not platform_module.user_scope_supported(entry.role):
-            carried.append(entry)
-        else:
+        seen.add(entry.path)
+        path = PurePosixPath(entry.path)
+        if _inside_root(install_root, entry.path) is None or any(
+            path.is_relative_to(root) for root in managed
+        ):
             stale.append(entry)
+        else:
+            carried.append(entry)
     return stale, carried
+
+
+# Two distinct names; only the shape of the resolved paths matters. They tell
+# a layout that varies with the artifact name (a directory) from one that does
+# not (a single file).
+_PROBE_NAMES = ("aiadev-probe-a", "aiadev-probe-b")
+
+
+def _managed_roots(
+    platform_module, install_root: Path, scope: str
+) -> list[PurePosixPath]:
+    """Where ``platform_module`` installs artifacts, relative to ``install_root``.
+
+    Derived from the handler, so the boundary of what an install may
+    retire cannot drift from where it writes. Each role is resolved for
+    two distinct names and the common ancestor of the two results is the
+    root: the directory when the name is part of the path
+    (``.claude/skills``, ``.claude/commands/aia``, whatever the file
+    extension) and the file itself when it is not (``AGENTS.md``,
+    ``.mcp.json``). The handler's wrapper (``CLAUDE.md``) is a root too.
+    A role the handler does not install under ``--scope user`` adds
+    nothing there, mirroring the filter at the top of :func:`install`.
+    """
+    wrapper_hook = getattr(platform_module, "wrapper_target", None)
+    targets: set[Path] = set()
+    for role in _ROLE_PRIORITY:
+        if scope == "user" and not platform_module.user_scope_supported(role):
+            continue
+        first, second = (
+            _resolve_artifact_target(platform_module, role, name, install_root, scope)
+            for name in _PROBE_NAMES
+        )
+        targets.add(Path(os.path.commonpath([first, second])))
+        if wrapper_hook is not None:
+            wrapper = wrapper_hook(role, _PROBE_NAMES[0], install_root, scope=scope)
+            if wrapper is not None:
+                targets.add(wrapper)
+    return [PurePosixPath(_to_rel(target, install_root)) for target in targets]
 
 
 def _retire_stale_files(
