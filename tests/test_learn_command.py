@@ -31,12 +31,13 @@ def _entry(ts, reviewer, verdict, task_id="branch-review", note=""):
 
 
 def _recent(days_ago: int, clock: str) -> str:
-    """ISO timestamp ``days_ago`` days before today (UTC) at ``clock``.
+    """ISO timestamp ``days_ago`` days before today at ``clock``.
 
-    Fixture entries are dated relative to today so they stay inside the
-    command's default 90-day window whenever the suite runs.
+    Fixture entries are dated relative to ``date.today()`` — the same clock
+    the command reads — so they stay inside its default 90-day window
+    whenever the suite runs.
     """
-    day = datetime.datetime.now(datetime.timezone.utc).date() - datetime.timedelta(days=days_ago)
+    day = datetime.date.today() - datetime.timedelta(days=days_ago)
     return f"{day.isoformat()}T{clock}Z"
 
 
@@ -72,12 +73,15 @@ def _invoke(ws: pathlib.Path, args: list[str]):
         os.chdir(before)
 
 
+# --- regression: fixture dates ----------------------------------------------
+
+
 def test_fixture_entries_fall_inside_the_default_window(tmp_path) -> None:
     """Regression: the fixture used fixed 2026-07 dates, so every test that
     relies on the default 90-day window started failing once the calendar
     moved past them. The fixture must stay inside the window on any day."""
     ws = _build_workspace(tmp_path)
-    today = datetime.datetime.now(datetime.timezone.utc).date()
+    today = datetime.date.today()
     oldest_allowed = today - datetime.timedelta(days=_DEFAULT_SINCE_DAYS)
     stamps = [
         json.loads(line)["timestamp"]
