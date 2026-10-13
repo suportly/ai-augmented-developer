@@ -89,6 +89,7 @@ Como agente que executa `implement`, quero que preflight, leitura de template e 
 2. Given uma task concluída e verificada, When rodo o comando de fechamento com a mensagem e os arquivos, Then o status vira `done`, os arquivos entram no commit e o commit é feito; se o commit falhar, o status volta a `pending`.
 3. Given um `spec.md` com um cenário que nenhuma task cita (nem diretamente nem pela story), When rodo o preflight de `implement`, Then ele falha apontando o cenário; o mesmo vale para uma task que não cita cenário, story nem critério de sucesso nomeado.
 4. Given uma checklist com linha FAIL sem task dona, When rodo o preflight de `implement`, Then ele bloqueia e lista a linha.
+5. Given uma feature em qualquer etapa do pipeline, When rodo `aiadev next --feature <slug>`, Then recebo em uma saída o estado atual (spec escrita, marcadores abertos, plano, tasks pendentes) e a próxima etapa a executar; uma entrada do roadmap sem spec informa que o próximo passo é `specify`.
 
 ### Story 3 — Uma revisão por task e uma por branch (P1)
 
@@ -137,10 +138,9 @@ Como usuário de um projeto já instalado, quero atualizar o framework sem ficar
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 o que substitui `/aia:help` — um comando novo `aiadev next` que informa o estado do pipeline de uma feature (hoje `src/aiadev/pipeline_state.py` não tem consumidor de CLI), ou apenas o bloco do `AGENTS.md`? `CLAUDE.md` e `templates/roadmap-template.md` mandam o usuário rodar `/aia:help` para saber se uma entrada está pronta para implementar.]
+Decididas (cl-1 pelo mantenedor em 2026-10-13; cl-2 e cl-3 pela evidência do reconhecimento):
 
-Decididas nesta spec (resolvidas pela evidência do reconhecimento, sem pergunta ao usuário):
-
+- cl-1 — `/aia:help` é substituído por um comando novo, `aiadev next`, que lê o estado da feature (spec, clarificações, plano, tasks) e informa a próxima etapa; `CLAUDE.md` e `templates/roadmap-template.md` passam a apontá-lo (Story 2, cenário 5; Story 6, cenário 4).
 - cl-2 — `using-ai-augmented-developer` **é** o ponto de entrada de Gemini (`GEMINI.md` a importa) e é citada como direcionadora no Codex (`docs/README.codex.md`): a remoção exige repontar cada plataforma para o bloco equivalente do `AGENTS.md` (Story 6, cenário 3), não vale só para o Claude Code.
 - cl-3 — a remoção do terse-mode é imediata, com aviso de uma linha para a chave ou variável antiga (Story 6, cenário 2); precedente: remoção direta do caminho de modelo no PR #55.
 
@@ -152,6 +152,7 @@ Decididas nesta spec (resolvidas pela evidência do reconhecimento, sem pergunta
 - `templates/spec-template.md` e `src/aiadev/preflight.py`: nova seção `## Assumptions`, **opcional** (validada só quando presente e fora da lista de âncoras obrigatórias `SPEC_ANCHORS`, para que as specs existentes continuem válidas); `agents/spec-document-reviewer.md`: critério de premissas.
 - `src/aiadev/preflight.py` e `src/aiadev/commands/preflight.py`: saída `--json`, checagem de cobertura e bloqueio por checklist; `templates/tasks-template.md`: notação canônica de referência a cenário.
 - `src/aiadev/tasks_status.py`: fechamento de task com commit e rollback.
+- Comando novo `aiadev next`, sobre o estado já calculado em `src/aiadev/pipeline_state.py`; `CLAUDE.md` e `templates/roadmap-template.md` deixam de citar `/aia:help`.
 - `src/aiadev/install_engine.py` e `src/aiadev/commands/sync.py`: remoção de arquivos que o framework deixou de distribuir (capacidade nova), com base em `src/aiadev/install_manifest.py`; possível mecanismo de extensão de skill por preset, a decidir no `plan`.
 - `skills/implement/SKILL.md` e `skills/requesting-code-review/SKILL.md`: convenção de prefixo (`implement:`, `review:`) na descrição do dispatch, usada pela medição para classificar o papel; os reviewers de documento de `specify` e `plan` ficam fora da convenção e, portanto, não classificados.
 - `.aiadev/review.yaml`: formato mantido; passa a ser o único registro de review de branch.
