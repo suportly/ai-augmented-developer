@@ -9,6 +9,7 @@ sidechain session whose tool result has no matching ``tool_use``, and
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import pathlib
@@ -48,7 +49,8 @@ def subagent_dir(tmp_path: pathlib.Path) -> pathlib.Path:
     one Bash tool result of 2 chars. Subagents: aaa (2 turns, 5 / 200 / 200 /
     50), bbb under ``workflows/wf_x`` (2 turns, 5 / 50 / 300 / 50). The
     sibling ``journal.jsonl`` carries 9999-token assistant events that must
-    never be read.
+    never be read. Each agent has an ``agent-<id>.meta.json`` next to it:
+    aaa is described as ``implement: ...`` and bbb as ``review: ...``.
     """
     target = tmp_path / "with_subagents"
     shutil.copytree(FIXTURES / "with_subagents", target)
@@ -523,6 +525,165 @@ def test_subagent_text_and_tool_results_never_surface(subagent_dir: pathlib.Path
     for rendered in (repr(report), tm.format_text(report), tm.format_json(report)):
         assert "subagent-secret-body" not in rendered
         assert "workflow step" not in rendered
+
+
+# ---------------------------------------------------------------------
+# Spec 0030, Story 1 sc2/sc3 — subagent role from the meta.json description
+# ---------------------------------------------------------------------
+
+
+def _write_meta(root: pathlib.Path, agent: str, meta: Any, session: str = "s") -> pathlib.Path:
+    """Write ``agent-<agent>.meta.json`` next to ``agent-<agent>.jsonl`` (raw text when ``meta`` is a str)."""
+    path = root / session / "subagents" / f"agent-{agent}.meta.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(meta if isinstance(meta, str) else json.dumps(meta), encoding="utf-8")
+    return path
+
+
+def _session_with_agents(root: pathlib.Path, agents: List[str]) -> None:
+    """A main thread plus one one-turn subagent transcript per name in ``agents`` (no meta.json yet)."""
+    _write_transcript(
+        root / "s.jsonl",
+        [_assistant("2026-09-16T10:00:00.000Z", message_id="msg_M", output=1)],
+    )
+    for name in agents:
+        _write_agent(
+            root,
+            "s",
+            f"agent-{name}.jsonl",
+            [_assistant("2026-09-16T10:00:01.000Z", message_id=f"msg_{name}", output=5)],
+        )
+
+
+def test_subagent_role_comes_from_the_meta_json_description_prefix(subagent_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(subagent_dir)
+    agents = _agents(report.sessions[0])
+    assert agents["aaa"].role == "implement"
+    assert agents["bbb"].role == "review"  # nested under workflows/wf_x, meta.json next to it
+    assert report.unclassified_subagents == 0
+    assert _agents(tm.read_session(subagent_dir / "sess-main.jsonl"))["aaa"].role == "implement"
+
+
+@pytest.mark.parametrize(
+    ("description", "role"),
+    [
+        ("implement: T003 add the role field", "implement"),
+        ("review: T003 add the role field", "review"),
+        ("review: branch feature/0030-lean-pipeline", "review"),
+        ("  IMPLEMENT: T003", "implement"),  # case-insensitive, leading whitespace tolerated
+        ("\tReview: T003", "review"),
+        ("implement:", "implement"),  # the prefix alone is enough
+        ("implement T003", "unclassified"),  # the colon is required
+        ("implement : T003", "unclassified"),
+        ("implementation: T003", "unclassified"),  # a longer word is not the prefix
+        ("review of implement: T003", "unclassified"),  # a prefix, not a substring
+        ("Explore the transcripts", "unclassified"),
+        ("spec-document-reviewer: spec", "unclassified"),
+        ("", "unclassified"),
+    ],
+)
+def test_subagent_role_prefix_convention(tmp_path: pathlib.Path, description: str, role: str) -> None:
+    _session_with_agents(tmp_path, ["a"])
+    _write_meta(tmp_path, "a", {"agentType": "general-purpose", "description": description, "spawnDepth": 1})
+    (agent,) = tm.build_token_report(tmp_path).sessions[0].subagents
+    assert agent.role == role
+
+
+def test_agent_type_is_not_used_to_infer_the_role(tmp_path: pathlib.Path) -> None:
+    _session_with_agents(tmp_path, ["a"])
+    _write_meta(tmp_path, "a", {"agentType": "implement", "description": "Explore the repo"})
+    (agent,) = tm.build_token_report(tmp_path).sessions[0].subagents
+    assert agent.role == "unclassified"
+
+
+def test_missing_or_unreadable_meta_json_is_unclassified_and_counted(tmp_path: pathlib.Path) -> None:
+    names = ["ok", "nometa", "garbage", "binary", "deep", "digits", "array", "nodesc", "numdesc", "nulldesc", "dirmeta"]
+    _session_with_agents(tmp_path, names)
+    _write_meta(tmp_path, "ok", {"description": "implement: T003"})
+    # "nometa" has no meta.json at all.
+    _write_meta(tmp_path, "garbage", "{not json at all")
+    (tmp_path / "s" / "subagents" / "agent-binary.meta.json").write_bytes(b"\xff\xfe\x00{\x80")
+    _write_meta(tmp_path, "deep", "[" * 1_000_000)  # deeper than any supported interpreter limit -> RecursionError
+    # an integer with > 4300 digits raises a plain ValueError (not JSONDecodeError)
+    _write_meta(tmp_path, "digits", '{"description": 1' + "0" * 5000 + "}")
+    _write_meta(tmp_path, "array", [1, 2, 3])  # valid JSON, not an object
+    _write_meta(tmp_path, "nodesc", {"agentType": "general-purpose"})
+    _write_meta(tmp_path, "numdesc", {"description": 42})
+    _write_meta(tmp_path, "nulldesc", {"description": None})
+    (tmp_path / "s" / "subagents" / "agent-dirmeta.meta.json").mkdir()  # cannot be opened as a file
+
+    report = tm.build_token_report(tmp_path)  # must not raise
+    agents = _agents(report.sessions[0])
+    assert sorted(agents) == sorted(names)  # every transcript is still reported
+    assert agents["ok"].role == "implement"
+    assert {n: a.role for n, a in agents.items() if n != "ok"} == {n: "unclassified" for n in names if n != "ok"}
+    assert report.unclassified_subagents == len(names) - 1
+    # A broken meta.json costs the role, never the figures.
+    assert all(a.turns == 1 and a.output_tokens == 5 for a in agents.values())
+    assert report.subagent_totals.turns == len(names)
+
+
+def test_unclassified_count_spans_sessions_and_is_zero_without_subagents(
+    tmp_path: pathlib.Path, pinned_dir: pathlib.Path
+) -> None:
+    assert tm.build_token_report(pinned_dir).unclassified_subagents == 0
+    assert tm.build_token_report(tmp_path / "missing").unclassified_subagents == 0
+
+    for session, started in (("s1", "2026-09-16T10:00:00.000Z"), ("s2", "2026-09-17T10:00:00.000Z")):
+        _write_transcript(
+            tmp_path / f"{session}.jsonl", [_assistant(started, message_id=f"msg_{session}", output=1)]
+        )
+        for agent in ("a", "b"):
+            _write_agent(
+                tmp_path,
+                session,
+                f"agent-{agent}.jsonl",
+                [_assistant(started, message_id=f"msg_{session}_{agent}", output=3)],
+            )
+    _write_meta(tmp_path, "a", {"description": "implement: T001"}, session="s1")
+    _write_meta(tmp_path, "b", {"description": "no convention"}, session="s1")
+    # s2 has no meta.json at all: both of its agents are unclassified.
+    report = tm.build_token_report(tmp_path)
+    assert [a.role for s in report.sessions for a in s.subagents] == [
+        "implement",
+        "unclassified",
+        "unclassified",
+        "unclassified",
+    ]
+    assert report.unclassified_subagents == 3
+
+
+def test_subagent_role_never_reads_message_text(tmp_path: pathlib.Path) -> None:
+    def chatty(message_id: str) -> Dict[str, Any]:
+        event = _assistant("2026-09-16T10:00:01.000Z", message_id=message_id, output=5)
+        event["message"]["content"] = [{"type": "text", "text": "implement: T003 review: branch"}]
+        return event
+
+    prompt = {
+        "type": "user",
+        "timestamp": "2026-09-16T10:00:02.000Z",
+        "message": {"role": "user", "content": "review: T003 implement: T003"},
+    }
+    _session_with_agents(tmp_path, [])  # main thread only
+    _write_agent(tmp_path, "s", "agent-chatty.jsonl", [chatty("msg_C")])
+    _write_agent(tmp_path, "s", "agent-prompted.jsonl", [prompt, chatty("msg_P")])
+    report = tm.build_token_report(tmp_path)
+    assert {a.agent_id: a.role for a in report.sessions[0].subagents} == {
+        "chatty": "unclassified",
+        "prompted": "unclassified",
+    }
+    assert report.unclassified_subagents == 2
+
+
+def test_subagent_description_text_never_surfaces(subagent_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(subagent_dir)
+    # The roles were derived (so the meta.json files were read) ...
+    assert {a.role for a in report.sessions[0].subagents} == {"implement", "review"}
+    # ... but only the role is kept, never the description it came from.
+    for rendered in (repr(report), tm.format_text(report), tm.format_json(report)):
+        assert "description-secret-marker" not in rendered
+    for agent in report.sessions[0].subagents:
+        assert "description-secret-marker" not in repr(dataclasses.asdict(agent))
 
 
 # ---------------------------------------------------------------------

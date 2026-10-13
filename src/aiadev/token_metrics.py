@@ -29,6 +29,14 @@ under ``workflows/wf_<id>/``, next to a ``journal.jsonl`` that is not an
 agent transcript and is never read). Their usage is reported in
 ``SessionTokens.subagents``, **separate** from the main thread's figures, and
 goes through the same ``message.id`` deduplication, including across files.
+
+Subagent role (spec ``0030-lean-pipeline``, Story 1): each ``agent-<id>.jsonl``
+may have an ``agent-<id>.meta.json`` next to it whose ``description`` starts
+with ``implement:`` or ``review:`` (case-insensitive, leading whitespace
+tolerated; the colon is required). That prefix is the **only** source of the
+role: message text and ``agentType`` are never consulted, and the description
+itself is not kept, only the derived role. A missing, unreadable or malformed
+``meta.json``, or any other description, makes the subagent ``unclassified``.
 """
 
 from __future__ import annotations
@@ -57,9 +65,17 @@ class ToolUsage:
     result_chars: int = 0
 
 
+ROLE_IMPLEMENT = "implement"
+ROLE_REVIEW = "review"
+ROLE_UNCLASSIFIED = "unclassified"
+
+
 @dataclasses.dataclass
 class SubagentTokens:
-    """Usage of one subagent transcript (``agent-<agent_id>.jsonl``)."""
+    """Usage of one subagent transcript (``agent-<agent_id>.jsonl``).
+
+    ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW`` or ``ROLE_UNCLASSIFIED``.
+    """
 
     agent_id: str
     turns: int = 0
@@ -67,6 +83,7 @@ class SubagentTokens:
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
     output_tokens: int = 0
+    role: str = ROLE_UNCLASSIFIED
 
     @property
     def total_input_tokens(self) -> int:
@@ -136,6 +153,11 @@ class TokenReport:
                 for name in _TOKEN_FIELDS:
                     setattr(t, name, getattr(t, name) + getattr(a, name))
         return t
+
+    @property
+    def unclassified_subagents(self) -> int:
+        """How many subagents have no role: no convention prefix, or no readable ``meta.json``."""
+        return sum(1 for s in self.sessions for a in s.subagents if a.role == ROLE_UNCLASSIFIED)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -315,33 +337,63 @@ def _subagent_files(session_path: pathlib.Path) -> List[pathlib.Path]:
         return []
 
 
-def _read_subagents(session_path: pathlib.Path) -> List[_Claim]:
+def _subagent_role(agent_path: pathlib.Path) -> str:
+    """Role of ``agent-<id>.jsonl`` from ``description`` in the ``agent-<id>.meta.json`` beside it.
+
+    Only that field is read, never message text. Anything that is not an
+    ``implement:`` / ``review:`` prefix (including a file that is missing,
+    unreadable or not a JSON object) is ``ROLE_UNCLASSIFIED``; never raises.
+    """
+    meta_path = agent_path.with_name(agent_path.stem + ".meta.json")
+    try:
+        with meta_path.open("r", encoding="utf-8", errors="replace") as fh:
+            meta = json.load(fh)
+    except (OSError, ValueError, RecursionError):
+        # ValueError: JSONDecodeError, and the int digit limit (a >4300-digit number)
+        return ROLE_UNCLASSIFIED
+    description = meta.get("description") if isinstance(meta, dict) else None
+    if isinstance(description, str):
+        head = description.lstrip().lower()
+        for role in (ROLE_IMPLEMENT, ROLE_REVIEW):
+            if head.startswith(role + ":"):
+                return role
+    return ROLE_UNCLASSIFIED
+
+
+# One subagent transcript: what it contributed (as a ``_Claim``) plus its role.
+_Agent = Tuple[SessionTokens, Dict[str, _MessageUsage], str]
+
+
+def _claims(agents: List[_Agent]) -> List[_Claim]:
+    return [(transcript, messages) for transcript, messages, _ in agents]
+
+
+def _read_subagents(session_path: pathlib.Path) -> List[_Agent]:
     """Parse the subagent transcripts next to ``session_path``, skipping any that cannot be opened.
 
     A subagent's turns are sidechain by location, so the per-event
     ``isSidechain`` flag is cleared: it must not leak into a main-thread
     message that shares the ``message.id`` and make it count as a sidechain turn.
     """
-    claims: List[_Claim] = []
+    agents: List[_Agent] = []
     for path in _subagent_files(session_path):
         try:
             transcript, messages = _read_transcript(path)
         except OSError:
             continue
-        claims.append(
-            (transcript, {mid: dataclasses.replace(usage, sidechain=False) for mid, usage in messages.items()})
-        )
-    return claims
+        cleared = {mid: dataclasses.replace(usage, sidechain=False) for mid, usage in messages.items()}
+        agents.append((transcript, cleared, _subagent_role(path)))
+    return agents
 
 
-def _attach_subagents(session: SessionTokens, agents: List[SessionTokens]) -> None:
+def _attach_subagents(session: SessionTokens, agents: List[_Agent]) -> None:
     """Record each agent's deduplicated usage on ``session.subagents``, apart from its own figures."""
-    for agent in agents:
+    for agent, _, role in agents:
         if agent.turns == 0:
             continue  # nothing countable: garbage file, or every message was counted elsewhere
         agent_id = agent.session_id.removeprefix("agent-")
         usage = {name: getattr(agent, name) for name in _TOKEN_FIELDS}
-        session.subagents.append(SubagentTokens(agent_id=agent_id, turns=agent.turns, **usage))
+        session.subagents.append(SubagentTokens(agent_id=agent_id, turns=agent.turns, role=role, **usage))
         session.sidechain_turns += agent.turns
 
 
@@ -354,8 +406,8 @@ def read_session(path: pathlib.Path) -> SessionTokens:
     """
     session, messages = _read_transcript(path)
     agents = _read_subagents(path)
-    _count_once([(session, messages)] + agents)  # the main thread claims first
-    _attach_subagents(session, [agent for agent, _ in agents])
+    _count_once([(session, messages)] + _claims(agents))  # the main thread claims first
+    _attach_subagents(session, agents)
     return session
 
 
@@ -374,7 +426,7 @@ def build_token_report(transcripts_dir: pathlib.Path) -> TokenReport:
     Returns an empty report when the directory does not exist; the CLI
     decides how to report that.
     """
-    parsed: List[Tuple[SessionTokens, Dict[str, _MessageUsage], List[_Claim]]] = []
+    parsed: List[Tuple[SessionTokens, Dict[str, _MessageUsage], List[_Agent]]] = []
     if transcripts_dir.is_dir():
         for path in sorted(transcripts_dir.glob("*.jsonl")):
             session, messages = _read_transcript(path)
@@ -383,12 +435,12 @@ def build_token_report(transcripts_dir: pathlib.Path) -> TokenReport:
 
     claims: List[_Claim] = [(session, messages) for session, messages, _ in parsed]
     for _, _, agents in parsed:
-        claims.extend(agents)
+        claims.extend(_claims(agents))
     _count_once(claims)
 
     sessions: List[SessionTokens] = []
     for session, _, agents in parsed:
-        _attach_subagents(session, [agent for agent, _ in agents])
+        _attach_subagents(session, agents)
         if session.turns == 0 and session.tool_calls == 0 and not session.subagents:
             continue
         sessions.append(session)
