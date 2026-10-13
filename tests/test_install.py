@@ -7,6 +7,8 @@ command path resolves correctly.
 from __future__ import annotations
 
 import pathlib
+import re
+import shutil
 
 import pytest
 from click.testing import CliRunner
@@ -149,6 +151,55 @@ class TestReInstall:
         )
         assert second.exit_code == 0, second.output
         assert "skip" in second.output.lower() or "nothing to do" in second.output
+
+    @pytest.mark.parametrize("dry_run", [False, True], ids=["real-run", "dry-run"])
+    @pytest.mark.parametrize(
+        "name", ["terse.md", "[red]terse.md"], ids=["plain", "markup-like"]
+    )
+    def test_edited_file_the_preset_dropped_is_listed_not_silent(
+        self,
+        framework_root: pathlib.Path,
+        tmp_path: pathlib.Path,
+        monkeypatch,
+        dry_run: bool,
+        name: str,
+    ) -> None:
+        # The preset ships one rule and drops it after the user edited it: the
+        # only thing left to report is the kept file, so a report that stayed
+        # quiet would print "nothing to do" and hide it. The name is printed
+        # as it is, even when it reads like Rich markup.
+        framework = tmp_path / "framework"  # the bare minimum a root needs
+        (framework / "templates").mkdir(parents=True)
+        (framework / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
+        shutil.copytree(framework_root / "schemas", framework / "schemas")
+        preset = framework / "presets" / "solo"
+        (preset / "rules").mkdir(parents=True)
+        (preset / "preset.yaml").write_text("name: solo\nversion: 1.0.0\n", encoding="utf-8")
+        (preset / "rules" / name).write_text("# terse\n", encoding="utf-8")
+        monkeypatch.setenv("AIADEV_ROOT", str(framework))
+        project = tmp_path / "project"
+        runner = CliRunner()
+        first = _invoke(runner, project, "--preset", "solo", "--non-interactive")
+        assert first.exit_code == 0, first.output
+        stale = project / ".claude" / "rules" / name
+        stale.write_text("my own terse rules\n", encoding="utf-8")
+        (preset / "rules" / name).unlink()
+
+        result = _invoke(
+            runner,
+            project,
+            "--preset",
+            "solo",
+            "--non-interactive",
+            *(["--dry-run"] if dry_run else []),
+        )
+
+        assert result.exit_code == 0, result.output  # kept, never a failure
+        assert stale.read_text(encoding="utf-8") == "my own terse rules\n"
+        assert "nothing to do" not in result.output
+        label = "would keep" if dry_run else "keep"
+        row = rf"[│|]\s+{label}\s+[│|]\s+{re.escape('.claude/rules/' + name)}\s+[│|]"
+        assert re.search(row, result.output)
 
 
 class TestConflictAndForce:

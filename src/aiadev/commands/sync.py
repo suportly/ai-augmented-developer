@@ -22,6 +22,10 @@ The sync flow has four steps:
    install time. Framework-generic artifacts (commands/agents/skills)
    come along for the ride, so projects that installed under an older
    ``aiadev`` pick up any new pipeline files the framework grew since.
+   The reverse holds too (spec 0030 Story 6 sc1): a file the framework
+   stopped shipping is removed, and one the user edited is kept and
+   listed as ``keep``; both are reported across all presets, and a kept
+   file never makes the exit code non-zero.
 2. **Regenerate the ``<!-- aiadev:auto-stack -->`` block in the agent
    file.** Reads well-known config files (package.json, pyproject.toml,
    docker-compose.yml, Makefile, .github/workflows/) via
@@ -66,6 +70,7 @@ from dataclasses import dataclass
 
 import click
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from ..frontmatter_migrate import FrontmatterError, migrate_skill_file
@@ -194,6 +199,8 @@ def sync_command(
     total_written: list[pathlib.Path] = []
     total_skipped: list[pathlib.Path] = []
     total_conflicts: list[pathlib.Path] = []
+    total_removed: list[pathlib.Path] = []
+    total_preserved: list[pathlib.Path] = []
 
     # Step 0 — migrate legacy agent files (T012, Story 3 sc2+sc3). Must
     # run before step 1: it turns a pre-T011 CLAUDE.md/GEMINI.md into the
@@ -270,6 +277,8 @@ def sync_command(
             total_written.extend(report.written)
             total_skipped.extend(report.skipped)
             total_conflicts.extend(report.conflicts)
+            total_removed.extend(report.removed)
+            total_preserved.extend(report.preserved)
 
     # Step 1.5 — (re-)apply migrated legacy content to AGENTS.md, now
     # that step 1's re-install has already converged AGENTS.md to the
@@ -360,6 +369,10 @@ def sync_command(
         total_written,
         total_skipped,
         total_conflicts,
+        # A path every preset records (a forged out-of-root entry) is reported
+        # by each of them; list it once.
+        removed=list(dict.fromkeys(total_removed)),
+        preserved=list(dict.fromkeys(total_preserved)),
         stack_path=stack_path,
         stack_result=stack_result,
         stack_appended=stack_appended,
@@ -935,6 +948,8 @@ def _render_report(
     skipped: list[pathlib.Path],
     conflicts: list[pathlib.Path],
     *,
+    removed: list[pathlib.Path],
+    preserved: list[pathlib.Path],
     stack_path: pathlib.Path | None,
     stack_result: str | None,
     stack_appended: bool,
@@ -947,10 +962,12 @@ def _render_report(
     table.add_column("Path")
 
     def _rel(path: pathlib.Path) -> str:
+        # Paths can come from the (untrusted) manifest or carry bracketed
+        # names: escape them so Rich prints them as they are.
         try:
-            return str(path.relative_to(project))
+            return escape(str(path.relative_to(project)))
         except ValueError:
-            return str(path)
+            return escape(str(path))
 
     for path in migrated_agent_files:
         table.add_row("[cyan]migrate-agent-file[/cyan]", _rel(path))
@@ -958,6 +975,11 @@ def _render_report(
         table.add_row("[green]write[/green]", _rel(path))
     for path in skipped:
         table.add_row("[blue]skip[/blue]", _rel(path))
+    would = "would " if mode is InstallMode.DRY_RUN else ""
+    for path in removed:
+        table.add_row(f"[magenta]{would}remove[/magenta]", _rel(path))
+    for path in preserved:
+        table.add_row(f"[yellow]{would}keep[/yellow]", _rel(path))
     for path in conflicts:
         table.add_row("[red]conflict[/red]", _rel(path))
     if stack_path is not None and stack_result is not None:
@@ -966,7 +988,16 @@ def _render_report(
     for path in migrated:
         table.add_row("[cyan]migrate[/cyan]", _rel(path))
 
-    if written or skipped or conflicts or stack_result or migrated or migrated_agent_files:
+    if (
+        written
+        or skipped
+        or removed
+        or preserved
+        or conflicts
+        or stack_result
+        or migrated
+        or migrated_agent_files
+    ):
         console.print(table)
     else:
         console.print("[yellow]nothing to do[/yellow]")
@@ -975,6 +1006,10 @@ def _render_report(
         console.print(
             "[red]refusing to overwrite the files above.[/red] "
             "Pass [cyan]--force[/cyan] to override."
+        )
+    if preserved:
+        console.print(
+            "[yellow]note:[/yellow] kept files stay on disk; aiadev no longer manages them."
         )
     if stack_appended:
         console.print(

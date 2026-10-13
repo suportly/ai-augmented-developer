@@ -234,7 +234,7 @@
 
 ### T016 — sync agrega e imprime removed e preserved
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T015
 - **Files:**
   - modify: `src/aiadev/commands/sync.py`
