@@ -27,7 +27,7 @@ metadata:
 
 # Plan
 
-Write the implementation plan from a clean `spec.md`. The plan says **how** the spec will be realized, without diving into task-level code (that is `tasks`).
+Write the implementation plan from a clean `spec.md`: **how** it will be realized, not task-level code (that is `tasks`).
 
 **Announce at start:** "Using the plan skill. I will produce plan.md and pass the Constitution Check before handing off."
 
@@ -57,13 +57,14 @@ Write the implementation plan from a clean `spec.md`. The plan says **how** the 
    passes a *Single required artifact* directive that forbids these
    auxiliary paths in the current turn — honour it.
 8. **Dispatch `plan-document-reviewer`** if available. Iterate until approved.
-9. **Report** in 3-5 lines: phases, #tasks forecast, any waivers requested, link to the file.
+9. **Report** in 3-5 lines: phases, task forecast, waivers, file link.
 
 ## Rules
 
 - The Constitution Check is **non-optional**. A plan with blank rows blocks `tasks` from running.
-- Do not write code in the plan. Pseudo-code is allowed only when needed to clarify an ADR.
+- No code in the plan; pseudo-code only to clarify an ADR.
 - Do not enumerate tasks here. `tasks.md` is the only source of truth for the task list.
+- If `references/stack.md` exists beside this file, read it for stack-specific guidance.
 
 ## Graph provider blast-radius (optional)
 

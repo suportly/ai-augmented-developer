@@ -19,12 +19,13 @@ Prepare and execute a structured code review before merging any branch.
 
 Before dispatching the reviewer:
 
-- [ ] All tests pass: `pytest` (backend) + `npx jest` (frontend/mobile)
-- [ ] No TypeScript errors: `npx tsc --noEmit`
-- [ ] No linting errors: `ruff check .` (backend) / `npm run lint` (frontend)
-- [ ] No pending migrations: `python manage.py showmigrations | grep "\[ \]"`
+- [ ] All tests pass
+- [ ] No type or lint errors
+- [ ] No pending migrations (if the change has any)
 - [ ] All planned tasks completed (no unchecked `- [ ]` in plan)
 - [ ] Commits are clean and atomic
+
+If `references/stack.md` exists beside this file, read it for stack-specific guidance.
 
 ## Impacted subsystems (optional — graph provider)
 

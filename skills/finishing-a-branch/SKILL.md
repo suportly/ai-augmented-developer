@@ -16,24 +16,9 @@ Before pushing:
 - [ ] Run `aiadev preflight finishing-a-branch --feature <slug>` and confirm exit 0. The CLI checks every upstream artifact and refuses to proceed unless `.aiadev/review.yaml` records `status: approved`. Bypass is `AIADEV_PREFLIGHT=warn` (debug only).
 - [ ] Code review approved (no outstanding CHANGES_REQUESTED)
 - [ ] All tests pass
-  ```bash
-  cd backend && pytest --tb=short
-  cd frontend && npx jest --no-coverage
-  ```
-- [ ] No TypeScript errors
-  ```bash
-  cd frontend && npx tsc --noEmit
-  ```
+- [ ] No type errors
 - [ ] No linting errors
-  ```bash
-  cd backend && ruff check .
-  cd frontend && npm run lint
-  ```
-- [ ] Migrations are clean (no unapplied, no conflicts)
-  ```bash
-  cd backend && python manage.py showmigrations | grep "\[ \]"
-  python manage.py migrate --check
-  ```
+- [ ] Migrations (if any) are clean: no unapplied, no conflicts
 - [ ] Branch is rebased on main/develop
   ```bash
   git fetch origin && git rebase origin/main
@@ -76,10 +61,8 @@ Then open PR with this template:
 - Plan: `specs/YYYY-MM-DD-<feature>/plan.md`
 
 ## Test Plan
-- [ ] `pytest` — all backend tests pass
-- [ ] `npx jest` — all frontend tests pass
-- [ ] `npx tsc --noEmit` — no TypeScript errors
-- [ ] Migrations applied without conflicts
+- [ ] Test suite passes
+- [ ] Type check and lint clean
 - [ ] Manual smoke test performed
 
 ## Screenshots (if UI changes)
@@ -115,20 +98,10 @@ git push origin --delete <branch>
 
 # Delete local branch
 git branch -d <branch>
-
-# Apply any pending migrations in production
-# (coordinate with deploy process)
 ```
 
 ## Deployment After Merge
 
-Depending on what changed:
+Deploy according to what changed.
 
-| Changed | Action |
-|---------|--------|
-| Backend Python | `deploy` skill → Cloud Run |
-| Database migrations | Run migrations before deploy |
-| Frontend React | `deploy` skill → build + deploy |
-| Mobile JS-only | `ota-update` skill |
-| Mobile native changes | `build-android` / `build-ios` skills |
-| Celery tasks | Restart workers after deploy |
+If `references/stack.md` exists beside this file, read it for stack-specific guidance.

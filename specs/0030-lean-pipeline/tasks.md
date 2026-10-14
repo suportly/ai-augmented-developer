@@ -554,7 +554,7 @@
 
 ### T039 — Stack para os presets (references/stack.md)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011
 - **Files:**
   - create: `presets/django-drf-react/skills/test-driven-development/references/stack.md`
