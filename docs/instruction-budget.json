@@ -152,7 +152,8 @@
     },
     "skill:implement": {
       "baseline": 3552,
-      "teto": 3552
+      "teto": 1500,
+      "reason": "T038: task-context integration moved to references/task-context.md (read only when enabled); loop, gates and prompts kept in the core."
     },
     "skill:plan": {
       "baseline": 1280,

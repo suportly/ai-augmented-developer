@@ -74,3 +74,18 @@ def test_backward_compatibility_called_out() -> None:
     """sc3: without the flags the existing behaviour runs unchanged."""
     text = _text()
     assert "byte-for-byte unchanged" in text or "purely additive" in text
+
+
+def test_default_skill_does_not_carry_integration_section() -> None:
+    """T038: the SKILL.md loaded by default holds only a trigger line; the
+    integration lives in references/task-context.md, cited by path."""
+    from tests.test_review_redispatch_skills import ROOT
+
+    body = (ROOT / SKILL).read_text(encoding="utf-8")
+    assert "references/task-context.md" in body
+    assert "aiadev.task_context" not in body
+    assert "is_stale" not in body
+    assert "Task-context integration" not in body
+    ref = ROOT / "skills/implement/references/task-context.md"
+    assert ref.is_file()
+    assert "aiadev.task_context" in ref.read_text(encoding="utf-8")

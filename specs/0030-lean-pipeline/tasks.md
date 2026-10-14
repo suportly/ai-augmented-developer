@@ -540,7 +540,7 @@
 
 ### T038 — implement em núcleo mais references/task-context.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011, T036, T037
 - **Files:**
   - create: `skills/implement/references/task-context.md`
