@@ -774,7 +774,10 @@ def test_write_baseline_records_every_measurement_as_baseline_and_teto(budget, t
     assert json.loads(text) == {
         "version": 1,
         "unit": UNIT,
-        "entries": {key: {"baseline": n, "teto": n} for key, n in measured.items()},
+        "entries": {
+            key: {**({"origin": n} if key in budget.ORIGIN_KEYS else {}), "baseline": n, "teto": n}
+            for key, n in measured.items()
+        },
     }
     assert budget.check_budget(measured, budget.load_budget(target)) == []
 
@@ -884,8 +887,8 @@ def test_write_baseline_then_check_passes_and_reports_the_blocks(
 
     assert budget.main(["--write-baseline", "--budget", str(target)]) == 0
     entries = json.loads(target.read_text(encoding="utf-8"))["entries"]
-    assert entries["preset:lean:total"] == {"baseline": 6, "teto": 6}
-    assert entries["path:total"] == {"baseline": 7, "teto": 7}
+    assert entries["preset:lean:total"] == {"origin": 6, "baseline": 6, "teto": 6}
+    assert entries["path:total"] == {"origin": 7, "baseline": 7, "teto": 7}
     assert entries["skill:plan"] == {"baseline": 9, "teto": 9}
     assert entries["path:skills/plan/SKILL.md"] == {"baseline": 7, "teto": 7}
     assert entries["preset:django-drf-react:rules"] == {"baseline": 1, "teto": 1}
@@ -986,3 +989,94 @@ def test_incompatible_options_are_a_usage_error(budget, argv):
     with pytest.raises(SystemExit) as excinfo:
         budget.main(argv)
     assert excinfo.value.code == 2
+
+
+# --- the 40% target against the original baseline (T056) --------------------
+
+TARGET_KEYS = ("preset:lean:total", "path:total")
+INFORMATIVE_KEYS = ("preset:django-drf-react:total",)
+
+
+def test_reduction_meets_the_40_percent_target_against_the_origin(budget):
+    """Spec 0030 success criterion #2. ``origin`` is the T009 baseline, kept
+    stable after ``baseline`` is lowered to the post-cut measurement."""
+    data = budget.load_budget(budget.BUDGET_FILE)
+    entries = data["entries"]
+    for key in (*TARGET_KEYS, *INFORMATIVE_KEYS):
+        assert isinstance(entries[key].get("origin"), int), f"{key}: origin missing"
+
+    leftovers = budget.reduction_shortfalls(data, TARGET_KEYS, minimum=0.40)
+    assert not leftovers, "\n".join(leftovers)
+    for key in TARGET_KEYS:
+        entry = entries[key]
+        assert (entry["origin"] - entry["baseline"]) / entry["origin"] >= 0.40
+
+
+def test_reduction_shortfalls_lists_the_leftovers_when_the_cut_is_too_small(budget):
+    data = {
+        "entries": {
+            "preset:lean:total": {"origin": 1000, "baseline": 700, "teto": 700},
+            "path:total": {"origin": 1000, "baseline": 600, "teto": 600},
+        }
+    }
+
+    lines = budget.reduction_shortfalls(data, TARGET_KEYS, minimum=0.40)
+
+    assert lines == [
+        "FAIL preset:lean:total: 700 > desired ceiling 600 "
+        "(origin 1000, -30.0% < -40%; +100 to cut)"
+    ]
+
+
+def test_reduction_shortfalls_requires_an_origin(budget):
+    data = {"entries": {"path:total": {"baseline": 5, "teto": 5}}}
+
+    assert budget.reduction_shortfalls(data, ("path:total",), minimum=0.4) == [
+        "FAIL path:total: no integer 'origin' recorded"
+    ]
+
+
+def test_write_baseline_preserves_an_existing_origin(budget, tmp_path):
+    target = tmp_path / "instruction-budget.json"
+    target.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "unit": UNIT,
+                "entries": {"path:total": {"origin": 900, "baseline": 800, "teto": 700}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    budget.write_baseline(target, {"path:total": 500, "skill:plan": 30}, force=True)
+
+    entries = json.loads(target.read_text(encoding="utf-8"))["entries"]
+    assert entries["path:total"] == {"origin": 900, "baseline": 500, "teto": 500}
+    assert entries["skill:plan"] == {"baseline": 30, "teto": 30}
+
+
+def test_first_write_records_the_origin_of_the_headline_keys(budget, tmp_path):
+    target = tmp_path / "instruction-budget.json"
+
+    budget.write_baseline(
+        target, {"preset:lean:total": 10, "preset:lean:rules": 4, "path:total": 20}
+    )
+
+    entries = json.loads(target.read_text(encoding="utf-8"))["entries"]
+    assert entries["preset:lean:total"] == {"origin": 10, "baseline": 10, "teto": 10}
+    assert entries["path:total"] == {"origin": 20, "baseline": 20, "teto": 20}
+    assert entries["preset:lean:rules"] == {"baseline": 4, "teto": 4}
+
+
+def test_load_budget_rejects_a_non_integer_origin(budget, tmp_path):
+    target = tmp_path / "b.json"
+    target.write_text(
+        json.dumps(
+            {"version": 1, "unit": UNIT, "entries": {"k": {"origin": "9", "baseline": 9, "teto": 9}}}
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(budget.BudgetError, match="k.*origin"):
+        budget.load_budget(target)

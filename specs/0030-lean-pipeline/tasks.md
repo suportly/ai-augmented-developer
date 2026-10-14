@@ -850,7 +850,7 @@
 
 ### T056 — Verificar a meta de 40% e rebaixar o baseline
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T038, T043, T048, T049, T051, T055, T060
 - **Files:**
   - modify: `docs/instruction-budget.json`

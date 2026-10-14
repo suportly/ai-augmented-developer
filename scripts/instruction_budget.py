@@ -68,9 +68,10 @@ and ``OK   budget: ...`` otherwise. ``--write-baseline`` records the current
 measurement with ``teto == baseline`` and refuses to overwrite an existing
 file without ``--force``: the baseline is rewritten only when a spec closes.
 ``--write-baseline --force`` rewrites EVERY entry as baseline == teto ==
-current, discarding any ``reason`` and the previous baseline (the reference
-of the reduction target): verify the reduction BEFORE ``--force``, and
-restore a ``reason`` by hand if one is still needed.
+current, discarding any ``reason`` and the previous baseline. The reference
+of the reduction target survives as ``origin`` (recorded on the first write
+for the three headline totals, preserved afterwards): verify the reduction
+BEFORE ``--force``, and restore a ``reason`` by hand if one is still needed.
 
 Exit codes:
     0 — every preset and the pipeline path measured (and, with ``--check``,
@@ -120,6 +121,13 @@ BUDGET_FILE = ROOT / "docs" / "instruction-budget.json"
 BUDGET_VERSION = 1
 #: Recorded in the budget: figures are only comparable under the same estimator.
 BUDGET_UNIT = "ceil(chars/4)"
+#: Headline keys that record ``origin``: the pre-cut baseline, kept stable
+#: when ``baseline`` is lowered, so the reduction target stays verifiable.
+ORIGIN_KEYS: tuple[str, ...] = (
+    "preset:lean:total",
+    "preset:django-drf-react:total",
+    "path:total",
+)
 
 
 def estimate_tokens(text: str) -> int:
@@ -463,7 +471,32 @@ def load_budget(path: Path) -> dict:
         for field in ("baseline", "teto"):
             if not isinstance(entry.get(field), int):
                 raise BudgetError(f"{where}: entry '{key}': '{field}' must be an integer")
+        if "origin" in entry and not isinstance(entry["origin"], int):
+            raise BudgetError(f"{where}: entry '{key}': 'origin' must be an integer")
     return data
+
+
+def reduction_shortfalls(data: dict, keys: tuple[str, ...] | list[str], minimum: float) -> list[str]:
+    """One ``FAIL`` line per key of *keys* whose ``baseline`` is not at least
+    *minimum* (0.40 = 40%) below its ``origin``; empty when the target holds.
+    The desired ceiling is ``floor(origin * (1 - minimum))``."""
+    lines: list[str] = []
+    for key in keys:
+        entry = data["entries"].get(key, {})
+        origin = entry.get("origin")
+        if not isinstance(origin, int) or isinstance(origin, bool) or origin <= 0:
+            lines.append(f"FAIL {key}: no integer 'origin' recorded")
+            continue
+        ceiling = int(origin * (1 - minimum))
+        current = entry["baseline"]
+        if current > ceiling:
+            change = (current - origin) / origin * 100
+            lines.append(
+                f"FAIL {key}: {current} > desired ceiling {ceiling} "
+                f"(origin {origin}, {change:+.1f}% < -{minimum * 100:.0f}%; "
+                f"+{current - ceiling} to cut)"
+            )
+    return lines
 
 
 def check_budget(measured: dict[str, int], budget: dict) -> list[str]:
@@ -496,7 +529,9 @@ def write_baseline(path: Path, measured: dict[str, int], force: bool = False) ->
     """Record *measured* as the budget: ``baseline == teto == measurement``.
 
     The baseline is the pre-cut reference, so an existing file is never
-    replaced unless *force*. Raises ``BudgetError`` in that case.
+    replaced unless *force*. Raises ``BudgetError`` in that case. An
+    ``origin`` already in the file is preserved; the first write records it
+    (equal to the measurement) for ``ORIGIN_KEYS`` only.
     """
     path = Path(path)
     if path.exists() and not force:
@@ -504,11 +539,22 @@ def write_baseline(path: Path, measured: dict[str, int], force: bool = False) ->
             f"{path.name} already exists; --force replaces it (rewrites every "
             "baseline and teto from the current measurement)"
         )
-    data = {
-        "version": BUDGET_VERSION,
-        "unit": BUDGET_UNIT,
-        "entries": {key: {"baseline": n, "teto": n} for key, n in measured.items()},
-    }
+    previous: dict = {}
+    if path.exists():
+        try:
+            previous = load_budget(path)["entries"]
+        except BudgetError:
+            previous = {}  # unreadable old file: nothing to preserve
+    entries: dict[str, dict] = {}
+    for key, n in measured.items():
+        origin = previous.get(key, {}).get("origin")
+        if origin is None and key in ORIGIN_KEYS:
+            origin = n
+        entries[key] = ({"origin": origin} if origin is not None else {}) | {
+            "baseline": n,
+            "teto": n,
+        }
+    data = {"version": BUDGET_VERSION, "unit": BUDGET_UNIT, "entries": entries}
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
