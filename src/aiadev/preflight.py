@@ -168,6 +168,66 @@ def check(
     return issues
 
 
+# Artifact template each skill produces (``templates/<name>``); other skills
+# produce none and report ``template: null``.
+_SKILL_TEMPLATE = {
+    "specify": "spec-template.md",
+    "plan": "plan-template.md",
+    "tasks": "tasks-template.md",
+}
+
+
+def build_payload(
+    skill: str,
+    feature_dir: Path,
+    issues: list[PreflightIssue],
+    repo_root: Path,
+) -> dict[str, object]:
+    """Structured context for ``aiadev preflight --format json``.
+
+    ``ok`` is true when no issue ``would_abort`` (so ``AIADEV_PREFLIGHT=warn``
+    yields ``ok: true`` with the downgraded issues still listed). Paths are
+    POSIX strings relative to ``repo_root`` when possible.
+    """
+
+    def rel(path: Path) -> str:
+        try:
+            return path.relative_to(repo_root).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    def existing(name: str) -> str | None:
+        path = feature_dir / name
+        return rel(path) if path.is_file() else None
+
+    checklists_dir = feature_dir / "checklists"
+    checklists = (
+        sorted(rel(p) for p in checklists_dir.glob("*.md") if p.is_file())
+        if checklists_dir.is_dir()
+        else []
+    )
+    template_name = _SKILL_TEMPLATE.get(skill)
+    template_path = repo_root / "templates" / template_name if template_name else None
+    return {
+        "skill": skill,
+        "feature": feature_dir.name,
+        "feature_dir": rel(feature_dir),
+        "ok": not any(i.would_abort for i in issues),
+        "issues": [
+            {"message": i.message, "would_abort": i.would_abort} for i in issues
+        ],
+        "docs": {
+            "spec": existing("spec.md"),
+            "plan": existing("plan.md"),
+            "tasks": existing("tasks.md"),
+            "checklists": checklists,
+        },
+        "template": rel(template_path)
+        if template_path is not None and template_path.is_file()
+        else None,
+    }
+
+
 def _should_abort(env: Mapping[str, str] | None) -> bool:
     """Return ``True`` unless ``AIADEV_PREFLIGHT=warn`` (case-insensitive)."""
     if env is None:

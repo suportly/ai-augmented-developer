@@ -344,7 +344,7 @@
 
 ### T024 — Preflight com saída JSON
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/preflight.py`
