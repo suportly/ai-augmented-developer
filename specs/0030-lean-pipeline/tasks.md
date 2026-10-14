@@ -371,7 +371,7 @@
 
 ### T026 — tasks_status: escrita atômica e retorno a pending
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/tasks_status.py`

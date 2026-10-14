@@ -9,14 +9,17 @@ is the right red signal per Article II.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import shutil
+import stat
 
 import pytest
 
 from aiadev.tasks_status import (
     TasksMdError,
     mark_done,
+    mark_pending,
     parse,
     validate,
 )
@@ -152,3 +155,82 @@ def test_mark_done_unknown_task_raises(tmp_path: pathlib.Path) -> None:
 
     with pytest.raises(TasksMdError):
         mark_done(target, "T999")
+
+
+def test_mark_done_failed_replace_leaves_original_intact_and_no_tmp(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D5: a failure during the swap must not truncate ``tasks.md`` nor
+    leave a temp file behind."""
+    target = tmp_path / "tasks.md"
+    shutil.copyfile(FIXTURES / "clean_3_tasks.md", target)
+    original = target.read_bytes()
+
+    def boom(src, dst):  # noqa: ANN001
+        raise OSError("disk gone")
+
+    monkeypatch.setattr("aiadev.tasks_status.os.replace", boom)
+
+    with pytest.raises(OSError):
+        mark_done(target, "T002")
+
+    assert target.read_bytes() == original
+    assert [p.name for p in tmp_path.iterdir()] == ["tasks.md"]
+
+
+def test_mark_done_preserves_file_mode(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / "tasks.md"
+    shutil.copyfile(FIXTURES / "clean_3_tasks.md", target)
+    os.chmod(target, 0o640)
+
+    mark_done(target, "T001")
+
+    assert stat.S_IMODE(target.stat().st_mode) == 0o640
+
+
+def test_mark_pending_reverts_only_target_status_line(
+    tmp_path: pathlib.Path,
+) -> None:
+    target = tmp_path / "tasks.md"
+    shutil.copyfile(FIXTURES / "all_done.md", target)
+    before = target.read_text(encoding="utf-8").splitlines()
+
+    mark_pending(target, "T003")
+
+    after = target.read_text(encoding="utf-8").splitlines()
+    assert len(after) == len(before)
+    changed = [(b, a) for b, a in zip(before, after) if b != a]
+    assert changed == [("- **Status:** done", "- **Status:** pending")]
+    assert [r.status for r in parse(target)] == ["done", "done", "pending"]
+
+
+def test_mark_pending_on_pending_is_noop(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / "tasks.md"
+    shutil.copyfile(FIXTURES / "clean_3_tasks.md", target)
+    original = target.read_bytes()
+
+    mark_pending(target, "T002")
+
+    assert target.read_bytes() == original
+
+
+def test_mark_pending_unknown_task_raises(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / "tasks.md"
+    shutil.copyfile(FIXTURES / "clean_3_tasks.md", target)
+
+    with pytest.raises(TasksMdError):
+        mark_pending(target, "T999")
+
+
+def test_mark_done_and_pending_preserve_crlf(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / "tasks.md"
+    crlf = (FIXTURES / "clean_3_tasks.md").read_bytes().replace(b"\n", b"\r\n")
+    target.write_bytes(crlf)
+
+    mark_done(target, "T002")
+    done = target.read_bytes()
+    assert b"\n" not in done.replace(b"\r\n", b"")
+    assert [r.status for r in parse(target)] == ["pending", "done", "pending"]
+
+    mark_pending(target, "T002")
+    assert target.read_bytes() == crlf
