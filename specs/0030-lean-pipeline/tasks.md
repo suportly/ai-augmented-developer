@@ -277,7 +277,7 @@
 
 ### T019 — task_context reutiliza o parser
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T018
 - **Files:**
   - modify: `src/aiadev/task_context.py`
