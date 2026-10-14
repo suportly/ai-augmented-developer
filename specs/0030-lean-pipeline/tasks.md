@@ -468,7 +468,7 @@
 
 ### T033 — Tier de auto-verificação para prosa
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T032
 - **Files:**
   - modify: `skills/implement/SKILL.md`

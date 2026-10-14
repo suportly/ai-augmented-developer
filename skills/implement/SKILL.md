@@ -59,7 +59,8 @@ The **orchestrator** (the agent following this skill) — not the implementer su
 3. **Treat `in_progress` as `pending`.** It means a previous run crashed before its commit landed; re-dispatch from scratch.
 4. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward conversation history.
 5. **Wait for the return status** (taxonomy below) and act on it.
-6. **Dispatch the single reviewer** only after the implementer reports `DONE`. It receives the diff and the test output and checks spec conformance first, code quality second (prompt below).
+6. **Prose tier: no reviewer.** If every file of the task is prose markdown under `docs/` or root docs (README, CHANGELOG, CONTRIBUTING), run `npx markdownlint-cli2 <files>` and `python3 scripts/validate_skills.py`, record the result in the commit message and do not dispatch a reviewer. Not prose: `docs/instruction-budget.json`, `docs/pipeline-path.yaml` (baselines the budget reads), and anything under `skills/`, `agents/`, `rules/`, `templates/`, `commands/`, `src/`, `tests/`.
+   Otherwise **dispatch the single reviewer** only after the implementer reports `DONE`. It receives the diff and the test output and checks spec conformance first, code quality second (prompt below).
 7. **Close the task, atomically** — one commit carries code, tests and the status flip:
    `aiadev tasks done <TID> --feature <slug> --commit "<TID> <subject>" FILES...`
    It flips `pending` → `done`, stages FILES plus `tasks.md`, commits, and on failure (hook rejection, signing error) rolls the marker back and unstages. It refuses if those paths are already staged. Surface the hook output; never use `--no-verify`.

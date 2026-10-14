@@ -95,3 +95,17 @@ def test_one_reviewer_per_task_and_no_full_branch_review() -> None:
     assert handoffs.index("- analyze") < handoffs.index("- requesting-code-review")
     assert re.search(r"hand off to `analyze`[^.\n]*`requesting-code-review`", text)
     assert "CHANGES_REQUESTED" in text and "ISSUES_FOUND" not in text
+
+
+def test_prose_only_tasks_self_verify_without_reviewer() -> None:
+    """Prose tier: lint + validator, no reviewer dispatch, explicit exclusions."""
+    text = _text()
+    match = re.search(r"^.*[Pp]rose.*$", text, re.M)
+    assert match, "prose self-verification tier missing"
+    para = text[match.start(): match.start() + 900]
+    assert "npx markdownlint-cli2" in para and "scripts/validate_skills.py" in para
+    assert re.search(r"do(?:es)? not dispatch a reviewer|without (?:a )?reviewer", para, re.I)
+    for excluded in ("docs/instruction-budget.json", "docs/pipeline-path.yaml"):
+        assert excluded in para, f"{excluded} must be named as outside the tier"
+    for root in ("skills/", "agents/", "rules/", "templates/", "commands/", "src/", "tests/"):
+        assert root in para, f"{root} must be named as not prose"
