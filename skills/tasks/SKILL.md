@@ -22,11 +22,9 @@ metadata:
 
 Convert a plan into the ordered list of atomic units that `implement` will execute.
 
-**Announce at start:** "Using the tasks skill. One task = one test + one implementation + one commit."
-
 ## Preconditions
 
-- Run pre-flight first: `aiadev preflight tasks --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
+- Run `aiadev preflight tasks --feature <slug>`; abort on non-zero exit unless `AIADEV_PREFLIGHT=warn`.
 - `plan.md` exists with a fully ticked Constitution Check.
 - `templates/tasks-template.md` is available.
 
@@ -37,10 +35,9 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 3. **For every task, fill the block**:
    - `T<NNN>` id, monotonic within the file.
    - Short title that fits in a commit message.
-   - `Status: pending`.
-   - `Depends on:` list of task ids or `—`.
+   - `Status: pending`; `Depends on:` task ids or `—`.
    - `Files:` create / modify / test lists. Exact paths.
-   - `Spec scenarios:` the spec scenarios this task exercises.
+   - `Spec scenarios:` canonical notation from the template.
    - `Acceptance:` the checklist every task ends with (test failed, then passed, no regression, commit).
 4. **Size rule.** A task should be doable in 2-15 minutes. If bigger, split. If smaller, fold.
 5. **Parallelization hints.** Mark groups of tasks that touch disjoint files in the "Parallel group" section. Everything else is serial.
@@ -49,12 +46,12 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 
 ## Rules
 
-- Every spec acceptance scenario must appear in at least one task. Grep to verify.
-- No task without a test step.
+- Every spec scenario appears in at least one task: run `aiadev preflight implement --feature <slug>` and fix the scenario/task coverage errors it reports.
+- Quote data-model constraints (size, enum values, nullability) verbatim in the task that touches them.
 - Task dependencies form a DAG; `implement` will refuse a cycle.
-- Never put time estimates in the task. Estimates drift; the acceptance checklist is what matters.
-- **Heading shape is part of the contract.** Tasks are `### T<NNN> — Title` (H3). If you want to group tasks visually by phase, use a bold paragraph or a bullet list — never a heading that demotes the task to `####`. Downstream consumers (the VSCode extension parser, `implement`) tolerate H3-H6 today, but H3 stays the canonical form.
-- **Status vocabulary is fixed.** Use exactly one of `pending`, `in_progress`, `blocked`, `done`. Synonyms like `completed`, `todo`, `wip` are tolerated by the VSCode parser as fallback, but `implement` writes `done` and downstream automation may rely on it. Don't invent new values.
+- No task without a test step; no time estimates.
+- **Heading shape is part of the contract.** Tasks are `### T<NNN> — Title` (H3). If you want to group tasks visually by phase, use a bold paragraph or a bullet list — never a heading that demotes the task to `####`. H3 stays canonical.
+- **Status vocabulary is fixed.** Use exactly one of `pending`, `in_progress`, `blocked`, `done`. Don't invent synonyms.
 
 ## Hand-off
 

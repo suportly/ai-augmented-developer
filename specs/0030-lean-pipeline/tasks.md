@@ -303,7 +303,7 @@
 
 ### T021 — Notação canônica em template e skill tasks
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T018
 - **Files:**
   - modify: `templates/tasks-template.md`
