@@ -21,7 +21,7 @@ Invoke the appropriate skill **before any action that writes code or state**. Cl
 | Hit a bug or test failure | `systematic-debugging` |
 | Ready to open a PR | `requesting-code-review` |
 | Code review approved | `finishing-a-branch` |
-| UI or component work | `frontend-design` |
+| UI or component work (preset `django-drf-react`) | `frontend-design` |
 
 Cross-cutting rules live under [`rules/`](./rules) and install into every
 consumer project (`.claude/rules/<name>.md`). When you add one, drop the

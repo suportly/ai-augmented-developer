@@ -589,7 +589,7 @@
 
 ### T041 — frontend-design vai para o preset
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T039
 - **Files:**
   - modify: `presets/django-drf-react/preset.yaml`

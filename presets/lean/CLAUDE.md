@@ -21,8 +21,7 @@ Use this preset when:
 once per project, or whenever the product context needs updating)
 
 Quality skills available: `test-driven-development`, `systematic-debugging`,
-`requesting-code-review`, `finishing-a-branch`, `analyze`, `checklist`,
-`frontend-design` (when applicable).
+`requesting-code-review`, `finishing-a-branch`, `analyze`, `checklist`.
 
 ## Project layout
 
