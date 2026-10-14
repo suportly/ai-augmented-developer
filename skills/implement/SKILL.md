@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Execute an approved plan + tasks list by dispatching one fresh subagent per task and applying two-stage review (spec compliance, then code quality) before moving on.
+description: Execute an approved plan + tasks list by dispatching one fresh subagent per task and applying a single reviewer per task (spec compliance first, then code quality) before moving on.
 metadata:
   aiadev:
     version: 0.2.0
@@ -16,6 +16,7 @@ metadata:
     - constitution
     - test-driven-development
     handoffs:
+    - analyze
     - requesting-code-review
     - finishing-a-branch
     - systematic-debugging
@@ -25,13 +26,13 @@ metadata:
 
 Take a `plan.md` + `tasks.md` that have already been specified, clarified and approved, and turn them into code through disciplined subagent execution.
 
-**Announce at start:** "Using the implement skill. One subagent per task with two-stage review."
+**Announce at start:** "Using the implement skill. One subagent per task, one reviewer per task."
 
 This skill replaces the previous `speckit` and `subagent-driven-development` skills. It does not generate specs or plans — use `specify` → `clarify` → `plan` → `tasks` first.
 
 ## When to use
 
-Run pre-flight first: `aiadev preflight implement --feature <slug>`. Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
+Pre-flight is the first call of the loop (below). Abort on non-zero exit unless `AIADEV_PREFLIGHT=warn` is set.
 
 Invoke when the repository already contains:
 
@@ -46,30 +47,26 @@ If any of those are missing, stop and invoke the appropriate upstream skill inst
 For each task in `tasks.md`, in declared order:
 
 ```
-read row  →  skip-if-done  →  dispatch implementer  →  spec reviewer  →
-code quality reviewer  →  flip status & commit
+read row  →  skip-if-done  →  dispatch implementer  →  single reviewer  →
+aiadev tasks done
 ```
 
 The **orchestrator** (the agent following this skill) — not the implementer subagent — owns every step that reads or mutates `tasks.md`. The subagent's "Files to create or modify" list never includes `tasks.md`.
 
-1. **Read the row.** Apply the parse/validate rules implemented in `aiadev.tasks_status` (the helper module that owns the `**Status:**` line grammar) to `specs/<branch>/tasks.md` at iteration start — the orchestrator may invoke it via `python -c` or replicate the rules inline using `Read`/`Bash` tools. On any malformed status line, value outside `pending|in_progress|blocked|done`, or `done`-prefix violation, halt the loop with a non-zero exit and surface the error verbatim — do not auto-repair. Examples: `ERROR: tasks.md malformed at T003 (line 47): missing or unparseable **Status:** line. Fix manually before resuming.` or `ERROR: tasks.md inconsistency — T003 is done but T002 is pending. Fix tasks.md manually before resuming.`
-2. **Skip if already done.** If the current row's `**Status:**` is `done`, advance to the next task with no subagent dispatch — this is the resume guard.
-3. **Treat `in_progress` as `pending`.** A row found in `**Status:** in_progress` at iteration start means a previous run crashed mid-iteration before its commit landed; there is nothing on disk worth preserving. Re-dispatch from scratch.
-4. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward full conversation history.
-5. **Wait for the return status** (see the taxonomy below) and act on it.
-6. **Dispatch spec reviewer** only after the implementer reports `DONE`.
-7. **Dispatch code quality reviewer** only after the spec reviewer returns `APPROVED`.
-8. **Flip status and commit, atomically.** This is one git commit per task — the marker rides inside it:
-   - (a) Rewrite the active row's `**Status:** pending` line to `**Status:** done` — invoke `aiadev.tasks_status.mark_done(tasks_md_path, task_id)` (e.g. via `python -c`) or apply the equivalent `Edit` directly. Only the targeted `### TNNN` block changes; surrounding bytes stay untouched.
-   - (b) `git add` the task's code/test files **and** `tasks.md` together.
-   - (c) `git commit -m "<task id> <subject>"`.
-   - (d) On commit failure (hook rejection, signing error, etc.): roll back the marker before re-raising — `git restore --staged tasks.md && git checkout -- tasks.md` — then surface the underlying hook output to the user. Never use `--no-verify` to bypass.
-9. If any step returns `ISSUES` or `BLOCKED`, fix and re-dispatch. The row stays `**Status:** pending` until step 8 lands a green commit; never premature-mark on retry.
+0. **First call.** Issue in parallel, in one message: `aiadev preflight implement --feature <slug> --format json` and `Read` of `tasks.md`, `plan.md`, `spec.md`. Take the doc paths from the JSON `docs` and the test command from `test_command`; do not rediscover them. `ok: false` aborts (see above).
+1. **Read the row.** Apply the parse/validate rules of `aiadev.tasks_status` (owner of the `**Status:**` grammar) to `tasks.md`. On any malformed status line, value outside `pending|in_progress|blocked|done`, or `done`-prefix violation, halt with a non-zero exit and surface the error verbatim — do not auto-repair. Example: `ERROR: tasks.md inconsistency — T003 is done but T002 is pending. Fix tasks.md manually before resuming.`
+2. **Skip if already done.** A row with `**Status:** done` advances with no dispatch — the resume guard.
+3. **Treat `in_progress` as `pending`.** It means a previous run crashed before its commit landed; re-dispatch from scratch.
+4. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward conversation history.
+5. **Wait for the return status** (taxonomy below) and act on it.
+6. **Dispatch the single reviewer** only after the implementer reports `DONE`. It receives the diff and the test output and checks spec conformance first, code quality second (prompt below).
+7. **Close the task, atomically** — one commit carries code, tests and the status flip:
+   `aiadev tasks done <TID> --feature <slug> --commit "<TID> <subject>" FILES...`
+   It flips `pending` → `done`, stages FILES plus `tasks.md`, commits, and on failure (hook rejection, signing error) rolls the marker back and unstages. It refuses if those paths are already staged. Surface the hook output; never use `--no-verify`.
+   Fallback if the command is unavailable: rewrite the row with `aiadev.tasks_status.mark_done`, `git add` the files and `tasks.md` together, commit, and on commit failure run `git restore --staged tasks.md && git checkout -- tasks.md`.
+8. If any step returns `ISSUES` or `BLOCKED`, fix and re-dispatch. The row stays `pending` until step 7 lands a green commit.
 
-After the last task:
-
-- Dispatch a final full-branch review.
-- Hand off to `finishing-a-branch` to open the PR.
+After the last task, hand off to `analyze` (drift check) and then `requesting-code-review`, which owns the branch-level review. `implement` does not review the whole branch.
 
 ## Task-context integration (opt-in)
 
@@ -140,8 +137,8 @@ and step 4 (Dispatch implementer):
    - BLOCKED
    ```
 
-The remaining loop steps (5 onwards: status handling, spec reviewer,
-code quality reviewer, status flip and commit) are unchanged.
+The remaining loop steps (5 onwards: status handling, reviewer,
+`aiadev tasks done`) are unchanged.
 
 ## Model selection
 
@@ -149,7 +146,7 @@ code quality reviewer, status flip and commit) are unchanged.
 |---|---|
 | Mechanical edits to 1-2 files with an unambiguous spec | Haiku |
 | Integration work, judgment calls, new modules | Sonnet |
-| Architectural decisions, cross-cutting refactors, final review | Opus |
+| Architectural decisions, cross-cutting refactors, review | Opus |
 
 ## Implementer prompt
 
@@ -184,50 +181,28 @@ Project-specific conventions (stack, patterns, commit style) belong in the activ
 
 ## Status handling
 
-- **DONE** — advance to spec review.
-- **DONE_WITH_CONCERNS** — decide: does the concern block the spec? If yes, fix before review. If no (quality only), pass to the code quality reviewer to judge.
+- **DONE** — advance to review.
+- **DONE_WITH_CONCERNS** — decide: does the concern block the spec? If yes, fix before review. If no (quality only), pass to the reviewer to judge.
 - **NEEDS_CONTEXT** — provide exactly what was asked for and re-dispatch. Never guess.
 - **BLOCKED** — find the root cause before retrying. Common causes: an unimplemented upstream task (fix ordering in `tasks.md`), a design conflict (escalate to the user), or an environment issue (invoke `systematic-debugging`).
 
-## Spec reviewer prompt
+## Reviewer prompt
 
 ```markdown
-You are reviewing whether an implementation matches its spec.
+You are the single reviewer for one task. Two passes, in order.
 
-Spec excerpt: <the relevant acceptance scenarios>
-Task: <description>
-Diff or files changed: <produce from git>
+Inputs: spec acceptance scenarios, task description, diff (from git),
+test output, active preset `CLAUDE.md`.
 
-Verify:
-1. Every acceptance scenario in the spec is exercised by at least one test.
-2. API shape (endpoints, payloads, status codes) matches the spec.
-3. Data model (fields, types, constraints) matches the spec.
-4. Error paths described in the spec are handled.
+Pass 1 — conformance. Every acceptance scenario is exercised by a test;
+API shape, data model and error paths match the spec.
+If pass 1 finds violations, stop: report them and skip pass 2.
 
-Return exactly one status as the first line:
-- APPROVED
-- ISSUES_FOUND — followed by a list of specific violations with file:line
-```
+Pass 2 — quality. Preset patterns followed; no security issues
+(injection, IDOR, XSS, secrets); no performance traps; explicit error
+handling; no gratuitous abstraction; tests cover happy path and a failure.
 
-## Code quality reviewer prompt
-
-```markdown
-You are reviewing code quality after spec compliance was already approved.
-
-Diff or files changed: <from git>
-Active preset context: <read CLAUDE.md>
-
-Verify:
-1. Follows the patterns declared in the active preset.
-2. No security issues (injection, IDOR, XSS, secret leakage).
-3. No performance traps (N+1, missing indexes, unbounded loops).
-4. Error handling is explicit; no silent catches.
-5. No gratuitous abstraction; YAGNI respected.
-6. Tests cover the happy path and at least one failure mode.
-
-Return exactly one status as the first line:
-- APPROVED
-- ISSUES — followed by a list with specific fixes suggested
+First line: APPROVED, or CHANGES_REQUESTED followed by file:line fixes.
 ```
 
 ## Reviewer re-dispatch gate
@@ -240,7 +215,7 @@ contract lives in `agents/<reviewer>.md` under the
 orchestrator-side counterpart — detecting violations and re-dispatching
 — lives HERE.
 
-For every reviewer dispatched in steps 6 and 7 of the loop:
+For the reviewer dispatched in step 6 of the loop:
 
 1. **Read the verdict line.** If the first line is `APPROVED`, parse
    the rest of the response.
@@ -283,8 +258,8 @@ For every reviewer dispatched in steps 6 and 7 of the loop:
 
 ## Rules that do not bend
 
-- Never skip either review. Quality comes from the reviews, not from the implementer.
-- Never start the code quality review before spec compliance is `APPROVED`.
+- Never skip the per-task review. Quality comes from the review, not from the implementer.
+- Never run the quality pass while conformance has open violations.
 - Never dispatch implementation subagents in parallel for tasks that touch the same files. Serial is safer and the cost is negligible compared to a botched merge.
 - Never forward the full session transcript to a subagent. Craft a focused prompt each time — the subagent should be able to succeed with no other context.
 - One task per commit; the commit message references the task id.

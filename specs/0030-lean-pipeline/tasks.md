@@ -440,7 +440,7 @@
 
 ### T031 — implement: preflight JSON, tasks done e revisão única
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009, T024, T027, T030
 - **Files:**
   - modify: `skills/implement/SKILL.md`

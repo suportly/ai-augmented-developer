@@ -69,3 +69,29 @@ def test_orchestrator_owns_tasks_md_not_the_implementer() -> None:
     assert re.search(
         r"orchestrator[\s\S]{0,300}tasks\.md|tasks\.md[\s\S]{0,300}orchestrator", text, re.I
     ), "the orchestrator must be named as the owner of tasks.md"
+
+
+def test_loop_emits_preflight_json_and_parallel_reads() -> None:
+    """First loop call: preflight as JSON plus the doc reads, in parallel."""
+    text = _text()
+    assert re.search(r"preflight implement[^\n]*--format json", text)
+    assert re.search(r"parallel", text, re.I), "reads must be issued in parallel"
+    assert "test_command" in text and "docs" in text, "JSON fields replace rediscovery"
+
+
+def test_loop_closes_task_with_tasks_done_and_manual_fallback() -> None:
+    text = _text()
+    assert re.search(r"aiadev tasks done \S+[^\n]*--commit", text)
+    assert re.search(r"fallback", text, re.I)
+    assert "git restore --staged tasks.md" in text, "manual path stays as fallback"
+
+
+def test_one_reviewer_per_task_and_no_full_branch_review() -> None:
+    text = _text()
+    assert re.search(r"single reviewer|one reviewer|reviewer único", text, re.I)
+    assert not re.search(r"full-branch review", text, re.I)
+    front = text.split("---", 2)[1]
+    handoffs = front.split("handoffs:")[1]
+    assert handoffs.index("- analyze") < handoffs.index("- requesting-code-review")
+    assert re.search(r"hand off to `analyze`[^.\n]*`requesting-code-review`", text)
+    assert "CHANGES_REQUESTED" in text and "ISSUES_FOUND" not in text
