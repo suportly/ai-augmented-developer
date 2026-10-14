@@ -781,7 +781,7 @@ def test_framework_reference_is_copied_verbatim(tmp_path: pathlib.Path) -> None:
 # What a "new version" of the preset drops, as (preset-relative source,
 # project-relative installed path): a rule, and a skill's references/ file
 # while the skill itself stays.
-_RULE = ("rules/terse-mode.md", ".claude/rules/terse-mode.md")
+_RULE = ("rules/sample-rule.md", ".claude/rules/sample-rule.md")
 _REFERENCE = (_REFERENCE_REL, ".claude/skills/hello-world/references/stack.md")
 
 
@@ -789,7 +789,7 @@ def _installed_v1(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
     """Install the mini preset plus a rule; return ``(preset, project)``."""
     preset = tmp_path / "preset"
     shutil.copytree(FIXTURES, preset)
-    _write(preset / _RULE[0], "# Terse mode\n")
+    _write(preset / _RULE[0], "# Sample rule\n")
     project = tmp_path / "project"
     install(preset, project, VARIABLES, now="2026-04-14T12:00:00Z")
     return preset, project
@@ -997,7 +997,7 @@ def _rich_preset(tmp_path: pathlib.Path) -> pathlib.Path:
     shutil.copytree(FIXTURES, preset)
     _write(preset / "constitution.md", "# Constitution\n")
     _write(preset / "mcps.yaml", "servers:\n  demo:\n    command: npx\n    args: [demo]\n")
-    _write(preset / "rules" / "terse-mode.md", "# Terse mode\n")
+    _write(preset / "rules" / "sample-rule.md", "# Sample rule\n")
     _write(preset / "commands" / "ship.md", "---\ndescription: Ship.\n---\nShip $ARGUMENTS\n")
     _write(preset / "agents" / "reviewer.md", "# Reviewer\n")
     return preset

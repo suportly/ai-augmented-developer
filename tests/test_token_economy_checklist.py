@@ -27,8 +27,8 @@ def test_skill_has_token_economy_items() -> None:
     lower = body.lower()
     assert "truncat" in lower  # non-truncated logs
     assert "compress" in lower  # compression opportunities
-    # references terse-mode instead of duplicating it
-    assert "terse-mode" in lower or "terse mode" in lower
+    # the removed reviewer-output rule is no longer referenced (0030)
+    assert "terse" not in lower
 
 
 # --- T002 -------------------------------------------------------------------

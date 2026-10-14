@@ -739,7 +739,7 @@
 
 ### T051 — terse-mode: referências restantes
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T050
 - **Files:**
   - modify: `templates/checklist-template.md`

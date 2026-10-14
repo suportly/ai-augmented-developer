@@ -1,10 +1,4 @@
-"""T019 — aiadev sync ships the terse-mode rule and the help skill.
-
-``framework_artifacts.iter_framework_artifacts`` auto-discovers any
-``rules/*.md`` and ``skills/*/SKILL.md`` under the framework root, so no
-code change is needed; this test is the evidence that the discovery
-covers the new assets.
-"""
+"""T019 — aiadev sync discovers rules and skills; every artifact path resolves."""
 
 from pathlib import Path
 

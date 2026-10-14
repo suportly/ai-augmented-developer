@@ -16,6 +16,4 @@ def test_credits_names_juliusbrussee_caveman_with_url_and_license():
     assert "license" in body.lower(), (
         "caveman credit block must mention the upstream license"
     )
-    assert "terse output" in body.lower() or "terse-output" in body.lower(), (
-        "credit block must name the adapted concept (terse output contract)"
-    )
+    assert "0030" in body, "credit block must note the removal in spec 0030"

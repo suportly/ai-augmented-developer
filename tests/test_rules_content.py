@@ -172,8 +172,3 @@ class TestLeanRulesT043:
         lines = [ln for ln in text.splitlines() if ln.strip()]
         assert len(lines) <= 2, f"slash-commands.md has {len(lines)} non-blank lines"
         assert "/aia:" in text, "namespaced form must still be stated"
-
-
-def test_inventory_has_no_terse_mode() -> None:
-    assert "terse-mode.md" not in EXPECTED_INVENTORY
-    assert not (RULES_DIR / "terse-mode.md").exists()

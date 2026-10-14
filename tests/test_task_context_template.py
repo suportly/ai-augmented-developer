@@ -136,7 +136,7 @@ def test_template_ends_with_trailing_newline(
 
 
 def test_template_has_no_emojis(framework_root: pathlib.Path) -> None:
-    """Project house style: templates carry no emojis (terse-mode glyphs
+    """Project house style: templates carry no emojis (compressed-output glyphs
     are runtime-only)."""
     template = _read(framework_root)
     # Match anything in the common emoji blocks. Keeps the assertion narrow

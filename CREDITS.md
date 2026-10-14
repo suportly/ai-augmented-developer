@@ -10,7 +10,7 @@ The original source for the "skill-first, opinionated workflow" structure. Early
 
 ### [juliusbrussee/caveman](https://github.com/JuliusBrussee/caveman)
 
-The terse-output contract for reviewer subagents (feature `0009-token-economy-terse-mode`) is adapted from caveman's one-line-per-finding output style — originally a Claude Code skill that compresses model output by roughly 22–87 % (MIT license at time of adaptation). We do not bundle caveman itself; we borrow the shape of its reviewer output and codify it in `schemas/terse-output.schema.json`. The meme/caveman-voice aesthetic and the companion `cavemem` / `cavekit` tools are out of scope for this framework.
+The terse-output contract for reviewer subagents (feature `0009`) was adapted from caveman's one-line-per-finding output style — originally a Claude Code skill that compresses model output by roughly 22–87 % (MIT license at time of adaptation). We never bundled caveman itself. The contract was removed in spec 0030 (lean pipeline) for lack of evidence; the credit stays for the lineage. The meme/caveman-voice aesthetic and the companion `cavemem` / `cavekit` tools are out of scope for this framework.
 
 ### [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify)
 

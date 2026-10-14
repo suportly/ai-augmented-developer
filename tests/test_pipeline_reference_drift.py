@@ -92,7 +92,7 @@ def test_reference_is_clean_regeneration(tmp_path):
 
 
 def test_reference_line_budget():
-    """Terse-mode help budget: ≤ 24 non-empty lines."""
+    """Help budget: ≤ 24 non-empty lines."""
     body = REFERENCE.read_text(encoding="utf-8")
     non_empty = [ln for ln in body.splitlines() if ln.strip()]
     assert len(non_empty) <= 24, (
