@@ -2,7 +2,7 @@
 
 Test patterns and run commands per stack for the TDD cycle.
 
-### Django Backend (pytest + factory_boy)
+## Django Backend (pytest + factory_boy)
 
 ```python
 # Location: backend/<app>/tests/test_<module>.py
@@ -38,7 +38,7 @@ def test_my_authenticated_endpoint(api_client, user_factory):
 cd backend && pytest tests/<app>/test_<module>.py::test_my_behavior -v
 ```
 
-### Celery Tasks (synchronous execution in tests)
+## Celery Tasks (synchronous execution in tests)
 
 ```python
 @pytest.mark.django_db
@@ -53,7 +53,7 @@ def test_my_task_processes_demand(db):
     assert demand.status == 'completed'
 ```
 
-### AI Service (LiteLLM mock)
+## AI Service (LiteLLM mock)
 
 ```python
 from unittest.mock import patch, MagicMock
@@ -71,7 +71,7 @@ def test_ai_service_generates_content():
     assert result['content'] == 'Content'
 ```
 
-### React Frontend (Jest + React Testing Library)
+## React Frontend (Jest + React Testing Library)
 
 ```typescript
 // Location: frontend/src/__tests__/<Component>.test.tsx
@@ -101,7 +101,7 @@ test('should display data after loading', async () => {
 cd frontend && npx jest --no-coverage src/__tests__/MyComponent.test.tsx
 ```
 
-### Mobile React Native (RNTL)
+## Mobile React Native (RNTL)
 
 ```typescript
 // Location: <mobile-dir>/src/__tests__/<Screen>.test.tsx
