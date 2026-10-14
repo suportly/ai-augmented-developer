@@ -162,6 +162,11 @@ def check(
         if violation is not None:
             issues.append(PreflightIssue(violation))
 
+    if skill == "implement" and spec_path.is_file():
+        tasks_path = feature_dir / "tasks.md"
+        if tasks_path.is_file():
+            issues.extend(_coverage_issues(feature_dir, spec_path, tasks_path, repo_root))
+
     if not _should_abort(env):
         issues = [PreflightIssue(i.message, would_abort=False) for i in issues]
 
@@ -247,6 +252,38 @@ def _detect_test_command(repo_root: Path) -> str | None:
     return None
 
 
+def _coverage_issues(
+    feature_dir: Path, spec_path: Path, tasks_path: Path, repo_root: Path | None
+) -> list[PreflightIssue]:
+    """Scenario-to-task coverage as preflight issues (D4); never raises."""
+    from . import spec_coverage
+
+    exceptions_path = (repo_root or Path.cwd()) / "docs" / "coverage-exceptions.yaml"
+    try:
+        exceptions = spec_coverage.load_exceptions(exceptions_path)
+    except (OSError, ValueError) as exc:
+        return [PreflightIssue(f"pre-flight: cannot read coverage-exceptions.yaml — {exc}")]
+    if feature_dir.name in exceptions:
+        return []
+    try:
+        found = spec_coverage.check(spec_path, tasks_path)
+    except (OSError, ValueError) as exc:
+        return [PreflightIssue(f"pre-flight: cannot check scenario coverage in tasks.md — {exc}")]
+    out: list[PreflightIssue] = []
+    for item in found:
+        if item.kind == "uncovered_scenario":
+            text = (
+                f"scenario {item.ref} is not covered by any task — "
+                "add it to a task's Spec scenarios"
+            )
+        elif item.kind == "orphan_task":
+            text = f"{item.ref} cites no scenario, story or success criterion"
+        else:
+            text = item.message
+        out.append(PreflightIssue(f"pre-flight: {text}"))
+    return out
+
+
 def _should_abort(env: Mapping[str, str] | None) -> bool:
     """Return ``True`` unless ``AIADEV_PREFLIGHT=warn`` (case-insensitive)."""
     if env is None:
@@ -280,7 +317,9 @@ def _git_current_branch() -> str:
 
 
 def _count_needs_clarification(text: str) -> int:
-    return text.count("[NEEDS CLARIFICATION")
+    from .pipeline_state import count_needs_clarification
+
+    return count_needs_clarification(text)
 
 
 def _missing_anchors(text: str, anchors: tuple[str, ...]) -> list[str]:

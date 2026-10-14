@@ -242,3 +242,31 @@ def _unknown(task_id: str, ref: str) -> CoverageIssue:
     return CoverageIssue(
         "unknown_reference", ref, f"{task_id} cites {ref}, which is not in the spec", task_id
     )
+
+
+def load_exceptions(path: Path) -> dict[str, str]:
+    """Read ``coverage-exceptions.yaml`` (feature -> reason); missing file -> ``{}``.
+
+    The file belongs to this repository (``docs/``); a consumer project has
+    none, so the coverage gate applies to all of its features.
+
+    Raises ``ValueError`` when the file is not a mapping or a reason is not a
+    non-empty string.
+    """
+    path = Path(path)
+    if not path.is_file():
+        return {}
+    import yaml  # local import keeps the module import-cheap
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{path.name}: invalid YAML ({exc})") from exc
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path.name}: expected a mapping of feature -> reason")
+    for feature, reason in data.items():
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(f"{path.name}: {feature!r} needs a non-empty reason")
+    return {str(k): v for k, v in data.items()}

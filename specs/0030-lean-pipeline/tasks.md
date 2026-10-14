@@ -317,7 +317,7 @@
 
 ### T022 — Preflight implement: cobertura como erro
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T018, T020
 - **Files:**
   - modify: `src/aiadev/preflight.py`

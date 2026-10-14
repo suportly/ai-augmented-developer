@@ -144,7 +144,7 @@ def test_story_cited_alone_then_with_scenario_stays_whole() -> None:
 
 from pathlib import Path  # noqa: E402
 
-from aiadev.spec_coverage import check, spec_scenarios  # noqa: E402
+from aiadev.spec_coverage import check, load_exceptions, spec_scenarios  # noqa: E402
 
 _SPEC = """# Spec
 
@@ -268,10 +268,7 @@ _EXCEPTIONS_FILE = _ROOT / "docs" / "coverage-exceptions.yaml"
 
 
 def _load_exceptions(path: Path = _EXCEPTIONS_FILE) -> dict[str, str]:
-    # T022 move este loader para spec_coverage.py (o preflight o reutiliza).
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    assert isinstance(data, dict), "coverage-exceptions.yaml deve ser um mapa"
-    return {str(k): str(v or "") for k, v in data.items()}
+    return load_exceptions(path)
 
 
 def _features() -> list[Path]:
@@ -315,5 +312,5 @@ def test_no_stale_exceptions() -> None:
 def test_exception_loader_rejects_non_mapping(tmp_path: Path) -> None:
     bad = tmp_path / "x.yaml"
     bad.write_text("- a\n- b\n", encoding="utf-8")
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         _load_exceptions(bad)
