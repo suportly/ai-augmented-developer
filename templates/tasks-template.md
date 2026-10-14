@@ -9,9 +9,8 @@
 
 ## How to read this file
 
-- Tasks are ordered. `implement` runs them top-to-bottom.
-- One task = one commit. The commit message starts with the task id.
-- `Status` is one of: `pending`, `in_progress`, `blocked`, `done`. Owned by `implement`; do not edit by hand.
+- Tasks run top-to-bottom, one commit each, message starting with the task id.
+- `Status` (`pending`, `in_progress`, `blocked`, `done`) is owned by `implement`.
 
 ## Task list
 
@@ -30,7 +29,6 @@
   - [ ] No other existing test regresses.
   - [ ] Commit message: `feat({{AREA}}): T001 {{SHORT_TITLE}}`.
 - **Notes:**
-  <!-- anything the implementer should know but isn't obvious from the files -->
 
 ### T002 — {{SHORT_TITLE}}
 
@@ -45,15 +43,11 @@
 
 ## Parallelization hints
 
-- Parallel group A: T00X, T00Y
-- Serial: everything else
+- Parallel group A: T00X, T00Y; the rest serial
 
 ## Post-task checklist
 
-After every task:
-
-- [ ] Commit message references the task id.
-- [ ] Status in this file updated.
+After every task: commit references the task id; status updated.
 
 After all tasks:
 

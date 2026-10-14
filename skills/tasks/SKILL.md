@@ -26,7 +26,6 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 
 - Run `aiadev preflight tasks --feature <slug>`; abort on non-zero exit unless `AIADEV_PREFLIGHT=warn`.
 - `plan.md` exists with a fully ticked Constitution Check.
-- `templates/tasks-template.md` is available.
 
 ## Loop
 
@@ -40,9 +39,9 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
    - `Spec scenarios:` canonical notation from the template.
    - `Acceptance:` the checklist every task ends with (test failed, then passed, no regression, commit).
 4. **Size rule.** A task should be doable in 2-15 minutes. If bigger, split. If smaller, fold.
-5. **Parallelization hints.** Mark groups of tasks that touch disjoint files in the "Parallel group" section. Everything else is serial.
+5. **Parallelization hints.** Group tasks touching disjoint files under "Parallel group"; the rest is serial.
 6. **Post-task checklist.** Fill `{{TEST_COMMAND}}` from the active preset.
-7. **Dispatch review.** If a task reviewer agent exists, use it; otherwise have the user read the tasks list.
+7. **Dispatch review** with a task reviewer agent if one exists, else the user reads the list.
 
 ## Rules
 
@@ -50,10 +49,9 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 - Quote data-model constraints (size, enum values, nullability) verbatim in the task that touches them.
 - Task dependencies form a DAG; `implement` will refuse a cycle.
 - No task without a test step; no time estimates.
-- Tasks are `### T<NNN> — Title` (H3); group by phase with a bold paragraph or list, never a deeper heading.
-- Status is exactly one of `pending`, `in_progress`, `blocked`, `done`.
+- Tasks are `### T<NNN> — Title` (H3); group by phase with a bold paragraph, never a deeper heading.
+- Status is one of `pending`, `in_progress`, `blocked`, `done`.
 
 ## Hand-off
 
-- Tasks written and reviewed → invoke `implement`.
-- Drift suspected between spec / plan / tasks → invoke `analyze` before implementing.
+- Reviewed → `implement`; drift suspected → `analyze` first.

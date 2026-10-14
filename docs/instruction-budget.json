@@ -4,11 +4,13 @@
   "entries": {
     "preset:lean:total": {
       "baseline": 5115,
-      "teto": 5115
+      "teto": 2921,
+      "reason": "T060"
     },
     "preset:lean:agent_file": {
       "baseline": 509,
-      "teto": 509
+      "teto": 504,
+      "reason": "T060"
     },
     "preset:lean:wrapper": {
       "baseline": 28,
@@ -16,15 +18,18 @@
     },
     "preset:lean:rules": {
       "baseline": 3195,
-      "teto": 3195
+      "teto": 1250,
+      "reason": "T060"
     },
     "preset:lean:skills": {
       "baseline": 744,
-      "teto": 744
+      "teto": 566,
+      "reason": "T060"
     },
     "preset:lean:commands": {
       "baseline": 495,
-      "teto": 495
+      "teto": 429,
+      "reason": "T060"
     },
     "preset:lean:agents": {
       "baseline": 144,
@@ -32,11 +37,13 @@
     },
     "preset:django-drf-react:total": {
       "baseline": 5725,
-      "teto": 5725
+      "teto": 3621,
+      "reason": "T060"
     },
     "preset:django-drf-react:agent_file": {
       "baseline": 875,
-      "teto": 875
+      "teto": 866,
+      "reason": "T060"
     },
     "preset:django-drf-react:wrapper": {
       "baseline": 28,
@@ -44,15 +51,18 @@
     },
     "preset:django-drf-react:rules": {
       "baseline": 3195,
-      "teto": 3195
+      "teto": 1250,
+      "reason": "T060"
     },
     "preset:django-drf-react:skills": {
       "baseline": 988,
-      "teto": 988
+      "teto": 873,
+      "reason": "T060"
     },
     "preset:django-drf-react:commands": {
       "baseline": 495,
-      "teto": 495
+      "teto": 460,
+      "reason": "T060"
     },
     "preset:django-drf-react:agents": {
       "baseline": 144,
@@ -60,53 +70,63 @@
     },
     "path:total": {
       "baseline": 21717,
-      "teto": 21717
+      "teto": 12715,
+      "reason": "T060: teto = valor medido (Art. IV e Rationale-pointer repostos)"
     },
     "path:skills/specify/SKILL.md": {
       "baseline": 1349,
-      "teto": 1349
+      "teto": 1180,
+      "reason": "T060"
     },
     "path:templates/spec-template.md": {
       "baseline": 978,
-      "teto": 978
+      "teto": 549,
+      "reason": "T060"
     },
     "path:agents/spec-document-reviewer.md": {
       "baseline": 1273,
-      "teto": 1273
+      "teto": 718,
+      "reason": "T060"
     },
     "path:skills/clarify/SKILL.md": {
       "baseline": 708,
-      "teto": 708
+      "teto": 606,
+      "reason": "T060"
     },
     "path:skills/plan/SKILL.md": {
       "baseline": 1280,
-      "teto": 899,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 772,
+      "reason": "T060"
     },
     "path:templates/plan-template.md": {
       "baseline": 780,
-      "teto": 780
+      "teto": 611,
+      "reason": "T060"
     },
     "path:constitution.md": {
       "baseline": 2098,
-      "teto": 2098
+      "teto": 1464,
+      "reason": "T060: teto = valor medido (Art. IV e Rationale-pointer repostos)"
     },
     "path:agents/plan-document-reviewer.md": {
       "baseline": 1438,
-      "teto": 1438
+      "teto": 770,
+      "reason": "T060"
     },
     "path:skills/tasks/SKILL.md": {
       "baseline": 740,
-      "teto": 618,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 573,
+      "reason": "T060"
     },
     "path:templates/tasks-template.md": {
       "baseline": 579,
-      "teto": 579
+      "teto": 419,
+      "reason": "T060"
     },
     "path:skills/implement/SKILL.md": {
       "baseline": 3552,
-      "teto": 3552
+      "teto": 1500,
+      "reason": "T060"
     },
     "path:skills/test-driven-development/SKILL.md": {
       "baseline": 1179,
@@ -115,16 +135,18 @@
     },
     "path:agents/code-reviewer.md": {
       "baseline": 1480,
-      "teto": 1480
+      "teto": 789,
+      "reason": "T060"
     },
     "path:skills/requesting-code-review/SKILL.md": {
       "baseline": 1964,
-      "teto": 1964
+      "teto": 747,
+      "reason": "T060"
     },
     "path:skills/finishing-a-branch/SKILL.md": {
       "baseline": 839,
-      "teto": 378,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 349,
+      "reason": "T060: teto = valor medido (Art. IV e Rationale-pointer repostos)"
     },
     "skill:analyze": {
       "baseline": 970,
@@ -132,21 +154,23 @@
     },
     "skill:checklist": {
       "baseline": 542,
-      "teto": 542
+      "teto": 541,
+      "reason": "T060"
     },
     "skill:clarify": {
       "baseline": 708,
-      "teto": 708
+      "teto": 606,
+      "reason": "T060"
     },
     "skill:constitution": {
       "baseline": 1284,
-      "teto": 836,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 838,
+      "reason": "T060: teto = valor medido (Art. IV e Rationale-pointer repostos)"
     },
     "skill:finishing-a-branch": {
       "baseline": 839,
-      "teto": 378,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 349,
+      "reason": "T060: teto = valor medido (Art. IV e Rationale-pointer repostos)"
     },
     "skill:frontend-design": {
       "baseline": 1142,
@@ -159,8 +183,8 @@
     },
     "skill:plan": {
       "baseline": 1280,
-      "teto": 899,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 772,
+      "reason": "T060"
     },
     "skill:product": {
       "baseline": 1577,
@@ -169,11 +193,13 @@
     },
     "skill:requesting-code-review": {
       "baseline": 1964,
-      "teto": 1964
+      "teto": 747,
+      "reason": "T060"
     },
     "skill:specify": {
       "baseline": 1349,
-      "teto": 1349
+      "teto": 1180,
+      "reason": "T060"
     },
     "skill:systematic-debugging": {
       "baseline": 1314,
@@ -186,8 +212,8 @@
     },
     "skill:tasks": {
       "baseline": 740,
-      "teto": 618,
-      "reason": "T048: skill enxuta, teto desce para o valor medido."
+      "teto": 573,
+      "reason": "T060"
     },
     "skill:test-driven-development": {
       "baseline": 1179,

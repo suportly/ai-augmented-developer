@@ -30,7 +30,12 @@ RULES_DIR = REPO_ROOT / "rules"
 
 EXPECTED_TESTING_PATHS = [
     "tests/**",
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/test_*.py",
+    "**/*_test.py",
     "**/*.test.*",
+    "**/*.spec.*",
     "**/*_test.*",
     "conftest.py",
 ]
@@ -43,13 +48,13 @@ RULES_WITHOUT_FRONTMATTER = {
     "slash-commands.md",
 }
 RULES_WITH_FRONTMATTER_NO_PATHS = {
-    "code-style.md",
     "git-workflow.md",
     "security.md",
 }
 RULE_WITH_PATHS = "testing.md"
 # spec 0030 T043: api-conventions became path-scoped (no longer always loaded).
-RULES_PATHS_SCOPED = {RULE_WITH_PATHS, "api-conventions.md"}
+# spec 0030 T060: code-style became path-scoped too (code extensions).
+RULES_PATHS_SCOPED = {RULE_WITH_PATHS, "api-conventions.md", "code-style.md"}
 
 EXPECTED_INVENTORY = (
     RULES_WITHOUT_FRONTMATTER
@@ -172,3 +177,16 @@ class TestLeanRulesT043:
         lines = [ln for ln in text.splitlines() if ln.strip()]
         assert len(lines) <= 2, f"slash-commands.md has {len(lines)} non-blank lines"
         assert "/aia:" in text, "namespaced form must still be stated"
+
+
+class TestCodeStyleScopedT060:
+    """spec 0030 T060: code-style loads only on code files (one glob per entry)."""
+
+    def test_code_style_declares_paths_and_drops_always_apply(self) -> None:
+        fm = _read_frontmatter(RULES_DIR / "code-style.md")
+        assert fm is not None
+        paths = fm.get("paths")
+        assert isinstance(paths, list) and paths, "code-style needs paths:"
+        assert all(isinstance(p, str) and "," not in p and "{" not in p for p in paths)
+        assert "alwaysApply" not in fm
+        assert "**/*.py" in paths and "**/*.ts" in paths

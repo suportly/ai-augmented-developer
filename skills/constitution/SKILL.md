@@ -33,21 +33,23 @@ Bootstrap a missing `constitution.md` or amend an existing one (framework, prese
 
 ## Amendment loop
 
+Read `references/rationale-and-amendment.md` first (rationale per article, amendment process).
+
 1. **Confirm the level** (framework, preset, project); each has its own process in that `constitution.md`.
 2. **An issue must exist** stating article, motivation, blast radius; otherwise stop and ask for it.
 3. **One article per amendment**; several articles mean separate PR plans.
-4. **Edit minimally.** New article: append, renumber only if necessary. Edit: keep the four fields (Statement, Rationale, Test, Waivable) and leave unrelated text alone. Repeal: move to a **Repealed** section at the bottom with version and reason, never silently delete.
+4. **Edit minimally.** New article: append, renumber only if necessary. Edit: keep Statement, Test and Waivable (Rationale lives in `references/rationale-and-amendment.md`) and leave unrelated text alone. Repeal: move to a **Repealed** section at the bottom with version and reason, never silently delete.
 5. **Bump the version** (semver): patch = clarification/typo; minor = new article, tightened test, added waiver; major = removed article or waiver condition, or anything that would retroactively fail existing plans.
 6. **Add a `Changed` entry** to `CHANGELOG.md [Unreleased]` naming article and version delta.
 7. **Open the PR** with the issue linked, a summary, and the blast radius.
 
 ## Rules
 
-- Inspect project context before asking anything; no generic "what change do you want?".
-- Never amend as a side effect of another PR; never approve your own amendment. A non-author reviewer is required; major bumps need two reviewers and a 48-hour comment window.
+- Inspect project context before asking anything.
+- Never amend as a side effect of another PR; never approve your own amendment; reviewer rules are in the reference.
 - Do not widen waivers without evidence a narrower one causes real harm.
 - Bootstrap: no articles unbacked by existing context; when in doubt leave it out.
 
 ## Hand-off
 
-Bootstrap or amendment merged → subsequent plans' Constitution Check covers the new articles. Rejected → record the rationale under the issue; do not silently resubmit.
+Merged → later plans' Constitution Check covers the new articles. Rejected → record the rationale under the issue; do not silently resubmit.

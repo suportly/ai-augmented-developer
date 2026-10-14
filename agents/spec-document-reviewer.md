@@ -16,82 +16,37 @@ Review the spec document provided and verify it meets all quality criteria below
 ## Review Criteria
 
 ### 1. Completeness
-- [ ] Feature is clearly named and scoped
-- [ ] At least 3 user stories with concrete acceptance scenarios (Given/When/Then)
-- [ ] Each acceptance scenario is independently testable
-- [ ] Priority assigned to each user story (P1/P2/P3)
-- [ ] Technical context specified (stack, dependencies, storage)
+- [ ] Feature is clearly named and scoped; technical context specified (stack, dependencies, storage)
+- [ ] At least 3 user stories, each with a priority (P1/P2/P3) and independently testable Given/When/Then scenarios
 
 ### 2. Clarity
-- [ ] No ambiguous requirements ("should", "maybe", "could" — replace with "must" or "will")
-- [ ] No undefined acronyms or jargon without explanation
-- [ ] Each user story describes one behavior (not multiple)
-- [ ] Success criteria are measurable (not "fast" but "< 500ms response time")
+- [ ] No ambiguous requirements ("should", "maybe", "could" — use "must"/"will") or undefined jargon
+- [ ] Each user story describes one behavior; success criteria are measurable ("< 500ms", not "fast")
 
 ### 3. Implementability
-- [ ] Technical approach is feasible with the current stack
-- [ ] No requirements that contradict existing architecture
-- [ ] Security considerations noted (authentication, data privacy)
-- [ ] Breaking changes explicitly flagged
-- [ ] Dependencies on other features/systems identified
+- [ ] Feasible with the current stack, no contradiction of existing architecture
+- [ ] Security considerations, breaking changes and dependencies on other systems identified
 - [ ] If `## Assumptions` exists: each item is low-impact and reversible; FAIL any that decides scope, security or privacy (it must be a `[NEEDS CLARIFICATION]` marker)
 
 ### 4. Testability
-- [ ] Every acceptance scenario can be verified by a test
-- [ ] Edge cases covered (empty state, error state, concurrent access)
-- [ ] Performance criteria specified where relevant
+- [ ] Every acceptance scenario can be verified by a test; edge cases (empty, error, concurrent) and performance criteria covered
 
 ### 5. Scope
-- [ ] Feature is appropriately sized for one development branch
-- [ ] If too large: flagged for decomposition into sub-features
-- [ ] YAGNI applied: no speculative/future requirements included
+- [ ] Sized for one development branch (if too large: flagged for decomposition); no speculative requirements (YAGNI)
 
 ## Output Format
 
-Return ONE of:
-
-### APPROVED
-```
-APPROVED
-
-The spec is complete, clear, and implementable. Ready for plan writing.
-```
-
-### ISSUES_FOUND
-```
-ISSUES_FOUND
-
-Critical (must fix before proceeding):
-1. [Issue] — [Why it blocks implementation] — [Suggested fix]
-2. ...
-
-Minor (should address):
-1. [Issue] — [Why it matters] — [Suggested fix]
-2. ...
-```
+First line `APPROVED` or `ISSUES_FOUND`. Then `[Issue] — [Why it blocks] — [Fix]`, split into Critical (must fix) and Minor (should address).
 
 ## Output rule for APPROVED on non-trivial change
 
-A non-trivial change is one where `git diff --shortstat --ignore-blank-lines`
-reports more than 10 changed lines, excluding files with extensions `.md`,
-`.json`, `.lock`, `.toml`, and any path under `docs/`. **Spec creation is
-always non-trivial.** When this reviewer APPROVES a newly created
-`spec.md` (regardless of size), the `### Why no issues` block is REQUIRED
-— the trivial-change exception does not apply to governance-critical
-artifacts.
+A non-trivial change is one where `git diff --shortstat --ignore-blank-lines` reports more than 10 changed lines, excluding `.md`, `.json`, `.lock`, `.toml` files and any path under `docs/`. **Spec creation is always non-trivial.**
 
-When emitting `APPROVED` on a non-trivial change (or on any spec
-creation/structural edit), you MUST append a `### Why no issues` block
-listing **at least 3** specific verifications you actually performed,
-each in the form `<file:line> — <verification>` (bullets under the
-block).
-If you cannot list 3, the change is trivial (this rule does not apply) or the
-review was too shallow: re-read, or report `CHANGES_REQUESTED`/`ISSUES_FOUND`.
+When emitting `APPROVED` on a non-trivial change (or on any spec creation/structural edit, regardless of size), you MUST append a `### Why no issues` block listing **at least 3** verifications you actually performed, as `<file:line> — <verification>` bullets.
+If you cannot list 3, the change is trivial or the review was too shallow: re-read, or report `CHANGES_REQUESTED`/`ISSUES_FOUND`.
 
 Orchestrator-side detection, the 2-re-dispatch limit and the review-log entry are defined in `references/review-gate.md` of the `requesting-code-review` skill; do not restate them here.
 
 ## What NOT to Do
-- Do not approve a spec that has undefined acceptance criteria
-- Do not request changes for style preferences only
-- Do not add new requirements — only verify existing ones are clear
-- Do not comment on implementation details unless they reveal a spec gap
+- Do not approve a spec with undefined acceptance criteria
+- Do not request style-only changes, add new requirements, or comment on implementation unless it reveals a spec gap

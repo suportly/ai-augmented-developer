@@ -828,7 +828,7 @@
 
 ### T060 — Corte adicional para a meta de 40%
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T054
 - **Files:**
   - modify: `rules/code-style.md`

@@ -5,8 +5,6 @@ description: Use after code review is approved to finalize, push, open PR, and c
 
 # Finishing a Development Branch
 
-Final checks, push, open PR, clean up.
-
 ## Pre-Flight Checklist
 
 - [ ] `aiadev preflight finishing-a-branch --feature <slug>` exits 0. It refuses unless `.aiadev/review.yaml` records `status: approved` (bypass `AIADEV_PREFLIGHT=warn`, debug only).
@@ -23,23 +21,19 @@ Squash messy commits into logical units (`git rebase -i HEAD~N`). Format: `feat(
 
 ```markdown
 ## Summary
-- [What was built; key technical decisions]
+- [What was built; key decisions]
 
 ## Traceability
-- Closes #<issue_number>
-- Spec: `specs/<feature>/spec.md`
-- Plan: `specs/<feature>/plan.md`
+- Closes #<issue>; Spec: `specs/<feature>/spec.md`; Plan: `specs/<feature>/plan.md`
 
 ## Test Plan
-- [ ] Test suite passes
-- [ ] Type check and lint clean
-- [ ] Manual smoke test performed
+- [ ] Suite, types and lint clean (list the exact commands run, Article IV); manual smoke test
 ```
 
 Then set the spec's status to `PR Open — #<PR number>` and notify reviewers.
 
 ## Merge and clean up
 
-When approved and CI passes, squash merge (preferred) or regular merge. Afterwards delete the remote (`git push origin --delete <branch>`) and local (`git branch -d <branch>`) branch, and deploy according to what changed.
+When approved and CI passes, squash merge (preferred). Then delete the remote (`git push origin --delete <branch>`) and local (`git branch -d <branch>`) branch.
 
 If `references/stack.md` exists beside this file, read it for stack-specific guidance.

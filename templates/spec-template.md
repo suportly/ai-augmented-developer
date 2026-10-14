@@ -1,12 +1,12 @@
 # Feature specification: {{FEATURE_NAME}}
 
-> This file is produced by the `specify` skill (or by `aiadev init --feature <name>` as a stub). Keep it focused on **what** and **why** — planning and code belong in `plan.md` and `tasks.md`.
+> Produced by `specify`. **What** and **why** only; planning and code belong in `plan.md` and `tasks.md`.
 
 **Branch:** `{{BRANCH}}`
 **Created:** {{DATE}}
 **Status:** Draft <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** {{SPEC_ID}} <!-- auto-incrementing integer -->
-**Language:** {{DOC_LANGUAGE}} <!-- BCP-47 tag; every downstream artifact in this feature is written in this language. -->
+**Language:** {{DOC_LANGUAGE}} <!-- BCP-47 tag; downstream artifacts use it. -->
 
 ---
 
@@ -18,7 +18,7 @@
 <!-- section: Reconnaissance -->
 ## Reconnaissance
 
-<!-- One bullet per surface not yet inspected this session, citing at least one real path in backticks (validated).
+<!-- One bullet per surface not yet inspected, citing a real path in backticks (validated).
      Single-surface change: replace the bullets with exactly:
      Reconnaissance: not required (single-surface change: <surface-name>) -->
 
@@ -48,7 +48,7 @@
 
 As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
-**Acceptance scenarios** (Given / When / Then, ≥ 3 per story):
+**Acceptance scenarios** (≥ 3 per story):
 
 1. Given ... When ... Then ...
 2. Given ... When ... Then ...

@@ -2,7 +2,12 @@
 description: Test-first workflow, naming, and structure baseline for every stack.
 paths:
   - "tests/**"
+  - "**/tests/**"
+  - "**/__tests__/**"
+  - "**/test_*.py"
+  - "**/*_test.py"
   - "**/*.test.*"
+  - "**/*.spec.*"
   - "**/*_test.*"
   - "conftest.py"
 ---
