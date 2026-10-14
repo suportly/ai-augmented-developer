@@ -481,7 +481,7 @@
 
 ### T034 — requesting-code-review: sem review-context.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009, T030
 - **Files:**
   - modify: `skills/requesting-code-review/SKILL.md`

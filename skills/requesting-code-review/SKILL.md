@@ -1,13 +1,13 @@
 ---
 name: requesting-code-review
-description: Use before opening a PR. Prepares context for code review and dispatches a reviewer subagent.
+description: Use before opening a PR. Dispatches a reviewer subagent.
 ---
 
 # Requesting Code Review
 
 Prepare and execute a structured code review before merging any branch.
 
-**Announce at start:** "Using requesting-code-review skill. Preparing review context."
+**Announce at start:** "Using requesting-code-review skill. Dispatching the reviewer."
 
 ## When to Use
 
@@ -26,72 +26,37 @@ Before dispatching the reviewer:
 - [ ] All planned tasks completed (no unchecked `- [ ]` in plan)
 - [ ] Commits are clean and atomic
 
-## Review Context Document
-
-Create `specs/YYYY-MM-DD-<feature>/review-context.md`:
-
-```markdown
-# Code Review Context: <Feature Name>
-
-## What Was Built
-[2-3 sentences describing the feature]
-
-## Spec Reference
-- Spec: `specs/YYYY-MM-DD-<feature>/spec.md`
-- Plan: `specs/YYYY-MM-DD-<feature>/plan.md`
-
-## Changed Files
-<git diff --stat output>
-
-## Key Decisions Made
-- [Decision 1 and why]
-- [Decision 2 and why]
-
-## Areas Needing Attention
-- [Any complexity, trade-offs, or areas where reviewer should look carefully]
-
-## Test Coverage
-- Backend: [pytest output summary]
-- Frontend: [jest output summary]
-- Manual verification: [what was manually tested]
-```
-
 ## Impacted subsystems (optional — graph provider)
 
 When a knowledge-graph context provider is configured (the optional
-`knowledge-graph` preset, spec 0017), add an **Impacted subsystems** section to
-the Review Context Document: query the provider's `impact` operation for the
-changed files in the diff and list the subsystems they touch, citing each edge
-as `path:symbol` with its confidence label per `rules/graph-facts.md`. This
-gives the reviewer the blast-radius up front.
+`knowledge-graph` preset, spec 0017), append an **Impacted subsystems** section
+to the reviewer prompt: query the provider's `impact` operation for the changed
+files and list the subsystems they touch, citing each edge as `path:symbol` with
+its confidence label per `rules/graph-facts.md`.
 
-**Graceful degradation.** The provider is optional. When no provider is
-configured — or it is unavailable at runtime — omit the Impacted subsystems
-section and prepare the review context exactly as before. Never emit an error
-because a provider is absent.
+**Graceful degradation.** The provider is optional. When none is configured, or
+it is unavailable at runtime, omit the section. Never emit an error because a
+provider is absent.
 
 ## Dispatching the Reviewer
 
-Use the `code-reviewer` agent with the review context document.
+This is the only review of the branch. Use the `code-reviewer` agent. No
+side document: the prompt carries the paths and the base ref, and the reviewer
+reads the diff itself.
 
-**Never pass session history** — always craft a focused review prompt:
+**Never pass session history** — craft a focused prompt:
 
 ```
-You are a code reviewer for a Django 5.2 + React 18 + TypeScript project.
+You are a code reviewer for <stack from the project's CLAUDE.md>.
 
-Review the changes described in: <path to review-context.md>
+Spec: specs/<feature>/spec.md   Plan: specs/<feature>/plan.md
+Base ref: <git merge-base HEAD main>
+Read the diff yourself: git diff <base ref>...HEAD
 
-Full diff:
-<git diff output>
+[Impacted subsystems section, when a provider is configured]
 
-Check for:
-1. Spec compliance — do changes fulfill the spec's acceptance criteria?
-2. Security — SQL injection, IDOR, XSS, unencrypted sensitive data?
-3. Django patterns — N+1 queries, missing select_related, transaction safety?
-4. TypeScript — any types, missing null checks, proper error handling?
-5. Celery tasks — idempotency, retry logic, transaction.on_commit usage?
-6. Tests — adequate coverage of the spec scenarios? Edge cases?
-7. Complexity — unnecessary abstractions, YAGNI violations?
+Check for: spec compliance, security, the stack's own pitfalls, test coverage
+of the spec scenarios and edge cases, unnecessary complexity.
 
 Return: APPROVED or CHANGES_REQUESTED with specific issues and suggested fixes.
 ```
