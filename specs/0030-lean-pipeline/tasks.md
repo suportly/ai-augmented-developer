@@ -880,11 +880,12 @@
 
 ### T058 — Executar os pares e registrar o resultado
 
-- **Status:** pending
+- **Status:** blocked
 - **Depends on:** T056, T057
 - **Files:**
   - modify: `docs/benchmark-0030.md`
 - **Spec scenarios:** Success criterion #8
+- **Blocked:** a execução de ≥ 5 pares (≥ 10 sessões pagas do Claude Code, uma por braço) não roda em ambiente automático nem sem autorização de gasto; fica com o mantenedor, com o harness de T057 e o protocolo de `docs/benchmark-0030.md`. Nenhum resultado é afirmado no CHANGELOG.
 - **Acceptance:**
   - [ ] ≥ 5 pares executados no Claude Code; o relatório lista ids de sessão, custo por par, mediana, aprovação de primeira e o veredito pela regra da spec, com os comandos usados.
   - [ ] Se a regra reprovar, o resultado e a reversão sugerida (dois reviewers) ficam registrados, sem mascarar.
