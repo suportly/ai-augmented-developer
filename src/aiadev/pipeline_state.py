@@ -15,19 +15,130 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-__all__ = ["recommend_next_command"]
+__all__ = [
+    "PipelineSnapshot",
+    "count_needs_clarification",
+    "pipeline_snapshot",
+    "recommend_next_command",
+]
 
 
 _BRANCH_LINE_RE = re.compile(r"^\*\*Branch:\*\*\s*`([^`]+)`", re.MULTILINE)
-_CLARIFICATION_RE = re.compile(r"\[NEEDS CLARIFICATION:cl-\d+")
+_MARKER = "[NEEDS CLARIFICATION"
 _TASK_STATUS_RE = re.compile(
     r"^- \*\*Status:\*\*\s*(pending|in_progress|blocked|done)\b",
     re.MULTILINE,
 )
+
+
+@dataclass(frozen=True)
+class PipelineSnapshot:
+    """Observable state of the active feature plus the recommended step."""
+
+    feature: str | None
+    has_spec: bool
+    open_markers: int
+    has_plan: bool
+    tasks_total: int | None  # None: tasks.md missing
+    tasks_pending: int | None
+    command: str
+    reason: str
+
+
+def count_needs_clarification(text: str) -> int:
+    """Count ``[NEEDS CLARIFICATION`` markers in any form (single criterion
+    shared by preflight, ``recommend_next_command`` and ``aiadev next``)."""
+    return text.count(_MARKER)
+
+
+def pipeline_snapshot(
+    workspace_path: Path,
+    *,
+    branch: str | None = None,
+    feature: str | None = None,
+) -> PipelineSnapshot:
+    """Inspect ``workspace_path`` and return state plus the next command.
+
+    ``feature`` (a ``specs/<slug>/`` directory name) selects the spec
+    directly and takes precedence over ``branch``. A slug without a spec
+    directory recommends ``/aia:specify``; it is not an error. Real read
+    errors (``OSError``) propagate.
+    """
+    specs_dir = workspace_path / "specs"
+
+    def snap(command: str, reason: str, **kw: Any) -> PipelineSnapshot:
+        fields: dict[str, Any] = {
+            "feature": None, "has_spec": False, "open_markers": 0,
+            "has_plan": False, "tasks_total": None, "tasks_pending": None,
+        }
+        fields.update(kw)
+        return PipelineSnapshot(command=command, reason=reason, **fields)
+
+    if feature is not None:
+        active = _feature_dir(specs_dir, feature)
+        if active is None:
+            return snap(
+                "/aia:specify",
+                f"feature {feature!r} has no spec yet (specs/{feature}/ missing)",
+            )
+    else:
+        spec_dirs = _list_spec_dirs(specs_dir)
+        if not spec_dirs:
+            return snap("/aia:specify", "no specs/ tree (or empty)")
+        active = _find_active_spec_dir(spec_dirs, branch)
+        if active is None:
+            return snap("/aia:specify", "no spec.md matches the current branch")
+
+    spec_md = active / "spec.md"
+    if not _is_file_strict(spec_md):
+        return snap(
+            "/aia:specify", "active spec dir is missing spec.md", feature=active.name
+        )
+
+    markers = count_needs_clarification(spec_md.read_text(encoding="utf-8"))
+    has_plan = _is_file_strict(active / "plan.md")
+    tasks_md = active / "tasks.md"
+    total = pending = None
+    if _is_file_strict(tasks_md):
+        text = tasks_md.read_text(encoding="utf-8")
+        statuses = _TASK_STATUS_RE.findall(text)
+        total = len(statuses)
+        pending = sum(1 for st in statuses if st != "done")
+    state = {
+        "feature": active.name, "has_spec": True, "open_markers": markers,
+        "has_plan": has_plan, "tasks_total": total, "tasks_pending": pending,
+    }
+
+    if markers:
+        return snap(
+            "/aia:clarify",
+            f"spec.md has {markers} open [NEEDS CLARIFICATION] marker(s)",
+            **state,
+        )
+    if not has_plan:
+        return snap("/aia:plan", "spec.md is clean; plan.md missing", **state)
+    if total is None:
+        return snap("/aia:tasks", "plan.md ticked; tasks.md missing", **state)
+    if pending:
+        return snap(
+            "/aia:implement", f"tasks.md has {pending} pending task(s)", **state
+        )
+    if _branch_review_approved(workspace_path, active / ".review-log.jsonl"):
+        return snap(
+            "/aia:finishing-a-branch",
+            "all tasks done; .aiadev/review.yaml approved after the last review-log entry",
+            **state,
+        )
+    return snap(
+        "/aia:requesting-code-review",
+        "all tasks done; branch review missing, not approved or older than the review log",
+        **state,
+    )
 
 
 def recommend_next_command(
@@ -36,87 +147,9 @@ def recommend_next_command(
     branch: str | None = None,
     feature: str | None = None,
 ) -> dict[str, Any]:
-    """Return the next pipeline command for ``workspace_path``.
-
-    Result shape::
-
-        {"command": str, "reason": str}
-
-    ``command`` is one of the ``/aia:*`` slash commands. ``reason`` is a
-    short free-form string suitable for debug surfaces; it is not part of
-    the contract.
-
-    ``feature`` (a ``specs/<slug>/`` directory name) selects the spec
-    directly and takes precedence over ``branch``. A slug without a spec
-    directory recommends ``/aia:specify``; it is not an error.
-    """
-    specs_dir = workspace_path / "specs"
-
-    if feature is not None:
-        active = _feature_dir(specs_dir, feature)
-        if active is None:
-            return {
-                "command": "/aia:specify",
-                "reason": f"feature {feature!r} has no spec yet (specs/{feature}/ missing)",
-            }
-    else:
-        spec_dirs = _list_spec_dirs(specs_dir)
-        if not spec_dirs:
-            return {
-                "command": "/aia:specify",
-                "reason": "no specs/ tree (or empty)",
-            }
-        active = _find_active_spec_dir(spec_dirs, branch)
-        if active is None:
-            return {
-                "command": "/aia:specify",
-                "reason": "no spec.md matches the current branch",
-            }
-
-    spec_md = active / "spec.md"
-    if not _is_file_strict(spec_md):
-        return {
-            "command": "/aia:specify",
-            "reason": "active spec dir is missing spec.md",
-        }
-
-    pending_clarifications = _count_pending_clarifications(spec_md)
-    if pending_clarifications:
-        return {
-            "command": "/aia:clarify",
-            "reason": f"spec.md has {pending_clarifications} pending cl-N marker(s)",
-        }
-
-    if not (active / "plan.md").is_file():
-        return {
-            "command": "/aia:plan",
-            "reason": "spec.md is clean; plan.md missing",
-        }
-
-    tasks_md = active / "tasks.md"
-    if not tasks_md.is_file():
-        return {
-            "command": "/aia:tasks",
-            "reason": "plan.md ticked; tasks.md missing",
-        }
-
-    pending_tasks = _count_pending_tasks(tasks_md)
-    if pending_tasks:
-        return {
-            "command": "/aia:implement",
-            "reason": f"tasks.md has {pending_tasks} pending task(s)",
-        }
-
-    if _branch_review_approved(workspace_path, active / ".review-log.jsonl"):
-        return {
-            "command": "/aia:finishing-a-branch",
-            "reason": "all tasks done; .aiadev/review.yaml approved after the last review-log entry",
-        }
-
-    return {
-        "command": "/aia:requesting-code-review",
-        "reason": "all tasks done; branch review missing, not approved or older than the review log",
-    }
+    """Return ``{"command": str, "reason": str}`` (see ``pipeline_snapshot``)."""
+    snapshot = pipeline_snapshot(workspace_path, branch=branch, feature=feature)
+    return {"command": snapshot.command, "reason": snapshot.reason}
 
 
 def _is_file_strict(path: Path) -> bool:
@@ -246,12 +279,6 @@ def _spec_branch(spec_md: Path) -> str | None:
             if match:
                 return match.group(1)
     return None
-
-
-def _count_pending_clarifications(spec_md: Path) -> int:
-    """Count ``[NEEDS CLARIFICATION:cl-N`` markers in ``spec_md``."""
-    text = spec_md.read_text(encoding="utf-8")
-    return len(_CLARIFICATION_RE.findall(text))
 
 
 def _count_pending_tasks(tasks_md: Path) -> int:

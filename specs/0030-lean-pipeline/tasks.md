@@ -413,7 +413,7 @@
 
 ### T029 — aiadev next
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T028
 - **Files:**
   - create: `src/aiadev/commands/next.py`
