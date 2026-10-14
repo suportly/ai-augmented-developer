@@ -815,7 +815,7 @@
 
 ### T055 — Teste de referências sem substituto
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T054
 - **Files:**
   - create: `tests/test_no_dangling_removed_refs.py`
