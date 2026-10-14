@@ -673,7 +673,7 @@
 
 ### T047 — clarify: teto e uma pergunta por vez
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009
 - **Files:**
   - modify: `skills/clarify/SKILL.md`
