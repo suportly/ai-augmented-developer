@@ -42,8 +42,8 @@ The **orchestrator** (you), not the implementer, owns every step that reads or m
 3. **Task context.** When `task_context: true` in `preset.yaml` or `--task-context`, read `references/task-context.md` and follow it; otherwise skip this step.
 4. **Dispatch implementer** with the prompt below, `description` `implement: <TID> <title>` (reviewer: `review: <TID> <title>`). Hand-craft the context; no conversation history.
 5. **Act on the return status** (below).
-6. **Prose tier: no reviewer.** If every file of the task is prose markdown under `docs/` or root docs (README, CHANGELOG, CONTRIBUTING), run `npx markdownlint-cli2 <files>` and `python3 scripts/validate_skills.py`, record the result in the commit message and do not dispatch a reviewer. Not prose: `docs/instruction-budget.json`, `docs/pipeline-path.yaml`, and anything under `skills/`, `agents/`, `rules/`, `templates/`, `commands/`, `src/`, `tests/`.
-   Otherwise dispatch the single reviewer only after `DONE` (prompt below); never skip it.
+6. **Prose tier: no reviewer.** If every file of the task is prose markdown under `docs/` or root docs (README, CHANGELOG, CONTRIBUTING), run `npx markdownlint-cli2 <files>` (plus `python3 scripts/validate_skills.py` if it exists), record the result in the commit message and do not dispatch a reviewer. Not prose: `docs/instruction-budget.json`, `docs/pipeline-path.yaml`, anything under `skills/`, `agents/`, `rules/`, `templates/`, `commands/`, `src/`, `tests/`.
+   Otherwise dispatch the single reviewer only after `DONE` (prompt below).
 7. **Close the task, atomically**, one commit with code, tests and the status flip:
    `aiadev tasks done <TID> --feature <slug> --commit "<TID> <subject>" FILES...`
    It flips `pending` → `done`, stages FILES plus `tasks.md`, commits, and on failure (hook rejection, signing error) rolls the marker back and unstages; refuses if those paths are already staged. Never `--no-verify`.

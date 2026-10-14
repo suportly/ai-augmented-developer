@@ -101,6 +101,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them must switch preset or add the content themselves.
 - `/aia:help` is gone; use `aiadev next`. `using-ai-augmented-developer` is
   gone as well.
+- `aiadev preflight implement` now blocks on two new gates: scenario-to-task
+  coverage (every spec scenario must appear in a task's `**Spec scenarios:**`
+  line, and every task must cite one) and checklists (a FAIL check with no
+  owner task). A `tasks.md` with no `Spec scenarios` line at all (legacy
+  template) only warns once and skips coverage. A feature that predates the
+  gate can be exempted in `docs/coverage-exceptions.yaml` of the consumer
+  project, a YAML map of `<feature-dir>: <reason>`, e.g.
+  `0012-billing: legado anterior à linha Spec scenarios`. `AIADEV_PREFLIGHT=warn`
+  downgrades every pre-flight issue, these included, to a non-aborting warning.
 
 ## [0.24.0] - 2026-09-16
 

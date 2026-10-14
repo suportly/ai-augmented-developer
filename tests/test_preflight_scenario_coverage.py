@@ -154,3 +154,19 @@ def test_real_features_have_no_coverage_issue(feature: Path) -> None:
         if "scenario" in i.message or "cites" in i.message or "coverage" in i.message
     ]
     assert coverage == []
+
+
+def test_legacy_tasks_without_scenario_lines_warn_once(tmp_path: Path) -> None:
+    body = "### T001 — a\n\n- **Status:** pending\n\n### T002 — b\n\n- **Status:** pending\n"
+    issues = _run(tmp_path, _feature(tmp_path, body))
+    assert [i.message for i in issues] == [
+        "pre-flight: tasks.md has no Spec scenarios lines (legacy format) — "
+        "scenario coverage not checked"
+    ]
+    assert not issues[0].would_abort
+
+
+def test_any_scenarios_line_keeps_coverage_aborting(tmp_path: Path) -> None:
+    body = "### T001 — a\n\n- **Spec scenarios:** Story 1 scenario 1\n\n### T002 — b\n\n- x\n"
+    issues = _run(tmp_path, _feature(tmp_path, body))
+    assert issues and all(i.would_abort for i in issues)

@@ -277,8 +277,16 @@ def _coverage_issues(
     if feature_dir.name in exceptions:
         return []
     try:
+        if "Spec scenarios" not in tasks_path.read_text(encoding="utf-8"):
+            return [
+                PreflightIssue(
+                    "pre-flight: tasks.md has no Spec scenarios lines (legacy format) — "
+                    "scenario coverage not checked",
+                    would_abort=False,
+                )
+            ]
         found = spec_coverage.check(spec_path, tasks_path)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError) as exc:  # UnicodeDecodeError is a ValueError
         return [PreflightIssue(f"pre-flight: cannot check scenario coverage in tasks.md — {exc}")]
     out: list[PreflightIssue] = []
     for item in found:

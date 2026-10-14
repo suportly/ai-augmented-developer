@@ -27,7 +27,7 @@ from pathlib import Path
 
 import click
 
-from ..tasks_status import TasksMdError, mark_done, mark_pending, parse
+from ..tasks_status import TasksMdError, mark_done, parse, restore_status
 
 
 class _GitError(Exception):
@@ -54,13 +54,20 @@ def _fail(message: str) -> None:
     sys.exit(1)
 
 
+def _tracked(repo: Path, path: Path) -> bool:
+    """True when git tracks ``path`` (a deletion to commit); literal pathspec."""
+    rel = path.relative_to(repo).as_posix()
+    proc = _git(repo, "--literal-pathspecs", "ls-files", "--error-unmatch", "--", rel)
+    return proc.returncode == 0
+
+
 def _resolve_files(repo: Path, cwd: Path, files: tuple[str, ...]) -> list[str]:
     out: list[str] = []
     for raw in files:
         path = (cwd / raw).resolve()
         if not path.is_relative_to(repo):
             _fail(f"{raw}: outside the repository")
-        if not path.exists():
+        if not path.exists() and not _tracked(repo, path):
             _fail(f"{raw}: file does not exist")
         out.append(path.relative_to(repo).as_posix())
     return out
@@ -100,7 +107,7 @@ def done_command(task_id: str, feature: str, message: str, files: tuple[str, ...
         _fail(str(exc))
     if row is None:
         _fail(f"task {task_id} not found in {tasks_rel}")
-    was_done = row.status == "done"
+    original_status = row.status
 
     to_add = list(dict.fromkeys([*rel_files, tasks_rel]))
     for p in to_add:
@@ -119,9 +126,9 @@ def done_command(task_id: str, feature: str, message: str, files: tuple[str, ...
     except _GitError as exc:
         # Only the status line and the paths we staged: no checkout/reset.
         causes = [str(exc)]
-        if not was_done:
+        if original_status != "done":
             try:
-                mark_pending(tasks_md, task_id)
+                restore_status(tasks_md, task_id, original_status)
             except (TasksMdError, OSError) as rexc:
                 causes.append(f"rollback of {task_id} status failed: {rexc}")
         has_head = _git(repo, "rev-parse", "--verify", "-q", "HEAD").returncode == 0

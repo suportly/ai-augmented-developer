@@ -186,3 +186,24 @@ def test_already_done_nothing_to_commit_fails_and_stays_done(repo: Path) -> None
     res = _run("T001", "--feature", SLUG, "--commit", "again")
     assert res.exit_code == 1
     assert _status(repo) == "done"  # was done before; rollback must not revert
+
+
+def test_commits_a_file_deletion(repo: Path) -> None:
+    _git(repo, "rm", "-q", "--cached", "keep.txt")
+    (repo / "keep.txt").unlink()
+    _git(repo, "reset", "-q", "--", "keep.txt")
+    res = _run("T001", "--feature", SLUG, "--commit", "chore: T001", "keep.txt")
+    assert res.exit_code == 0, res.output
+    assert _status(repo) == "done"
+    assert "keep.txt" in _git(repo, "show", "--name-status", "--format=", "HEAD")
+
+
+def test_rollback_restores_original_in_progress_status(repo: Path) -> None:
+    p = repo / "specs" / SLUG / "tasks.md"
+    p.write_text(p.read_text().replace("**Status:** pending", "**Status:** in_progress", 1))
+    _git(repo, "commit", "-qam", "wip")
+    _failing_hook(repo)
+    (repo / "a.py").write_text("x = 1\n")
+    res = _run("T001", "--feature", SLUG, "--commit", "m", "a.py")
+    assert res.exit_code == 1
+    assert _status(repo) == "in_progress"

@@ -118,6 +118,11 @@ def mark_pending(path: Path | str, task_id: str) -> None:
     _set_status(Path(path), task_id, "pending")
 
 
+def restore_status(path: Path | str, task_id: str, status: str) -> None:
+    """Put one task back to a status it had before (rollback); only its status token changes."""
+    _set_status(Path(path), task_id, status)
+
+
 def _set_status(p: Path, task_id: str, new_status: str) -> None:
     # Bytes in/out: decoding without newline translation keeps CRLF files CRLF.
     text = p.read_bytes().decode("utf-8")
