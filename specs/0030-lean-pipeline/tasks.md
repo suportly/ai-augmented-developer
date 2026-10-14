@@ -427,7 +427,7 @@
 
 ### T030 — Reescrever testes de prosa de implement/review como comportamento
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `tests/test_implement_skill_drift.py`

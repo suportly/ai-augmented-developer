@@ -1,200 +1,137 @@
-"""T009 — Reviewer re-dispatch gate is documented in orchestrator skills.
+"""Reviewer re-dispatch gate is reachable from the orchestrator skills.
 
-Story 3 sc2/sc3 of ``specs/0014-bmad-inspired-evolutions/spec.md`` makes
-the orchestrator (``skills/implement/SKILL.md`` and
-``skills/requesting-code-review/SKILL.md``) responsible for detecting
-APPROVED-without-``### Why no issues``-block on a non-trivial change and
-re-dispatching the reviewer with reinforced adversarial framing.
+Story 3 sc2/sc3 of ``specs/0014-bmad-inspired-evolutions/spec.md``.
+Rewritten by spec 0030 (T030) to assert behaviour instead of a section
+header at a fixed position: the gate may live in the SKILL.md itself or
+in a ``references/*.md`` file the skill cites (e.g.
+``skills/requesting-code-review/references/review-gate.md``). The
+"effective text" of a skill is its SKILL.md plus the reference files it
+names. Set ``AIADEV_PROSE_ROOT`` to point at a copy of the repo text.
 
-The agent-side rule lives in ``agents/<reviewer>.md`` (T004). This test
-asserts the orchestrator-side counterpart is documented in BOTH
-orchestrator skills as a dedicated section, and that section names the
-six load-bearing pieces of the contract:
+Contract pieces asserted (on the effective text of BOTH skills):
 
     1. detection of APPROVED without the ``### Why no issues`` block
     2. non-trivial-change definition (cl-5 anchor or preflight pointer)
     3. re-dispatch with reinforced adversarial framing
-    4. hard limit of 2 re-dispatches per reviewer per task
-    5. trivial-change exception (no re-dispatch on noise)
-    6. write-through to ``specs/<branch>/.review-log.jsonl`` with the
-       canonical entry shape
-
-Pure content assertions; no shell-out, no git operations, no fixtures.
+    4. hard limit of 2 re-dispatches per reviewer
+    5. trivial-change exception
+    6. write-through to ``.review-log.jsonl`` with the canonical shape
+    7. a correction -> re-review iteration limit exists (both loop bounds:
+       this plus #4)
 """
 from __future__ import annotations
 
+import os
+import re
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(
+    os.environ.get("AIADEV_PROSE_ROOT") or Path(__file__).resolve().parents[1]
+)
 
 ORCHESTRATOR_SKILLS = (
     "skills/implement/SKILL.md",
     "skills/requesting-code-review/SKILL.md",
 )
 
-# A unique heading that announces the gate in both skills. Either an H2
-# or H3 is acceptable so the section can nest under the reviewer prompt
-# subsections in skills/implement/SKILL.md if the author prefers.
-SECTION_HEADERS = (
-    "## Reviewer re-dispatch gate",
-    "### Reviewer re-dispatch gate",
-    "## Re-dispatch gate",
-    "### Re-dispatch gate",
-)
+_REF = re.compile(r"(?:skills/[\w-]+/)?references/[\w.-]+\.md")
 
 
-def _section_text(body: str) -> str:
-    """Return the section starting at the first matching header up to the
-    next H2 (``\\n## ``) or end-of-file. Fail loudly if no header found."""
-    for header in SECTION_HEADERS:
-        idx = body.find(header)
-        if idx != -1:
-            # Find the next H2 boundary AFTER the header (allow nested H3
-            # within the section).
-            after = body.find("\n## ", idx + len(header))
-            return body[idx:] if after == -1 else body[idx:after]
-    raise AssertionError(
-        "no re-dispatch gate section header found; expected one of: "
-        + ", ".join(repr(h) for h in SECTION_HEADERS)
-    )
+def effective_text(skill_path: str) -> str:
+    """SKILL.md plus every ``references/*.md`` file it cites (one level).
+
+    A cited path is resolved relative to the skill directory first, then
+    to the repo root (cross-skill references use ``skills/<x>/references``).
+    Uncited or missing references are ignored.
+    """
+    skill = ROOT / skill_path
+    body = skill.read_text(encoding="utf-8")
+    parts = [body]
+    seen: set[Path] = set()
+    for ref in _REF.findall(body):
+        for base in (skill.parent, ROOT):
+            candidate = (base / ref).resolve()
+            if candidate.is_file() and candidate not in seen:
+                seen.add(candidate)
+                parts.append(candidate.read_text(encoding="utf-8"))
+                break
+    return "\n".join(parts)
 
 
 @pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_skill_declares_redispatch_gate_section(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-
-    found = any(header in body for header in SECTION_HEADERS)
-    assert found, (
-        f"{skill_path} must declare a re-dispatch gate section "
-        f"(one of: {SECTION_HEADERS})"
+def test_gate_is_reachable_and_detects_missing_block(skill_path: str) -> None:
+    text = effective_text(skill_path)
+    assert re.search(r"re-?dispatch", text, re.I), f"{skill_path}: no re-dispatch gate reachable"
+    assert "APPROVED" in text
+    assert "### Why no issues" in text, (
+        f"{skill_path}: gate must reference the '### Why no issues' block by name"
     )
+    # APPROVED and the block must be discussed together (detection rule).
+    assert re.search(
+        r"APPROVED[\s\S]{0,800}### Why no issues|### Why no issues[\s\S]{0,800}APPROVED", text
+    ), f"{skill_path}: APPROVED-without-block detection not described"
 
 
 @pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_describes_block_detection(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-
-    assert "APPROVED" in section, (
-        f"{skill_path} re-dispatch gate must describe detecting an "
-        f"APPROVED verdict"
-    )
-    assert "### Why no issues" in section, (
-        f"{skill_path} re-dispatch gate must reference the "
-        f"'### Why no issues' block by name"
-    )
-
-
-@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_anchors_non_trivial_definition(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-    lowered = section.lower()
-
-    assert "non-trivial" in lowered, (
-        f"{skill_path} re-dispatch gate must define when the rule applies "
-        f"using the term 'non-trivial'"
-    )
-    # Must point at the canonical cl-5 anchor: either the helper module
-    # name OR the preflight subcommand. Either reference resolves the
-    # definition for the reader.
-    has_anchor = (
-        "aiadev.review_log" in section
-        or "is_non_trivial_change" in section
-        or "aiadev preflight requesting-code-review" in section
-        or "cl-5" in section
-    )
-    assert has_anchor, (
-        f"{skill_path} re-dispatch gate must point at the canonical "
-        f"non-trivial definition (cl-5 / aiadev.review_log / preflight)"
-    )
-
-
-@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_uses_reinforced_adversarial_framing(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-    lowered = section.lower()
-
-    assert "re-dispatch" in lowered, (
-        f"{skill_path} gate must instruct the orchestrator to re-dispatch"
-    )
-    assert "adversarial" in lowered, (
-        f"{skill_path} gate must call the second prompt 'adversarial' "
-        f"(reinforced framing per spec Story 3 sc2)"
-    )
-    # Spec sc2 quotes the reinforcement: "assume there is at least one bug"
-    # — the orchestrator must echo that wording (or close to it) so the
-    # reviewer sees the framing escalation, not a polite "please retry".
-    assert "at least one bug" in lowered, (
-        f"{skill_path} gate must reproduce the 'assume at least one bug' "
-        f"reinforcement from spec Story 3 sc2"
-    )
-
-
-@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_states_two_redispatch_hard_limit(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-    lowered = section.lower()
-
-    # Plan ADR-4 risk mitigation: max 2 re-dispatches per reviewer per task.
-    assert "2 re-dispatches" in lowered or "two re-dispatches" in lowered, (
-        f"{skill_path} gate must state the '2 re-dispatches' hard limit "
-        f"(plan ADR-4 risk mitigation)"
-    )
-    # Scope: per reviewer per task (or per reviewer per review pass for
-    # the branch-level skill).
-    assert "per reviewer" in lowered, (
-        f"{skill_path} gate must scope the limit 'per reviewer'"
-    )
-
-
-@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_excepts_trivial_changes(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-    lowered = section.lower()
-
-    # Story 3 sc3: trivial diff with APPROVED-without-block must NOT
-    # trigger re-dispatch. The exception must be explicit.
-    assert "trivial" in lowered, (
-        f"{skill_path} gate must call out the 'trivial' exception"
-    )
-    has_exception_phrasing = (
-        "does not apply" in lowered
-        or "do not re-dispatch" in lowered
-        or "not re-dispatch" in lowered
-        or "no re-dispatch" in lowered
-        or "accept approved" in lowered
-        or "silently" in lowered
-    )
-    assert has_exception_phrasing, (
-        f"{skill_path} gate must phrase the trivial-change carve-out "
-        f"explicitly (e.g. 'does not apply', 'do not re-dispatch')"
-    )
-
-
-@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
-def test_redispatch_gate_writes_review_log_entry(skill_path: str) -> None:
-    body = (ROOT / skill_path).read_text(encoding="utf-8")
-    section = _section_text(body)
-
-    assert ".review-log.jsonl" in section, (
-        f"{skill_path} gate must instruct the orchestrator to append a "
-        f"row to specs/<branch>/.review-log.jsonl"
-    )
-    # The five entry-shape fields pinned by tests/test_review_log.py.
-    for field in (
-        "timestamp",
-        "reviewer",
-        "verdict",
-        "has_why_no_issues_block",
-        "task_id",
-    ):
-        assert field in section, (
-            f"{skill_path} gate must mention review-log entry field "
-            f"{field!r}"
+def test_gate_anchors_non_trivial_definition(skill_path: str) -> None:
+    text = effective_text(skill_path)
+    assert "non-trivial" in text.lower()
+    assert any(
+        anchor in text
+        for anchor in (
+            "aiadev.review_log",
+            "is_non_trivial_change",
+            "aiadev preflight requesting-code-review",
+            "cl-5",
         )
+    ), f"{skill_path}: gate must point at the canonical non-trivial definition"
+
+
+@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
+def test_gate_uses_reinforced_adversarial_framing(skill_path: str) -> None:
+    lowered = effective_text(skill_path).lower()
+    assert re.search(r"re-?dispatch[\s\S]{0,1500}adversarial|adversarial[\s\S]{0,1500}re-?dispatch", lowered)
+    assert "at least one bug" in lowered, (
+        f"{skill_path}: gate must reproduce the 'assume at least one bug' escalation"
+    )
+
+
+@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
+def test_redispatch_limit_is_two_per_reviewer(skill_path: str) -> None:
+    lowered = effective_text(skill_path).lower()
+    assert re.search(r"\b(?:2|two) re-?dispatch", lowered), (
+        f"{skill_path}: must state the 2 re-dispatches hard limit"
+    )
+    assert re.search(r"per reviewer|per (?:task|review pass)", lowered)
+
+
+@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
+def test_gate_excepts_trivial_changes(skill_path: str) -> None:
+    lowered = effective_text(skill_path).lower()
+    exception = r"does not apply|do not re-?dispatch|not re-?dispatch|no re-?dispatch|silently|accept[^.]{0,30}approved"
+    assert re.search(
+        rf"\b(?<!non-)trivial[^.]{{0,200}}(?:{exception})|(?:{exception})[^.]{{0,200}}\b(?<!non-)trivial",
+        lowered,
+    ), f"{skill_path}: trivial-change carve-out must be explicit"
+
+
+@pytest.mark.parametrize("skill_path", ORCHESTRATOR_SKILLS)
+def test_gate_writes_review_log_entry(skill_path: str) -> None:
+    text = effective_text(skill_path)
+    assert ".review-log.jsonl" in text
+    for field in ("timestamp", "reviewer", "verdict", "has_why_no_issues_block", "task_id"):
+        assert field in text, f"{skill_path}: review-log entry field {field!r} missing"
+
+
+def test_correction_rereview_limit_exists() -> None:
+    number = r"(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)"
+    noun = r"(?:iterations?|rounds?|attempts?|cycles?|loops?|passes|review (?:rounds|passes))"
+    pattern = re.compile(
+        rf"(?:after|exceeds?|more than|up to|at most|max\w*|limit\w*)[^.\n]{{0,40}}?\b{number}\b[^.\n]{{0,30}}?\b{noun}\b",
+        re.I,
+    )
+    assert any(
+        pattern.search(effective_text(s)) for s in ORCHESTRATOR_SKILLS
+    ), "no correction -> re-review iteration limit stated in implement or requesting-code-review"
