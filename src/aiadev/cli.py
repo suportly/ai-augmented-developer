@@ -14,6 +14,7 @@ from .commands.manifests import manifests_command
 from .commands.metrics import metrics_command
 from .commands.preflight import preflight_command
 from .commands.sync import sync_command
+from .commands.tasks import tasks_command
 from .commands.validate import validate_command
 
 
@@ -34,6 +35,7 @@ main.add_command(preflight_command)
 main.add_command(metrics_command)
 main.add_command(manifests_command)
 main.add_command(learn_command)
+main.add_command(tasks_command)
 
 
 if __name__ == "__main__":  # pragma: no cover

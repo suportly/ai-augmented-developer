@@ -384,7 +384,7 @@
 
 ### T027 — aiadev tasks done
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T026
 - **Files:**
   - create: `src/aiadev/commands/tasks.py`
