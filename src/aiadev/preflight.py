@@ -167,6 +167,9 @@ def check(
         if tasks_path.is_file():
             issues.extend(_coverage_issues(feature_dir, spec_path, tasks_path, repo_root))
 
+    if skill == "implement":
+        issues.extend(_checklist_issues(feature_dir))
+
     if not _should_abort(env):
         issues = [PreflightIssue(i.message, would_abort=False) for i in issues]
 
@@ -281,6 +284,108 @@ def _coverage_issues(
         else:
             text = item.message
         out.append(PreflightIssue(f"pre-flight: {text}"))
+    return out
+
+
+def _table_cells(line: str) -> list[str] | None:
+    """Cells of a markdown table row, or ``None`` for non-rows and separators.
+
+    Edge pipes are optional and ``\\|`` stays inside its cell.
+    """
+    import re
+
+    text = line.strip()
+    if "|" not in text:
+        return None
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|") and not text.endswith("\\|"):
+        text = text[:-1]
+    cells = [c.replace("\\|", "|").strip() for c in re.split(r"(?<!\\)\|", text)]
+    if all(c and set(c) <= set("-: ") for c in cells):
+        return None
+    return cells
+
+
+_FAIL_PREFIXES = ("FAIL", "❌", "✗")
+
+
+def _checklist_issues(feature_dir: Path) -> list[PreflightIssue]:
+    """Block on a FAIL check with no owner task in ``tasks.md`` (D3); never raises.
+
+    Checks table = header with ``#`` and ``Status``; failures table = header
+    with ``#`` and ``Owner task``. The template placeholder row (status
+    ``PASS / FAIL / N/A``) is not a FAIL.
+    """
+    import re
+
+    checklists = feature_dir / "checklists"
+    if not checklists.is_dir():
+        return []
+    try:
+        tasks_text = (feature_dir / "tasks.md").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        tasks_text = ""
+    except (OSError, ValueError) as exc:
+        return [PreflightIssue(f"pre-flight: cannot read tasks.md for checklists — {exc}")]
+    task_ids = set(re.findall(r"^###\s+(T\d+)\b", tasks_text, re.MULTILINE))
+
+    out: list[PreflightIssue] = []
+    for path in sorted(checklists.glob("*.md")):
+        label = f"checklists/{path.name}"
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError) as exc:
+            out.append(PreflightIssue(f"pre-flight: cannot read {label} — {exc}"))
+            continue
+        fails: list[str] = []
+        owners: dict[str, str] = {}
+        mode = ""
+        width = column = 0
+        in_fence = False
+        for line in lines:
+            if line.lstrip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence or not line.strip():
+                continue
+            cells = _table_cells(line)
+            if cells is None:
+                if "|" not in line:
+                    mode = ""  # prose or heading ends the table
+                continue
+            names = [c.lower() for c in cells]
+            if "#" in names and "status" in names:
+                mode, width, column = "checks", len(cells), names.index("status")
+                continue
+            if "#" in names and "owner task" in names:
+                mode, width, column = "failed", len(cells), names.index("owner task")
+                continue
+            if not mode:
+                continue
+            if len(cells) < width:
+                out.append(PreflightIssue(f"pre-flight: {label} has a malformed table row"))
+                continue
+            number = cells[0].strip().lstrip("#").strip()
+            if mode == "checks":
+                status = re.sub(r"[*`\s]", "", cells[column]).upper()
+                if status.startswith(_FAIL_PREFIXES):
+                    fails.append(number)
+            elif number:
+                owners[number] = cells[column]
+        for number in fails:
+            owner_cell = owners.get(number, "")
+            owner_ids = re.findall(r"T\d+", owner_cell)
+            if not owner_ids:
+                out.append(PreflightIssue(
+                    f"pre-flight: {label} check #{number} is FAIL without an owner "
+                    "task in tasks.md"
+                ))
+            elif not any(t in task_ids for t in owner_ids):
+                out.append(PreflightIssue(
+                    f"pre-flight: {label} check #{number} is FAIL and its owner task "
+                    f"{owner_ids[0]} is not in tasks.md"
+                ))
     return out
 
 

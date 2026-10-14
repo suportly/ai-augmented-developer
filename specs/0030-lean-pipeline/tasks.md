@@ -330,7 +330,7 @@
 
 ### T023 — Preflight implement: gate de checklists
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T022
 - **Files:**
   - modify: `src/aiadev/preflight.py`
