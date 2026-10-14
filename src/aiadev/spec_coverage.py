@@ -3,12 +3,14 @@
 ``parse_scenario_refs`` is the single, pure parser shared by the coverage
 check and ``task_context``. It reads the line's value (a leading
 ``**Spec scenarios:**`` label is tolerated) and returns a ``ScenarioRefs``.
+``check`` compares a spec with a tasks file and returns ``CoverageIssue`` items.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # A range wider than this keeps only its endpoints: a typo such as
 # ``1-100000`` must not allocate. The limit errs toward "uncovered": the
@@ -119,4 +121,124 @@ def parse_scenario_refs(line: str) -> ScenarioRefs:
         whole_stories=frozenset(mentioned),
         orphan_scenarios=frozenset(orphans),
         criteria=frozenset(criteria),
+    )
+
+
+_STORY_HEADING_RE = re.compile(r"^###\s+Story\s+(\d+)\b")
+_SCENARIO_LINE_RE = re.compile(r"^\s*(\d+)\.\s+\S")
+_TASK_HEADING_RE = re.compile(r"^###\s+(T\d+)\b")
+_TASK_SCENARIOS_RE = re.compile(r"^\s*-\s*\*\*Spec scenarios:\*\*\s*(.*?)\s*$")
+
+
+@dataclass(frozen=True)
+class CoverageIssue:
+    """One coverage problem.
+
+    ``kind``: ``uncovered_scenario`` | ``orphan_task`` | ``unknown_reference``
+    | ``unknown_criterion``. ``ref`` is the scenario, task id or citation at
+    fault; ``task`` is the citing task, when there is one.
+    """
+
+    kind: str
+    ref: str
+    message: str
+    task: str | None = None
+
+
+def spec_scenarios(spec_text: str) -> dict[int, list[int]]:
+    """Story number -> numbered acceptance scenarios under its ``### Story N``."""
+    stories: dict[int, list[int]] = {}
+    current: list[int] | None = None
+    for line in spec_text.splitlines():
+        heading = _STORY_HEADING_RE.match(line)
+        if heading:
+            current = stories.setdefault(int(heading.group(1)), [])
+        elif line.startswith("## ") or line.startswith("### "):
+            current = None
+        elif current is not None:
+            scenario = _SCENARIO_LINE_RE.match(line)
+            if scenario:
+                current.append(int(scenario.group(1)))
+    return stories
+
+
+def _criteria_count(spec_text: str) -> int:
+    """Top-level bullets under ``## Success criteria`` (N = bullet order)."""
+    in_section = False
+    count = 0
+    for line in spec_text.splitlines():
+        if line.startswith("## "):
+            in_section = line[3:].strip().lower() == "success criteria"
+        elif in_section and re.match(r"^[-*]\s+\S", line):
+            count += 1
+    return count
+
+
+def _task_lines(tasks_text: str) -> list[tuple[str, str | None]]:
+    """``(task_id, spec scenarios value or None)`` for every ``### T0NN`` block."""
+    tasks: list[tuple[str, str | None]] = []
+    for line in tasks_text.splitlines():
+        heading = _TASK_HEADING_RE.match(line)
+        if heading:
+            tasks.append((heading.group(1), None))
+            continue
+        match = _TASK_SCENARIOS_RE.match(line)
+        if match and tasks and tasks[-1][1] is None:
+            tasks[-1] = (tasks[-1][0], match.group(1))
+    return tasks
+
+
+def check(spec_path: Path, tasks_path: Path) -> list[CoverageIssue]:
+    """Check scenario-to-task coverage; raises ``FileNotFoundError`` for a missing file."""
+    texts: list[str] = []
+    for path in (Path(spec_path), Path(tasks_path)):
+        if not path.is_file():
+            raise FileNotFoundError(f"{path.name} not found: {path}")
+        texts.append(path.read_text(encoding="utf-8"))
+    spec_text, tasks_text = texts
+    stories = spec_scenarios(spec_text)
+    criteria = _criteria_count(spec_text)
+
+    issues: list[CoverageIssue] = []
+    covered: set[tuple[int, int]] = set()
+    for task_id, value in _task_lines(tasks_text):
+        refs = parse_scenario_refs(value or "")
+        if not refs.has_reference:
+            issues.append(CoverageIssue(
+                "orphan_task", task_id,
+                f"{task_id} cites no scenario, story or Success criterion #N",
+                task_id,
+            ))
+        for story in sorted(refs.whole_stories):
+            if story in stories:
+                covered.update((story, n) for n in stories[story])
+            else:
+                issues.append(_unknown(task_id, f"Story {story}"))
+        for story, numbers in sorted(refs.scenarios.items()):
+            for number in sorted(numbers):
+                if number in stories.get(story, ()):
+                    covered.add((story, number))
+                else:
+                    issues.append(_unknown(task_id, f"Story {story} scenario {number}"))
+        for number in sorted(refs.criteria):
+            if not 1 <= number <= criteria:
+                issues.append(CoverageIssue(
+                    "unknown_criterion", f"Success criterion #{number}",
+                    f"{task_id} cites Success criterion #{number}, "
+                    f"but the spec has {criteria}",
+                    task_id,
+                ))
+    for story, numbers in sorted(stories.items()):
+        for number in numbers:
+            if (story, number) not in covered:
+                ref = f"Story {story} scenario {number}"
+                issues.append(CoverageIssue(
+                    "uncovered_scenario", ref, f"{ref} is cited by no task",
+                ))
+    return issues
+
+
+def _unknown(task_id: str, ref: str) -> CoverageIssue:
+    return CoverageIssue(
+        "unknown_reference", ref, f"{task_id} cites {ref}, which is not in the spec", task_id
     )

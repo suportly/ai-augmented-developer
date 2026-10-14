@@ -138,3 +138,117 @@ def test_story_cited_alone_then_with_scenario_stays_whole() -> None:
     assert _s(refs) == {1: {2}}
     refs = parse_scenario_refs("Story 1 scenario 2; Story 1")
     assert refs.whole_stories == frozenset({1})
+
+
+# --- check(): cobertura cenário -> task (T018) ---------------------------------
+
+from pathlib import Path  # noqa: E402
+
+from aiadev.spec_coverage import check, spec_scenarios  # noqa: E402
+
+_SPEC = """# Spec
+
+## Success criteria
+
+- primeiro critério
+  continuação indentada
+- segundo critério
+
+## User stories
+
+### Story 1 — A (P1)
+
+1. dado x, quando y, então z
+2. dado a, quando b, então c
+
+### Story 2 — B (P2)
+
+1. dado m, quando n, então o
+
+## Clarifications
+"""
+
+
+def _tasks(*blocks: tuple[str, str]) -> str:
+    out = ["# Tasks", "", "## Task list", ""]
+    for task_id, line in blocks:
+        out += [f"### {task_id} — título", "", "- **Status:** pending"]
+        if line is not None:
+            out.append(f"- **Spec scenarios:** {line}")
+        out.append("")
+    return "\n".join(out)
+
+
+def _run(tmp_path: Path, tasks: str, spec: str = _SPEC):
+    spec_path = tmp_path / "spec.md"
+    tasks_path = tmp_path / "tasks.md"
+    spec_path.write_text(spec, encoding="utf-8")
+    tasks_path.write_text(tasks, encoding="utf-8")
+    return check(spec_path, tasks_path)
+
+
+def _kinds(issues) -> list[tuple[str, str]]:
+    return sorted((i.kind, i.ref) for i in issues)
+
+
+def test_spec_scenarios_extracts_per_story() -> None:
+    assert spec_scenarios(_SPEC) == {1: [1, 2], 2: [1]}
+
+
+def test_only_dash_task_is_reported(tmp_path: Path) -> None:
+    tasks = _tasks(
+        ("T001", "Story 1 scenario 1, scenario 2"),
+        ("T002", "Story 2 scenario 1"),
+        ("T003", "—"),
+    )
+    # T003 é órfã (— sem critério); as demais cobrem tudo.
+    assert _kinds(_run(tmp_path, tasks)) == [("orphan_task", "T003")]
+
+
+def test_story_alone_covers_its_scenarios(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1; Story 2"))
+    assert _run(tmp_path, tasks) == []
+
+
+def test_uncovered_scenario(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1 scenario 1; Story 2 scenario 1"))
+    issues = _run(tmp_path, tasks)
+    assert _kinds(issues) == [("uncovered_scenario", "Story 1 scenario 2")]
+    assert issues[0].message
+
+
+def test_orphan_task_without_reference(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1; Story 2"), ("T002", None), ("T003", "scenario 2"))
+    assert _kinds(_run(tmp_path, tasks)) == [("orphan_task", "T002"), ("orphan_task", "T003")]
+
+
+def test_success_criterion_makes_infra_task_valid(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1; Story 2"), ("T002", "— Success criterion #2"))
+    assert _run(tmp_path, tasks) == []
+
+
+def test_unknown_criterion(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1; Story 2"), ("T002", "Success criterion #3"))
+    assert _kinds(_run(tmp_path, tasks)) == [("unknown_criterion", "Success criterion #3")]
+
+
+def test_unknown_story_and_scenario(tmp_path: Path) -> None:
+    tasks = _tasks(("T001", "Story 1; Story 2"), ("T002", "Story 9 scenario 1; Story 2 scenario 7"))
+    assert _kinds(_run(tmp_path, tasks)) == [
+        ("unknown_reference", "Story 2 scenario 7"),
+        ("unknown_reference", "Story 9 scenario 1"),
+    ]
+
+
+def test_missing_files_raise(tmp_path: Path) -> None:
+    (tmp_path / "tasks.md").write_text(_tasks(), encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="spec.md"):
+        check(tmp_path / "spec.md", tmp_path / "tasks.md")
+    (tmp_path / "spec.md").write_text(_SPEC, encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="nope.md"):
+        check(tmp_path / "spec.md", tmp_path / "nope.md")
+
+
+def test_real_lean_pipeline_spec_is_clean() -> None:
+    root = Path(__file__).resolve().parent.parent / "specs" / "0030-lean-pipeline"
+    assert check(root / "spec.md", root / "tasks.md") == []

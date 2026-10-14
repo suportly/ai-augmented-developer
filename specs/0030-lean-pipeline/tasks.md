@@ -264,7 +264,7 @@
 
 ### T018 — spec_coverage: checagem de cobertura
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T017
 - **Files:**
   - modify: `src/aiadev/spec_coverage.py`
