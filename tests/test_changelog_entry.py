@@ -21,9 +21,9 @@ def test_0_15_0_section_records_terse_feature():
     )
 
 
-def test_unreleased_records_0030_with_breaking_note_and_benchmark_result():
+def test_release_0_25_0_records_0030_with_breaking_note_and_benchmark_result():
     body = CHANGELOG.read_text(encoding="utf-8")
-    section = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    section = body.split("## [0.25.0]", 1)[1].split("\n## [", 1)[0]
     assert "0030" in section
     for heading in ("### Added", "### Changed", "### Removed", "### Breaking"):
         assert heading in section, heading
