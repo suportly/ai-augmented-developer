@@ -844,7 +844,7 @@
 
 ### T057 — Harness e protocolo do benchmark
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T005, T035
 - **Files:**
   - create: `docs/benchmark-0030.md`
