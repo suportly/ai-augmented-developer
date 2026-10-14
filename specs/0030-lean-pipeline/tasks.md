@@ -633,7 +633,7 @@
 
 ### T044 — specify: teto de marcadores e Assumptions
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009
 - **Files:**
   - modify: `skills/specify/SKILL.md`
