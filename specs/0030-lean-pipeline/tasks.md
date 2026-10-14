@@ -251,7 +251,7 @@
 
 ### T017 — spec_coverage: parser de referências
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `src/aiadev/spec_coverage.py`
