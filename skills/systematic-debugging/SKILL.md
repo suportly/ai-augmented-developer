@@ -52,8 +52,7 @@ If `references/stack.md` exists beside this file, read it for stack-specific gui
 - Verify the test fails for the correct reason
 - Apply a minimal fix
 
-**When you don't know — say so explicitly:**
-> "I don't know the root cause. My best hypothesis is X, but I need more evidence."
+When you don't know, say so: state the best hypothesis and the evidence still missing.
 
 ### Phase 4: Fix Implementation
 
@@ -68,13 +67,6 @@ If `references/stack.md` exists beside this file, read it for stack-specific gui
 - Does it need structural refactoring?
 - Escalate to the user with collected evidence
 
-## Bug Report Format
+## Bug Report
 
-After identifying root cause:
-```
-**Bug**: [short description]
-**Root Cause**: [identified cause with evidence]
-**Fix Applied**: [description of fix]
-**Regression Test**: `tests/path/test_bug_fix.py::test_name`
-**Verified**: [test passes + all other tests still pass]
-```
+Close with: **Bug**, **Root Cause** (with evidence), **Fix Applied**, **Regression Test** (`path::name`), **Verified** (test passes, rest still green).

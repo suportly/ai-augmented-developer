@@ -80,7 +80,8 @@
     },
     "path:skills/plan/SKILL.md": {
       "baseline": 1280,
-      "teto": 1280
+      "teto": 899,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "path:templates/plan-template.md": {
       "baseline": 780,
@@ -96,7 +97,8 @@
     },
     "path:skills/tasks/SKILL.md": {
       "baseline": 740,
-      "teto": 740
+      "teto": 618,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "path:templates/tasks-template.md": {
       "baseline": 579,
@@ -108,7 +110,8 @@
     },
     "path:skills/test-driven-development/SKILL.md": {
       "baseline": 1179,
-      "teto": 1179
+      "teto": 358,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "path:agents/code-reviewer.md": {
       "baseline": 1480,
@@ -120,7 +123,8 @@
     },
     "path:skills/finishing-a-branch/SKILL.md": {
       "baseline": 839,
-      "teto": 839
+      "teto": 378,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:analyze": {
       "baseline": 970,
@@ -136,11 +140,13 @@
     },
     "skill:constitution": {
       "baseline": 1284,
-      "teto": 1284
+      "teto": 836,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:finishing-a-branch": {
       "baseline": 839,
-      "teto": 839
+      "teto": 378,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:frontend-design": {
       "baseline": 1142,
@@ -157,11 +163,13 @@
     },
     "skill:plan": {
       "baseline": 1280,
-      "teto": 1280
+      "teto": 899,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:product": {
       "baseline": 1577,
-      "teto": 1577
+      "teto": 958,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:requesting-code-review": {
       "baseline": 1964,
@@ -173,7 +181,8 @@
     },
     "skill:systematic-debugging": {
       "baseline": 1314,
-      "teto": 1314
+      "teto": 562,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:task-context": {
       "baseline": 751,
@@ -181,11 +190,13 @@
     },
     "skill:tasks": {
       "baseline": 740,
-      "teto": 740
+      "teto": 618,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:test-driven-development": {
       "baseline": 1179,
-      "teto": 1179
+      "teto": 358,
+      "reason": "T048: skill enxuta, teto desce para o valor medido."
     },
     "skill:using-ai-augmented-developer": {
       "baseline": 941,

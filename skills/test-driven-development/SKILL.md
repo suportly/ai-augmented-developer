@@ -51,8 +51,6 @@ If `references/stack.md` exists beside this file, read it for stack-specific gui
 - Auto-generated code (automatic migrations)
 - Configuration files
 
-**Thinking about skipping TDD this time?** Stop. That's rationalization.
-
 ## TDD Commits
 
 Always commit in complete cycles:

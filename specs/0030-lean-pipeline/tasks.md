@@ -685,7 +685,7 @@
 
 ### T048 — Skills restantes enxutas e gates canônicos
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T036, T038
 - **Files:**
   - modify: `skills/product/SKILL.md`

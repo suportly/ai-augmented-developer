@@ -50,8 +50,8 @@ Convert a plan into the ordered list of atomic units that `implement` will execu
 - Quote data-model constraints (size, enum values, nullability) verbatim in the task that touches them.
 - Task dependencies form a DAG; `implement` will refuse a cycle.
 - No task without a test step; no time estimates.
-- **Heading shape is part of the contract.** Tasks are `### T<NNN> — Title` (H3). If you want to group tasks visually by phase, use a bold paragraph or a bullet list — never a heading that demotes the task to `####`. H3 stays canonical.
-- **Status vocabulary is fixed.** Use exactly one of `pending`, `in_progress`, `blocked`, `done`. Don't invent synonyms.
+- Tasks are `### T<NNN> — Title` (H3); group by phase with a bold paragraph or list, never a deeper heading.
+- Status is exactly one of `pending`, `in_progress`, `blocked`, `done`.
 
 ## Hand-off
 
