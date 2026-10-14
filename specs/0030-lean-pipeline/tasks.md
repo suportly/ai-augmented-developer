@@ -398,7 +398,7 @@
 
 ### T028 — pipeline_state: feature, prefixo e review.yaml
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/pipeline_state.py`
