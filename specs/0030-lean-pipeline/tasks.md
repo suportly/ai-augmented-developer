@@ -607,7 +607,7 @@
 
 ### T042 — Teste "lean sem palavras de stack"
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T040, T041
 - **Files:**
   - create: `tests/test_lean_has_no_stack.py`

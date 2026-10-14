@@ -51,7 +51,7 @@ When in conflict, the user wins.
 
 ### Preset skills
 
-Skills specific to a stack (Django + React, React Native + Expo, etc.) live under `presets/<preset>/skills/` and load only when that preset is active. Check `CLAUDE.md` to see which preset the current project uses.
+Skills specific to a stack live under `presets/<preset>/skills/` and load only when that preset is active. Check `CLAUDE.md` to see which preset the current project uses.
 
 ## How to invoke
 
