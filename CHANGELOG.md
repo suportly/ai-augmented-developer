@@ -36,6 +36,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every `plan` re-derived it from scratch, with no guarantee two runs agreed,
   and no durable place to correct a wrong inference once made.
 
+- Spec **0030 — lean-pipeline**. Measurement, engine and pipeline additions
+  that make the framework cheaper to run per task:
+  - `aiadev metrics --tokens` reports token use per session with deduplication
+    by `message.id`, includes subagent transcripts and breaks cost down by role.
+  - `scripts/instruction_budget.py` measures the instruction text of skills,
+    agents, rules and templates and the path of the pipeline; the ratchet in
+    `docs/instruction-budget.json` and `docs/pipeline-path.yaml` only lets the
+    ceiling go down (`--check` fails when it goes up).
+  - The install engine (`aiadev sync` / `aiadev install`) installs a skill's
+    `references/` directory and removes files the framework no longer
+    distributes, following the hash rule (files edited by the consumer are
+    kept) and limited to the current platform.
+  - `aiadev preflight --format json`, scenario-to-task coverage and a
+    checklist gate in `aiadev preflight implement`.
+  - `aiadev tasks done` marks a task as finished in `tasks.md`; `aiadev next`
+    prints the next pipeline step for the current feature.
+  - `spec.md` accepts an optional `## Assumptions` section, with a ceiling of
+    3 `[NEEDS CLARIFICATION]` markers and 5 questions per `clarify` round.
+  - One reviewer per task instead of a fixed pair.
+  - `scripts/benchmark_pairs.py`, the harness for before/after benchmark
+    pairs (`docs/benchmark-0030.md`).
+
+  **Why:** the pipeline text grew without a measure; every skill invocation
+  paid for instructions the task did not need, and cost per task was not
+  observable.
+
+  **Benchmark status:** the before/after benchmark (at least 5 pairs) is
+  PENDING — the maintainer still has to run it with `scripts/benchmark_pairs.py`
+  (see `docs/benchmark-0030.md`). No benchmark result is claimed here; the
+  figures below are static measurements of instruction text only.
+
+### Changed
+
+- `implement` and `requesting-code-review` are split into a core `SKILL.md`
+  plus `references/` loaded on demand.
+- The Django / Celery / React / MUI / Expo stack content moved from the
+  generic skills to `presets/django-drf-react` (`references/stack.md`);
+  `frontend-design` is now provided by that preset.
+- Rules declare `paths:` so they load only when matching files are touched.
+- The constitution's Rationale and Amendment sections moved to skill
+  references.
+- Measured reduction of instruction text (chars/4): preset `lean` 5115 to 2921
+  tokens (-42.9%), pipeline path 21717 to 12715 tokens (-41.5%).
+
+### Removed
+
+- `terse-mode`: the rule, its schema, configuration and tests. `aiadev sync`
+  warns when it finds `aiadev.terseMode` or `AIADEV_TERSE`, and the key is
+  ignored.
+- The `help` skill (use `aiadev next`) and the `using-ai-augmented-developer`
+  skill.
+- `review-context.md`.
+- The "Announce at start" ritual in skills.
+
+### Breaking
+
+- Preset `lean` no longer ships `frontend-design` nor the stack content; both
+  remain available in `django-drf-react`. Consumers of `lean` that relied on
+  them must switch preset or add the content themselves.
+- `/aia:help` is gone; use `aiadev next`. `using-ai-augmented-developer` is
+  gone as well.
+
 ## [0.24.0] - 2026-09-16
 
 ### Removed

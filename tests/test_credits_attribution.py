@@ -17,3 +17,12 @@ def test_credits_names_juliusbrussee_caveman_with_url_and_license():
         "caveman credit block must mention the upstream license"
     )
     assert "0030" in body, "credit block must note the removal in spec 0030"
+
+
+def test_credits_records_spec_kit_mechanisms_adapted_in_0030():
+    body = CREDITS.read_text(encoding="utf-8")
+    section = body.split("### [github/spec-kit]", 1)[1].split("\n### ", 1)[0]
+    assert "0030" in section
+    lower = section.lower()
+    for term in ("preflight", "scenario-to-task", "ceiling", "checklist gate"):
+        assert term in lower, f"spec-kit credit must mention {term!r}"

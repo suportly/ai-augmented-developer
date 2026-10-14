@@ -892,7 +892,7 @@
 
 ### T059 — CHANGELOG, CREDITS, manifests e versão
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T058
 - **Files:**
   - modify: `CHANGELOG.md`

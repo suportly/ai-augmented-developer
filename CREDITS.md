@@ -69,6 +69,8 @@ Starting in v0.2, this project adopts spec-kit's architecture for spec-driven de
 
 Where we copy verbatim (for example markdownlint config or template scaffolds), the original license notice is preserved alongside the file.
 
+Feature `0030-lean-pipeline` adapts four mechanisms observed in spec-kit (MIT at time of adaptation); no code is copied, each was rewritten for the Markdown-skill architecture and the `aiadev` CLI: context pre-computation by script (`aiadev preflight --format json` hands the skill resolved paths and state instead of the model rediscovering them), scenario-to-task coverage (every spec scenario must be cited by at least one task), a ceiling on `[NEEDS CLARIFICATION]` markers and clarification questions, and a checklist gate before `implement`.
+
 ### [bmad-code-org/BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD)
 
 A comparative analysis of BMAD-METHOD v6.6.0 (MIT license at time of adaptation) inspired the feature `0014-bmad-inspired-evolutions`, which introduces the `task-context` skill (Story 1) for per-task context composition before each implementer dispatch, the 3-tier customization resolver (Story 2) layering skill `customize.toml` (base) → `_aiadev/team.toml` (committed) → `_aiadev/user.toml` (gitignored), the zero-findings-halt review pattern (Story 3) requiring an explicit `### Why no issues` block + re-dispatch gate when reviewer subagents return APPROVED on a non-trivial diff, and the state-aware `help` skill (Story 4) via the new `pipeline_state` module. No code is copied verbatim; the framework adapts BMAD's design ideas to the existing Markdown-skill architecture.
