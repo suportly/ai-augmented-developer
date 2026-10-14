@@ -1,0 +1,52 @@
+{
+  "arm": "after",
+  "pair": 7,
+  "session_id": "f04573f4-f39f-4973-91b2-de7c7dd89aa3",
+  "rc": 0,
+  "seconds": 249.0,
+  "total_cost_usd": 0.9098639999999998,
+  "num_turns": 3,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 5,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 5
+    },
+    "started_in_background": 5,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 5,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 2
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "c9929d5 docs(greet): record branch review and mark spec implemented",
+    "8ae2c9e feat(cli): T003 cover missing NAME usage error and document greet",
+    "ea86450 feat(cli): T002 add --shout option to greet",
+    "98feae5 feat(cli): T001 add greet NAME command",
+    "b867942 docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "f04573f4-f39f-4973-91b2-de7c7dd89aa3.jsonl"
+}

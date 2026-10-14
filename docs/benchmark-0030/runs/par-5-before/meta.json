@@ -1,0 +1,56 @@
+{
+  "arm": "before",
+  "pair": 5,
+  "session_id": "c721edb9-3cf3-462b-be0f-9730bf949bdd",
+  "rc": 0,
+  "seconds": 248.6,
+  "total_cost_usd": 1.2921847499999999,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 10,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 10
+    },
+    "started_in_background": 10,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 10,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 3,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "6e6c66d docs(greet): record review verdict and spec status",
+    "e5ce82a docs(greet): add review context",
+    "45ddd9b T003 docs(readme): document greet command",
+    "cda4bf3 T002 feat(cli): add --shout flag to greet",
+    "38da0a6 T001 feat(cli): add greet command",
+    "49402cb docs(greet): add tasks",
+    "8f160b1 docs(greet): add plan",
+    "baac0c9 docs(greet): add spec"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "c721edb9-3cf3-462b-be0f-9730bf949bdd.jsonl"
+}

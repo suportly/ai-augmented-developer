@@ -1,0 +1,53 @@
+{
+  "arm": "before",
+  "pair": 8,
+  "session_id": "41c33d86-a40c-459f-8cae-5640767c586e",
+  "rc": 0,
+  "seconds": 303.2,
+  "total_cost_usd": 1.1397724000000002,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 8,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 8
+    },
+    "started_in_background": 8,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 8,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 2,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "472af63 docs(greet): record branch review and status",
+    "b00b8b9 docs(greet): add review context",
+    "c46b123 T003 docs(cli): document greet and cover missing NAME",
+    "4468ed5 T002 feat(cli): add --shout flag to greet",
+    "7fcfb16 T001 feat(cli): add greet command",
+    "ea6d595 docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "41c33d86-a40c-459f-8cae-5640767c586e.jsonl"
+}

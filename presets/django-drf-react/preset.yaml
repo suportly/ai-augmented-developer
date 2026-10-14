@@ -41,6 +41,9 @@ provides:
     - skills/autodev-pipeline
     - skills/deploy
     - skills/run-tests
+    - skills/frontend-design
+  commands:
+    - commands/frontend-design.md
 
 # Constitution articles added by this preset, for display in `aiadev doctor`.
 adds_articles:

@@ -285,3 +285,54 @@ def test_is_stale_accepts_injectable_newest_modification_callable(
         "is_stale must honour the injected newest_modification callable; "
         f"got {stale!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# T019: the spec slice reuses the shared scenario-reference parser.
+# ---------------------------------------------------------------------------
+
+_SLICE_SPEC = """\
+## User stories
+
+### Story 1 — a
+
+1. alpha-one
+2. alpha-two
+3. alpha-three
+
+### Story 2 — b
+
+1. beta-one
+2. beta-two
+"""
+
+
+def _slice(line: str) -> str:
+    from aiadev.task_context import _extract_spec_slice
+
+    return _extract_spec_slice(_SLICE_SPEC, line)
+
+
+def test_spec_slice_accepts_template_notation() -> None:
+    result = _slice("Story 1 scenario 1, scenario 2")
+    assert "alpha-one" in result and "alpha-two" in result
+    assert "alpha-three" not in result
+    assert "Could not parse" not in result
+
+
+def test_spec_slice_covers_two_stories_on_one_line() -> None:
+    result = _slice("Story 1 scenario 3; Story 2 scenario 2")
+    assert "alpha-three" in result and "beta-two" in result
+    assert "alpha-one" not in result and "beta-one" not in result
+
+
+def test_spec_slice_whole_story_includes_every_scenario() -> None:
+    result = _slice("Story 2")
+    assert "beta-one" in result and "beta-two" in result
+    assert "alpha-one" not in result
+
+
+def test_spec_slice_keeps_legacy_notation() -> None:
+    result = _slice("Story 1 sc2")
+    assert "alpha-two" in result
+    assert "alpha-one" not in result

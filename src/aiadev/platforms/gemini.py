@@ -99,6 +99,16 @@ def wrapper_target(
     return install_root / "GEMINI.md"
 
 
+# Keep in parity with docs/gemini-tools.md (tests/test_gemini_entrypoint.py).
+_TOOL_MAPPING = (
+    "Gemini CLI tools (skills use Claude Code names): `Read` -> `read_file`, "
+    "`Write` -> `write_file`, `Edit` -> `replace`, `Bash` -> `run_shell_command`, "
+    "`Grep` -> `grep_search`, `Glob` -> `glob`, `TodoWrite` -> `write_todos`.\n"
+    "`Skill` -> `activate_skill`, `WebSearch` -> `google_web_search`, "
+    "`WebFetch` -> `web_fetch`; `Agent` has no equivalent (run the steps in-session).\n"
+)
+
+
 def render_wrapper(role: ArtifactRole, canonical_name: str) -> str | None:
     """Return the wrapper file's content for ``role``, or ``None``.
 
@@ -111,7 +121,25 @@ def render_wrapper(role: ArtifactRole, canonical_name: str) -> str | None:
     return (
         f"# {canonical_name}\n\n"
         f"Project guidance for agents and humans lives in "
-        f"[`{canonical_name}`](./{canonical_name}). Read that file first.\n"
+        f"[`{canonical_name}`](./{canonical_name}). Read that file first.\n\n"
+        f"{_TOOL_MAPPING}"
+    )
+
+
+def legacy_wrappers(role: ArtifactRole, canonical_name: str) -> tuple[str, ...]:
+    """Earlier renderings of :func:`render_wrapper` (exact text, no patterns).
+
+    ``aiadev sync`` treats a sync-owned file equal to one of these as a
+    plain stale wrapper to refresh, not as a hand-written agent file to
+    migrate. Append here whenever the wrapper text changes.
+    """
+    if role != "agent_file":
+        return ()
+    return (
+        # pre-0030: no tool mapping.
+        f"# {canonical_name}\n\n"
+        f"Project guidance for agents and humans lives in "
+        f"[`{canonical_name}`](./{canonical_name}). Read that file first.\n",
     )
 
 

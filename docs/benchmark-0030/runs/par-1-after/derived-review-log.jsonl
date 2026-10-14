@@ -1,0 +1,4 @@
+{"timestamp": "2026-10-14T12:35:23.381Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "description": "review: T001 greet command"}
+{"timestamp": "2026-10-14T12:35:51.209Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "review: T002 --shout flag"}
+{"timestamp": "2026-10-14T12:36:03.850Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "description": "review: T003 missing NAME test"}
+{"timestamp": "2026-10-14T12:36:21.375Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "review: branch feature/greet"}

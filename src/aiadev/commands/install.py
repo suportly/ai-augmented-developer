@@ -10,6 +10,7 @@ import pathlib
 import click
 import yaml
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from ..extensions import ExtensionError, find_preset as find_extension_preset
@@ -269,21 +270,32 @@ def _render_report(
     table.add_column("Path")
 
     def _rel(path: pathlib.Path) -> str:
+        # Paths can come from the (untrusted) manifest or carry bracketed
+        # names: escape them so Rich prints them as they are.
         try:
-            return str(path.relative_to(report_root))
+            return escape(str(path.relative_to(report_root)))
         except ValueError:
-            return str(path)
+            return escape(str(path))
 
     for path in report.written:
         table.add_row("[green]write[/green]", _rel(path))
     for path in report.skipped:
         table.add_row("[blue]skip[/blue]", _rel(path))
+    would = "would " if report.mode is InstallMode.DRY_RUN else ""
     for path in report.removed:
-        table.add_row("[magenta]remove[/magenta]", _rel(path))
+        table.add_row(f"[magenta]{would}remove[/magenta]", _rel(path))
+    for path in report.preserved:
+        table.add_row(f"[yellow]{would}keep[/yellow]", _rel(path))
     for path in report.conflicts:
         table.add_row("[red]conflict[/red]", _rel(path))
 
-    if report.conflicts or report.removed or report.written or report.skipped:
+    if (
+        report.conflicts
+        or report.removed
+        or report.preserved
+        or report.written
+        or report.skipped
+    ):
         console.print(table)
     else:
         console.print(
@@ -303,4 +315,8 @@ def _render_report(
         console.print(
             "[red]refusing to overwrite the files above.[/red] "
             "Pass [cyan]--force[/cyan] to override."
+        )
+    if report.preserved:
+        console.print(
+            "[yellow]note:[/yellow] kept files stay on disk; aiadev no longer manages them."
         )

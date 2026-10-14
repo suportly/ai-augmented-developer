@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from aiadev.review_log import branch_dir_for_workspace
+from aiadev.spec_coverage import parse_scenario_refs
 
 _TEMPLATE_RELATIVE = Path("templates") / "task-context-template.md"
 
@@ -46,10 +47,6 @@ _SPEC_SCENARIOS_RE = re.compile(
 _STORY_HEADING_RE = re.compile(r"^###\s+Story\s+(\d+)\b")
 
 _SCENARIO_LINE_RE = re.compile(r"^\s*(\d+)\.\s+(.*)$")
-
-_SCENARIO_REF_RE = re.compile(r"sc(\d+)", re.IGNORECASE)
-
-_STORY_REF_RE = re.compile(r"Story\s+(\d+)", re.IGNORECASE)
 
 
 def compose(workspace_path: Path, task_id: str) -> Path:
@@ -172,19 +169,17 @@ def _extract_spec_slice(spec_text: str, scenarios_line: str) -> str:
     """Return the bullet list of scenarios referenced by ``scenarios_line``."""
     if not scenarios_line:
         return "_No spec scenarios referenced by this task._"
-    story_match = _STORY_REF_RE.search(scenarios_line)
-    if not story_match:
-        return "_Could not parse Spec scenarios line._"
-    story_id = int(story_match.group(1))
-    wanted = {int(match.group(1)) for match in _SCENARIO_REF_RE.finditer(scenarios_line)}
-    if not wanted:
+    refs = parse_scenario_refs(scenarios_line)
+    if not (refs.scenarios or refs.whole_stories):
         return "_Could not parse Spec scenarios line._"
 
-    scenarios = _scenarios_for_story(spec_text, story_id)
     bullets: list[str] = []
-    for number, body in scenarios:
-        if number in wanted:
-            bullets.append(f"- {body}")
+    for story_id in sorted(set(refs.scenarios) | refs.whole_stories):
+        whole = story_id in refs.whole_stories
+        wanted = refs.scenarios.get(story_id, frozenset())
+        for number, body in _scenarios_for_story(spec_text, story_id):
+            if whole or number in wanted:
+                bullets.append(f"- {body}")
     if not bullets:
         return "_No matching scenarios found in spec.md._"
     return "\n".join(bullets)

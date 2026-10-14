@@ -89,3 +89,14 @@ def test_token_economy_doc_has_hook_example() -> None:
     assert "```" in body and "hooks" in lower
     # Non-goal preserved (framework implements no compressor/hook)
     assert "non-goal" in lower or "fora de escopo" in lower
+
+
+def test_review_skill_has_no_review_context_artifact() -> None:
+    """T034: the reviewer gets paths + base ref in the prompt; no side file."""
+    body = REVIEW.read_text(encoding="utf-8")
+    lower = body.lower()
+    assert "review-context" not in lower
+    assert "merge-base" in lower
+    assert ".aiadev/review.yaml" in body
+    # Impacted subsystems is appended to the reviewer prompt, not a document.
+    assert "prompt" in lower.split("impacted subsystems", 1)[1][:400]

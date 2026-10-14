@@ -8,7 +8,8 @@ walk every artifact the platform handler declares, substitute the user's
 variables, decide (for each artifact) whether to write, skip, or flag a
 conflict, update ``.aiadev/installed.yaml``, and return a structured
 :class:`InstallReport`. Uninstall walks the manifest in reverse, removing
-only files whose sha256 still matches what the installer recorded.
+only files whose sha256 still matches what the installer recorded; a
+re-install applies that same rule to files the framework stopped shipping.
 
 The engine is pure-enough for tests: every side effect is a file write
 inside ``project_root``, and the callers inject ``now=`` for
@@ -18,9 +19,11 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
-from dataclasses import dataclass, field
+import os
+import posixpath
+from dataclasses import dataclass, field, replace
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import yaml
 
@@ -100,6 +103,13 @@ class InstallReport:
     skipped: list[Path] = field(default_factory=list)  # present, identical
     conflicts: list[Path] = field(default_factory=list)  # present, differs
     removed: list[Path] = field(default_factory=list)
+    # Files the framework stopped shipping that the user had hand-edited
+    # (spec 0030 Story 6 sc1): kept on disk, dropped from the manifest and
+    # listed here. Also lists a manifest entry that points outside the
+    # install root (see :func:`_inside_root`), which is never touched.
+    # Deliberately not ``conflicts`` — nothing is wrong, so :attr:`ok`
+    # ignores them and the exit code stays 0.
+    preserved: list[Path] = field(default_factory=list)
     unresolved: list[str] = field(default_factory=list)
     # Artifacts the handler reports as not installable under the current
     # scope (user scope refuses agent_file and constitution). One entry
@@ -142,6 +152,37 @@ def _load_or_create_manifest(install_root: Path) -> Manifest:
 
 def _to_rel(target: Path, install_root: Path) -> str:
     return str(target.relative_to(install_root)).replace("\\", "/")
+
+
+def _normalize_rel(rel: str) -> str:
+    """Spell a manifest path the way the engine writes one (:func:`_to_rel`).
+
+    Forward slashes with ``.`` and ``..`` collapsed, lexically. It is the
+    key every previous-record entry is compared by, so an alias of a
+    shipped file (``./AGENTS.md``) in a hand-edited manifest is that file,
+    not a second one.
+    """
+    return posixpath.normpath(rel.replace("\\", "/"))
+
+
+def _inside_root(install_root: Path, rel: str) -> Path | None:
+    """Return ``install_root / rel`` if the manifest entry stays inside the root.
+
+    ``None`` for anything that would leave it — absolute paths, drive or
+    root-anchored paths, ``..`` that climbs above the root, or the root
+    itself — and the caller must then never stat, hash, delete or prune
+    it. Install and uninstall delete whatever the (committable, hence
+    untrusted) manifest names, so every path from it goes through here.
+    The check is lexical on purpose: symlinks are not resolved, so a
+    ``.claude/skills`` that points elsewhere keeps working.
+    """
+    windows = PureWindowsPath(rel)
+    if windows.drive or windows.root:  # also catches POSIX "/abs"
+        return None
+    parts = PurePosixPath(_normalize_rel(rel)).parts
+    if not parts or parts[0] == "..":
+        return None
+    return install_root.joinpath(*parts)
 
 
 def _resolve_install_root(scope: str, project_root: Path) -> Path:
@@ -227,6 +268,7 @@ def install(
     scope: str = "project",
     framework_root: Path | None = None,
     now: str | None = None,
+    manifest: Manifest | None = None,
 ) -> InstallReport:
     """Install or re-install a preset into ``project_root`` (or ``$HOME``).
 
@@ -236,9 +278,38 @@ def install(
     and constitutions are skipped and noted in
     :attr:`InstallReport.skipped_unsupported`.
 
+    Placeholders are validated for every artifact before the first write:
+    an unresolved ``{{TOKEN}}`` raises :class:`InstallError` naming the
+    offending file(s) with nothing written and the manifest untouched
+    (unless ``allow_unresolved``, which writes the literal tokens and
+    reports their keys).
+
+    Files the previous install of this preset recorded but the framework no
+    longer ships are retired by the same hash rule as uninstall: unedited
+    ones are removed (:attr:`InstallReport.removed`), hand-edited ones are
+    kept and listed in :attr:`InstallReport.preserved` — never a conflict,
+    and ``force`` does not delete them. Only paths under this platform's
+    managed roots (:func:`_managed_roots`) are candidates; the rest of the
+    previous record, such as another platform's files, is carried over
+    untouched and stays tracked. A role ``mcp`` file (``.mcp.json``, the
+    one file every server of the project lives in) is never a candidate.
+    A path another preset's record still lists is not this preset's to
+    delete: it leaves this record, stays on disk and is not reported, so
+    the last preset to stop shipping a shared file is the one that
+    removes it.
+
     ``mode=InstallMode.DRY_RUN`` produces the same report without writing.
     ``mode=InstallMode.UNINSTALL`` removes the preset's files using the
     scope-appropriate manifest.
+
+    ``manifest`` is the manifest to read and update instead of the one on
+    disk. A caller that re-installs several presets in ``DRY_RUN`` (``aiadev
+    sync --dry-run``) passes the same object to each call: nothing is
+    saved, but this preset's new record is applied to it in memory, so the
+    next preset decides about shared files from the records a real run
+    would have saved. Without it the manifest is loaded from disk. In
+    INSTALL it is the object saved (and UNINSTALL saves it too), so pass it
+    only when it is the current record.
 
     ``framework_root`` points at the ``aiadev`` checkout whose top-level
     ``commands/``, ``agents/``, and ``skills/`` directories are always
@@ -257,18 +328,31 @@ def install(
     preset_name = preset_data.get("name", preset_path.name)
     preset_version = str(preset_data.get("version", "0.0.0"))
 
-    manifest = _load_or_create_manifest(install_root)
+    if manifest is None:
+        manifest = _load_or_create_manifest(install_root)
     existing = manifest.find_preset(preset_name)
 
     if mode is InstallMode.UNINSTALL:
         return _perform_uninstall(install_root, manifest, existing, preset_name, force)
 
     report = InstallReport(preset_name=preset_name, mode=mode)
-    previous_by_path = {f.path: f for f in existing.files} if existing else {}
+    previous = (
+        [replace(f, path=_normalize_rel(f.path)) for f in existing.files]
+        if existing
+        else []
+    )
+    previous_by_path = {f.path: f for f in previous}
     recorded_files: list[InstalledFile] = []
 
     artifacts = _collect_artifacts(framework_root, platform_module, preset_path)
 
+    # Pass 1 — render every artifact and validate its placeholders before
+    # the first write (spec 0030 Story 4 sc2): an unresolved-placeholder
+    # failure must have no side effects, so nothing lands on disk and the
+    # manifest is untouched. The re-run after fixing the variable is then a clean
+    # install instead of a wall of conflicts on half-written files.
+    prepared: list[tuple[str, str, str]] = []
+    offenders: list[str] = []
     for role, name, source_path, verbatim in artifacts:
         # Under user scope, skip artifacts the handler says are not
         # installable there (agent_file, constitution). They stay
@@ -291,9 +375,20 @@ def install(
             unresolved = find_unresolved(rendered)
             if unresolved:
                 report.unresolved.extend(unresolved)
-                if not allow_unresolved:
-                    continue
+                # Cite the preset-relative file so the author knows where
+                # the stray token lives, not just which key it is.
+                offenders.append(
+                    f"{_to_rel(source_path, preset_path)} ({', '.join(unresolved)})"
+                )
+        prepared.append((role, name, rendered))
 
+    if offenders and not allow_unresolved:
+        raise InstallError(
+            "unresolved placeholders after substitution: " + "; ".join(offenders)
+        )
+
+    # Pass 2 — write.
+    for role, name, rendered in prepared:
         # Platforms may transform rendered content per-role (Gemini
         # converts markdown commands to TOML, for example). The hook is
         # optional; default is a pass-through.
@@ -301,7 +396,9 @@ def install(
         if render_hook is not None:
             rendered = render_hook(role, name, rendered)
 
-        target = platform_module.resolve_target(role, name, install_root, scope=scope)
+        target = _resolve_artifact_target(
+            platform_module, role, name, install_root, scope
+        )
         _write_one_target(
             target,
             rendered,
@@ -339,25 +436,41 @@ def install(
                         recorded_files=recorded_files,
                     )
 
-    if report.unresolved and not allow_unresolved:
-        raise InstallError(
-            "unresolved placeholders after substitution: "
-            f"{sorted(set(report.unresolved))}"
-        )
+    # Files this preset used to ship but no longer does would otherwise
+    # drop out of the manifest and stay on disk, silently orphaned. What
+    # this platform does not manage is carried over instead, so the record
+    # keeps tracking the other platforms' files. What another preset's
+    # record still lists is that preset's file as well: not ours to delete.
+    owned_elsewhere = {
+        _normalize_rel(f.path)
+        for other in manifest.installed_presets
+        if other.name != preset_name
+        for f in other.files
+    }
+    stale, carried = _split_previous(
+        previous, recorded_files, install_root, scope, platform_module, owned_elsewhere
+    )
+    _retire_stale_files(stale, install_root=install_root, mode=mode, report=report)
+    recorded_files.extend(carried)
 
-    if mode is InstallMode.INSTALL:
-        merged_vars: dict[str, str] = {}
-        if existing is not None:
-            merged_vars.update(existing.variables)
-        merged_vars.update(variables)
-        record = InstalledPreset(
+    merged_vars: dict[str, str] = {}
+    if existing is not None:
+        merged_vars.update(existing.variables)
+    merged_vars.update(variables)
+    # Applied in memory in every mode, so a DRY_RUN over several presets
+    # that share one manifest object sees each record a real run would
+    # have saved. Only INSTALL persists it.
+    manifest.upsert(
+        InstalledPreset(
             name=preset_name,
             version=preset_version,
             installed_at=now or _utc_now_iso(),
             variables=merged_vars,
             files=recorded_files,
         )
-        manifest.upsert(record)
+    )
+
+    if mode is InstallMode.INSTALL:
         save_manifest(manifest, _manifest_path(install_root))
 
         # Customization stubs land at the project root only — they are a
@@ -369,6 +482,150 @@ def install(
             _ensure_gitignore_entry(project_root)
 
     return report
+
+
+def _split_previous(
+    previous: list[InstalledFile],
+    recorded_files: list[InstalledFile],
+    install_root: Path,
+    scope: str,
+    platform_module,
+    owned_elsewhere: set[str],
+) -> tuple[list[InstalledFile], list[InstalledFile]]:
+    """Split the previous record into ``(stale, carried)`` entries.
+
+    ``previous`` has its paths in :func:`_normalize_rel` form, which is
+    also the form of ``recorded_files`` and of ``owned_elsewhere`` (the
+    paths every other preset's record lists), so one path is one entry:
+    the entry this run recorded wins and a repeat of a path is dropped.
+    Each entry the run did not handle is then:
+
+    * stale when it points outside ``install_root`` (the retire step lists
+      it as preserved and drops it from the manifest) or under a root the
+      current platform manages (:func:`_managed_roots`): the framework
+      stopped shipping it;
+    * released when it would be stale under a managed root but
+      ``owned_elsewhere`` has it: it leaves this record and is neither
+      retired nor reported, because the file is still that preset's;
+    * carried otherwise. Another platform's files, a project install's
+      ``AGENTS.md`` seen from ``--scope user`` or any path the handler
+      never writes are never this run's business: they stay on disk and in
+      the record. A forged entry outside those roots is carried, never
+      touched; inside them it is subject to the hash rule like any
+      recorded file.
+    """
+    if not previous:
+        return [], []
+    seen = {f.path for f in recorded_files}
+    managed = _managed_roots(platform_module, install_root, scope)
+    stale: list[InstalledFile] = []
+    carried: list[InstalledFile] = []
+    for entry in previous:
+        if entry.path in seen:
+            continue
+        seen.add(entry.path)
+        path = PurePosixPath(entry.path)
+        if _inside_root(install_root, entry.path) is None:
+            stale.append(entry)
+        elif any(path.is_relative_to(root) for root in managed):
+            if entry.path not in owned_elsewhere:
+                stale.append(entry)
+        else:
+            carried.append(entry)
+    return stale, carried
+
+
+# Two distinct names; only the shape of the resolved paths matters. They tell
+# a layout that varies with the artifact name (a directory) from one that does
+# not (a single file).
+_PROBE_NAMES = ("aiadev-probe-a", "aiadev-probe-b")
+
+
+def _managed_roots(
+    platform_module, install_root: Path, scope: str
+) -> list[PurePosixPath]:
+    """Where ``platform_module`` installs artifacts, relative to ``install_root``.
+
+    Derived from the handler, so the boundary of what an install may
+    retire cannot drift from where it writes. Each role is resolved for
+    two distinct names and the common ancestor of the two results is the
+    root: the directory when the name is part of the path
+    (``.claude/skills``, ``.claude/commands/aia``, whatever the file
+    extension) and the file itself when it is not (``AGENTS.md``,
+    ``constitution.md``). The handler's wrapper (``CLAUDE.md``) is a root too.
+    A role the handler does not install under ``--scope user`` adds
+    nothing there, mirroring the filter at the top of :func:`install`.
+    Role ``mcp`` adds nothing either, in any scope: its single file
+    (``.mcp.json``) holds every server of the project, hand-added ones
+    included, so no preset's install may retire it.
+    """
+    wrapper_hook = getattr(platform_module, "wrapper_target", None)
+    targets: set[Path] = set()
+    for role in _ROLE_PRIORITY:
+        if role == "mcp" or (
+            scope == "user" and not platform_module.user_scope_supported(role)
+        ):
+            continue
+        first, second = (
+            _resolve_artifact_target(platform_module, role, name, install_root, scope)
+            for name in _PROBE_NAMES
+        )
+        targets.add(Path(os.path.commonpath([first, second])))
+        if wrapper_hook is not None:
+            wrapper = wrapper_hook(role, _PROBE_NAMES[0], install_root, scope=scope)
+            if wrapper is not None:
+                targets.add(wrapper)
+    return [PurePosixPath(_to_rel(target, install_root)) for target in targets]
+
+
+def _retire_stale_files(
+    stale: list[InstalledFile],
+    *,
+    install_root: Path,
+    mode: InstallMode,
+    report: InstallReport,
+) -> None:
+    """Apply the uninstall hash rule to files the framework stopped shipping.
+
+    Same hash is ours to delete; a different hash is the user's, so it is
+    kept and listed in ``report.preserved``. ``--force`` deliberately has
+    no say here: it overwrites what the framework still ships, it never
+    deletes a hand-edit. A file already gone just drops out of the
+    manifest. An entry outside the install root (:func:`_inside_root`)
+    is not touched on disk either: it is listed in ``preserved`` and
+    dropped from the manifest. ``DRY_RUN`` reports the same outcome and
+    touches nothing.
+    """
+    for entry in stale:
+        target = _inside_root(install_root, entry.path)
+        if target is None:
+            # Display only, never stat'ed.
+            report.preserved.append(install_root / entry.path)
+            continue
+        if not target.is_file():
+            continue
+        if compute_sha256(target) != entry.sha256:
+            report.preserved.append(target)
+            continue
+        if mode is InstallMode.INSTALL:
+            target.unlink()
+            _prune_empty_dirs(target.parent, install_root)
+        report.removed.append(target)
+
+
+def _prune_empty_dirs(directory: Path, install_root: Path) -> None:
+    """``rmdir`` ``directory`` and its ancestors while empty, up to ``install_root``.
+
+    Never removes a populated directory nor ``install_root`` itself.
+    ``directory`` must come from :func:`_inside_root`: this loop climbs by
+    equality with ``install_root`` and does no containment check of its own.
+    """
+    while directory.is_dir() and directory != install_root:
+        try:
+            directory.rmdir()
+        except OSError:
+            break  # directory not empty; stop climbing.
+        directory = directory.parent
 
 
 def _ensure_team_toml_stub(project_root: Path, framework_root: Path | None) -> None:
@@ -405,6 +662,31 @@ def _ensure_gitignore_entry(project_root: Path) -> None:
     gitignore.write_text(_USER_TOML_GITIGNORE_LINE + "\n", encoding="utf-8")
 
 
+def _resolve_artifact_target(
+    platform_module,
+    role: str,
+    name: str,
+    install_root: Path,
+    scope: str,
+) -> Path:
+    """Return the destination of one collected artifact.
+
+    Everything goes through the platform handler's ``resolve_target``,
+    except a skill's ``references/`` file (spec 0030, plan D1): its name
+    is ``<skill>/references/<rel>`` and it lands next to that skill's
+    installed ``SKILL.md`` — the handler only knows where ``SKILL.md``
+    goes, so the reference reuses its directory. No platform handler
+    changes: each already maps role ``skill`` to ``.../<skill>/SKILL.md``.
+    """
+    if role == "skill" and "/" in name:
+        skill, _, relative = name.partition("/")
+        skill_file = platform_module.resolve_target(
+            role, skill, install_root, scope=scope
+        )
+        return skill_file.parent / relative
+    return platform_module.resolve_target(role, name, install_root, scope=scope)
+
+
 def _collect_artifacts(
     framework_root: Path | None,
     platform_module,
@@ -418,6 +700,11 @@ def _collect_artifacts(
     constitution), then command → agent → skill; within each role,
     alphabetical.
 
+    Each skill's ``references/**/*.md`` (see
+    :func:`_collect_skill_references`) travel as role ``skill`` entries
+    named ``<skill>/references/<rel>``, so they share the skill's
+    scope filter, manifest role and write/skip/conflict path.
+
     The trailing ``verbatim`` flag tells the engine whether to run
     variable substitution. Framework-generic artifacts are copied
     verbatim because their ``{{UPPER_SNAKE}}`` tokens are runtime
@@ -430,10 +717,63 @@ def _collect_artifacts(
             merged[(role, name)] = (role, name, source_path, True)
     for role, name, source_path in platform_module.iter_preset_artifacts(preset_path):
         merged[(role, name)] = (role, name, source_path, False)
+    # Already resolved framework-vs-preset per key by the collector.
+    for role, name, source_path, verbatim in _collect_skill_references(
+        framework_root, preset_path
+    ):
+        merged[(role, name)] = (role, name, source_path, verbatim)
     return sorted(
         merged.values(),
         key=lambda t: (_ROLE_PRIORITY.get(t[0], 99), t[1]),
     )
+
+
+def _collect_skill_references(
+    framework_root: Path | None,
+    preset_path: Path,
+) -> list[tuple[str, str, Path, bool]]:
+    """Collect every skill's ``references/**/*.md`` from framework and preset.
+
+    Companion to :func:`_collect_artifacts`, which only yields each
+    ``SKILL.md`` (spec 0030, plan D1). Entries are ``("skill",
+    "<skill>/<relative-path>", source_path, verbatim)``: framework first
+    (``verbatim=True``), then the preset's (``verbatim=False``), the
+    preset winning on the same key; sorted by name.
+
+    * A skill counts when ``SKILL.md`` exists for its name in the
+      framework **or** the preset (the union ``_collect_artifacts``
+      installs), and its ``references/`` is read from either root. So a
+      preset can ship only ``skills/<n>/references/stack.md`` and extend
+      the generic skill without replacing it; a ``references/`` whose
+      skill has no ``SKILL.md`` anywhere is skipped, not installed as an
+      orphan.
+    * A symlink whose target resolves outside the ``skills/`` tree is not
+      followed.
+    """
+    roots: list[tuple[Path, bool]] = []
+    for root, verbatim in ((framework_root, True), (preset_path, False)):
+        if root is not None and (root / "skills").is_dir():
+            roots.append((root / "skills", verbatim))
+    installed = {
+        skill_dir.name
+        for skills_dir, _verbatim in roots
+        for skill_dir in skills_dir.iterdir()
+        if (skill_dir / "SKILL.md").is_file()
+    }
+    merged: dict[str, tuple[str, str, Path, bool]] = {}
+    for skills_dir, verbatim in roots:
+        boundary = skills_dir.resolve()
+        for skill_dir in skills_dir.iterdir():
+            if skill_dir.name not in installed:
+                continue
+            for path in (skill_dir / "references").rglob("*"):
+                if path.suffix != ".md" or not path.is_file():
+                    continue
+                if not path.resolve().is_relative_to(boundary):
+                    continue
+                name = f"{skill_dir.name}/{path.relative_to(skill_dir).as_posix()}"
+                merged[name] = ("skill", name, path, verbatim)
+    return sorted(merged.values(), key=lambda t: t[1])
 
 
 def _perform_uninstall(
@@ -448,8 +788,8 @@ def _perform_uninstall(
         return report
 
     for entry in list(existing.files):
-        target = install_root / entry.path
-        if not target.is_file():
+        target = _inside_root(install_root, entry.path)
+        if target is None or not target.is_file():
             continue
         current_sha = compute_sha256(target)
         if current_sha != entry.sha256 and not force:
@@ -467,13 +807,9 @@ def _perform_uninstall(
     for entry in existing.files:
         if entry.role not in ("skill", "command", "agent", "rule", "mcp"):
             continue
-        parent = (install_root / entry.path).parent
-        while parent.is_dir() and parent != install_root:
-            try:
-                parent.rmdir()
-            except OSError:
-                break  # directory not empty; stop climbing.
-            parent = parent.parent
+        target = _inside_root(install_root, entry.path)
+        if target is not None:
+            _prune_empty_dirs(target.parent, install_root)
 
     manifest.remove(preset_name)
     manifest_path = _manifest_path(install_root)

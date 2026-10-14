@@ -32,7 +32,7 @@
      "Ready to implement" is deliberately NOT a roadmap status. Readiness
      is a property of the spec's own pipeline state (spec written, clarified,
      planned, tasked), not of the roadmap entry, so it is never duplicated
-     here — duplicated state drifts. Run `/aia:help` on the spec's branch
+     here — duplicated state drifts. Run `aiadev next --feature <slug>`
      to know whether a planned entry is ready to implement. -->
 
 ### R{{NNN}} — {{ENTRY_TITLE}}

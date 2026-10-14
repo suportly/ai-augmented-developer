@@ -1,0 +1,53 @@
+{
+  "arm": "before",
+  "pair": 9,
+  "session_id": "7f7f3d84-a70b-46bf-a991-010f6bf77638",
+  "rc": 0,
+  "seconds": 200.0,
+  "total_cost_usd": 1.515485799999999,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 13,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 13
+    },
+    "started_in_background": 13,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 13,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 1,
+      "general-purpose": 3,
+      "code-reviewer": 7
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "80b9cda docs(greet): add review context and review log",
+    "29d5c73 T003 missing NAME usage error test and README line",
+    "e14d739 T002 --shout upper-cases the greeting",
+    "4d9f2f5 T001 greet NAME prints a greeting",
+    "55ea968 docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "7f7f3d84-a70b-46bf-a991-010f6bf77638.jsonl"
+}

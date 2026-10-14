@@ -1,0 +1,7 @@
+{"timestamp": "2026-10-14T13:03:44.854Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "description": "Spec review T001"}
+{"timestamp": "2026-10-14T13:03:53.039Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "description": "Quality review T001"}
+{"timestamp": "2026-10-14T13:04:21.525Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "Spec review T002"}
+{"timestamp": "2026-10-14T13:04:32.083Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "Quality review T002"}
+{"timestamp": "2026-10-14T13:04:55.473Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "description": "Spec review T003"}
+{"timestamp": "2026-10-14T13:05:06.030Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "description": "Quality review T003"}
+{"timestamp": "2026-10-14T13:05:24.963Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "Branch code review"}

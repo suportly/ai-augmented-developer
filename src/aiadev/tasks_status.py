@@ -17,11 +17,16 @@ Public API:
   or if the ``done`` ids do not form a contiguous prefix of the
   declared task order.
 - ``mark_done(path, task_id)`` flips the targeted block's status
-  in place; idempotent on already-``done`` rows.
+  in place, atomically; idempotent on already-``done`` rows.
+- ``mark_pending(path, task_id)`` reverts one task to ``pending`` the
+  same way; idempotent on already-``pending`` rows.
 """
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -105,8 +110,22 @@ def validate(rows: list[TaskRow]) -> None:
 
 
 def mark_done(path: Path | str, task_id: str) -> None:
-    p = Path(path)
-    text = p.read_text(encoding="utf-8")
+    _set_status(Path(path), task_id, "done")
+
+
+def mark_pending(path: Path | str, task_id: str) -> None:
+    """Revert one task to ``pending``; only its status line changes."""
+    _set_status(Path(path), task_id, "pending")
+
+
+def restore_status(path: Path | str, task_id: str, status: str) -> None:
+    """Put one task back to a status it had before (rollback); only its status token changes."""
+    _set_status(Path(path), task_id, status)
+
+
+def _set_status(p: Path, task_id: str, new_status: str) -> None:
+    # Bytes in/out: decoding without newline translation keeps CRLF files CRLF.
+    text = p.read_bytes().decode("utf-8")
     headers = list(_TASK_HEADER_RE.finditer(text))
 
     target_index = next(
@@ -123,18 +142,31 @@ def mark_done(path: Path | str, task_id: str) -> None:
         if target_index + 1 < len(headers)
         else len(text)
     )
-    body = text[body_start:body_end]
-    status_match = _STATUS_LINE_RE.search(body)
+    status_match = _STATUS_LINE_RE.search(text, body_start, body_end)
     if status_match is None:
         raise TasksMdError(
             f"task {task_id} has no parseable **Status:** line in {p}"
         )
-    if status_match.group(1) == "done":
+    if status_match.group(1) == new_status:
         return  # idempotent — Story 2 sc1 resume safety
 
-    new_body = (
-        body[: status_match.start()]
-        + "- **Status:** done"
-        + body[status_match.end() :]
-    )
-    p.write_text(text[:body_start] + new_body + text[body_end:], encoding="utf-8")
+    # Replace only the status token: the regex's trailing ``\s*`` may span
+    # line breaks that must stay untouched.
+    start, end = status_match.span(1)
+    _atomic_write(p, text[:start] + new_status + text[end:])
+
+
+def _atomic_write(p: Path, content: str) -> None:
+    """Write via a same-directory temp file + ``os.replace`` (never truncates)."""
+    fd, tmp_name = tempfile.mkstemp(dir=p.parent, prefix=f".{p.name}.", suffix=".tmp")
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(content.encode("utf-8"))
+            fh.flush()
+            os.fsync(fh.fileno())
+        shutil.copymode(p, tmp)
+        os.replace(tmp, p)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise

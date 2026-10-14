@@ -151,12 +151,7 @@ class TestStory2PathsRuleTransport:
         )
         assert installed.is_file()
         fm = _frontmatter(installed.read_text(encoding="utf-8"))
-        assert fm["paths"] == [
-            "tests/**",
-            "**/*.test.*",
-            "**/*_test.*",
-            "conftest.py",
-        ]
+        assert fm["paths"] == ["tests/**", "**/tests/**", "**/__tests__/**", "**/test_*.py", "**/*_test.py", "**/*.test.*", "**/*.spec.*", "**/*_test.*", "conftest.py"]
         assert fm.get("alwaysApply") is not True
 
     def test_cursor_translates_paths_to_mdc_globs(
@@ -170,7 +165,7 @@ class TestStory2PathsRuleTransport:
         assert "paths" not in fm
         assert "globs" in fm
         patterns = [p.strip() for p in fm["globs"].split(",")]
-        assert patterns == ["tests/**", "**/*.test.*", "**/*_test.*", "conftest.py"]
+        assert patterns == ["tests/**", "**/tests/**", "**/__tests__/**", "**/test_*.py", "**/*_test.py", "**/*.test.*", "**/*.spec.*", "**/*_test.*", "conftest.py"]
         assert fm["alwaysApply"] is False
 
     def test_codex_strips_paths_with_no_error_or_warning(

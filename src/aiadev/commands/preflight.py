@@ -5,12 +5,13 @@ the spec's Breaking-Changes ``--all`` flag.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 
 import click
 
-from ..preflight import PIPELINE_SKILLS, check
+from ..preflight import PIPELINE_SKILLS, build_payload, check
 
 
 @click.command(
@@ -44,11 +45,22 @@ from ..preflight import PIPELINE_SKILLS, check
         "Silently ignored for non-implement skills."
     ),
 )
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help=(
+        "Output format. json prints one object per feature to stdout (a list "
+        "with --all), keeps stderr silent and leaves the exit code unchanged."
+    ),
+)
 def preflight_command(
     skill: str | None,
     feature: str | None,
     all_features: bool,
     task_context: bool,
+    output_format: str,
 ) -> None:
     if all_features and feature:
         raise click.UsageError("--all is mutually exclusive with --feature")
@@ -72,19 +84,28 @@ def preflight_command(
         assert feature is not None
         targets = [repo_root / "specs" / feature]
 
+    as_json = output_format == "json"
+    payloads: list[dict[str, object]] = []
     exit_code = 0
     for feature_dir in targets:
         skill_for_dir = skill or _highest_stage(feature_dir)
-        if task_context and skill_for_dir == "implement":
+        if task_context and skill_for_dir == "implement" and not as_json:
             click.echo(
                 "pre-flight: task-context enabled (will compose "
                 "specs/<branch>/task-context/<TID>.md before each task)"
             )
         issues = check(skill_for_dir, feature_dir, repo_root=repo_root)
+        if as_json:
+            payloads.append(build_payload(skill_for_dir, feature_dir, issues, repo_root))
         for issue in issues:
-            click.echo(issue.message, err=True)
+            if not as_json:
+                click.echo(issue.message, err=True)
             if issue.would_abort:
                 exit_code = 1
+
+    if as_json:
+        out = payloads if all_features else payloads[0]
+        click.echo(json.dumps(out, ensure_ascii=False))
 
     sys.exit(exit_code)
 

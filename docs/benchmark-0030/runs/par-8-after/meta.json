@@ -1,0 +1,52 @@
+{
+  "arm": "after",
+  "pair": 8,
+  "session_id": "00c14a15-4fa6-4be6-809a-3dfaf3b35bb2",
+  "rc": 0,
+  "seconds": 167.3,
+  "total_cost_usd": 0.970102,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 6,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 6
+    },
+    "started_in_background": 6,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 6,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "e0db39e docs(readme): document greet and cover usage error",
+    "b290099 feat(cli): add --shout flag to greet",
+    "32413b9 feat(cli): add greet command",
+    "f0b8211 docs(specs): align spec and tasks with pipeline notation",
+    "64c66c9 docs(specs): add spec, plan and tasks for greet subcommand"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "00c14a15-4fa6-4be6-809a-3dfaf3b35bb2.jsonl"
+}

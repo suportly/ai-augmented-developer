@@ -10,7 +10,7 @@ Once it's teased a spec out of the conversation, it shows it to you in chunks sh
 
 After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY.
 
-Next up, once you say "go", the `implement` skill takes over: it dispatches one fresh subagent per task, runs a spec compliance review and a code quality review after each, and moves forward only when both pass. The agent can run through several tasks unattended as long as the plan stays accurate — your job is to check in, not to babysit every step.
+Next up, once you say "go", the `implement` skill takes over: it dispatches one fresh subagent per task, runs a single review per task (conformance first, then quality), and moves forward only when it passes. The agent can run through several tasks unattended as long as the plan stays accurate — your job is to check in, not to babysit every step.
 
 There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has AI-Augmented Developer superpowers.
 
@@ -287,7 +287,7 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 
 4. **tasks** — Decomposes the plan into an ordered `tasks.md` where each task = one failing test + one implementation + one commit, with dependencies declared.
 
-5. **implement** — Dispatches one fresh subagent per task with a two-stage review (spec compliance, then code quality) before advancing. One task per commit; never skip either review.
+5. **implement** — Dispatches one fresh subagent per task with a single review per task (conformance first, then quality) before advancing. One task per commit; prose-only tasks are the one documented exception.
 
 6. **analyze**, **checklist** — Cross-checks. `analyze` reports drift between spec, plan, tasks, and actual code. `checklist` runs a category pass (security, performance, accessibility, i18n, privacy, observability).
 
@@ -299,7 +299,7 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 
 ## What's Inside
 
-### Skills (17 generic + preset)
+### Skills (14 generic + preset)
 
 **Pipeline**
 - **product** — Bootstraps or updates `specs/_product/mission.md`, `tech-stack.md`, and `roadmap.md` from the repository; runs once per project before `specify`.
@@ -307,18 +307,17 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 - **clarify** — Surfaces those markers one at a time and rewrites the spec with the answers.
 - **plan** — Turns an approved spec into `plan.md` with a mandatory Constitution Check.
 - **tasks** — Ordered `tasks.md`; one task = one test + one implementation + one commit.
-- **implement** — Fresh subagent per task with two-stage review (spec compliance, then code quality).
+- **implement** — Fresh subagent per task with a single review per task (conformance first, then quality).
 - **analyze** — Gap report between spec, plan, tasks, and code.
 - **checklist** — Category pass: security, performance, accessibility, i18n, privacy, observability.
 - **constitution** — Amend the framework/preset/project constitution through the documented process.
 
 **Quality**
-- **using-ai-augmented-developer** — Meta-skill that orients the agent to the catalog and skill rule.
 - **test-driven-development** — RED-GREEN-REFACTOR cycle, strictly enforced.
 - **systematic-debugging** — 4-phase root-cause investigation before any fix.
 - **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch.
 - **finishing-a-branch** — PR creation, merge decision, cleanup.
-- **frontend-design** — Production-grade UI with distinctive, non-generic aesthetics.
+- **task-context** — Opt-in per-task context file composed before each implementer dispatch.
 
 **Stack skills (via presets)**
 

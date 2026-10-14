@@ -31,9 +31,10 @@ Invoke the right skill for the stage you are at:
 | Ready to open a PR | `requesting-code-review` |
 | Review approved | `finishing-a-branch` |
 
-`brainstorming` and `writing-plans` were removed in 0.2. Use `specify` +
-`plan` + `tasks` instead — one artifact per stage, validated against the
-constitution.
+Priority: user instructions and project agent files > skills > defaults. If
+two skills apply, take the upstream one (`specify` > `plan` > `implement`).
+Invoke via the `Skill` tool (Claude Code), `activate_skill` (Gemini CLI), or
+auto-discovery (Cursor / OpenCode / Codex).
 
 ## Constitution
 

@@ -1,2 +1,4 @@
-@./skills/using-ai-augmented-developer/SKILL.md
-@./skills/using-ai-augmented-developer/references/gemini-tools.md
+# AI-Augmented Developer (Gemini CLI)
+
+@./CLAUDE.md
+@./docs/gemini-tools.md

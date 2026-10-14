@@ -45,3 +45,17 @@ def test_spec_template_recon_block_documents_micro_format(
         "recon block must contain at least one example bullet matching "
         f"recon_entry_pattern={schema['recon_entry_pattern']!r}"
     )
+
+
+def test_spec_template_has_optional_assumptions_without_anchor(
+    framework_root: pathlib.Path,
+) -> None:
+    """Spec 0030 T044: `## Assumptions` is optional, so it has no section
+    anchor, and the preliminary Constitution Check is gone."""
+    template = (framework_root / "templates" / "spec-template.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Assumptions" in template
+    assert "section: Assumptions" not in template
+    assert "Constitution Check (preliminar" not in template
+    assert "Preliminary" not in template

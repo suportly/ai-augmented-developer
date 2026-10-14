@@ -1,0 +1,56 @@
+{
+  "arm": "after",
+  "pair": 3,
+  "session_id": "08a3aff2-a209-4a5f-802a-9875f50122e9",
+  "rc": 0,
+  "seconds": 322.1,
+  "total_cost_usd": 1.4165307000000003,
+  "num_turns": 6,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 11,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 11
+    },
+    "started_in_background": 11,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 11,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 4,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "fe8430a docs(greet): add review log and PR description",
+    "eea3c55 docs(greet): T004 document greet in README",
+    "8d04664 test(greet): T003 pin usage errors",
+    "10f13a6 feat(greet): T002 add --shout flag",
+    "91dd85a feat(greet): T001 add greet command",
+    "384df83 docs(greet): fix status marker format in tasks",
+    "4e8886d docs(greet): use bold status markers in tasks",
+    "8052641 docs(greet): add spec, plan and tasks for greet subcommand"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "08a3aff2-a209-4a5f-802a-9875f50122e9.jsonl"
+}

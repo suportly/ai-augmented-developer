@@ -1,0 +1,52 @@
+{
+  "arm": "after",
+  "pair": 9,
+  "session_id": "743c2b15-3d16-4e12-8681-4c8b28561efa",
+  "rc": 0,
+  "seconds": 143.7,
+  "total_cost_usd": 0.7382871000000002,
+  "num_turns": 31,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 6,
+    "requested": {
+      "background": 0,
+      "foreground": 5,
+      "unset": 1
+    },
+    "started_in_background": 1,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 6,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "5db67d4 docs(cli): cover missing NAME and document greet (T003)",
+    "c7aa0aa feat(cli): add --shout flag to greet (T002)",
+    "fd6a1e7 feat(cli): add greet command (T001)",
+    "c5d8e2e docs(greet): use Status grammar in tasks",
+    "a89ea62 docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "743c2b15-3d16-4e12-8681-4c8b28561efa.jsonl"
+}

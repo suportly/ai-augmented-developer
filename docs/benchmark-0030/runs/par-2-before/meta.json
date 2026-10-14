@@ -1,0 +1,50 @@
+{
+  "arm": "before",
+  "pair": 2,
+  "session_id": "8d7fa50b-4668-4324-a978-ab349e1ed797",
+  "rc": 0,
+  "seconds": 115.2,
+  "total_cost_usd": 0.7114333999999999,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 4,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 4
+    },
+    "started_in_background": 4,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 4,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 2
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "58958f5 docs(specs): add review context and approval for greet",
+    "adab722 T002 docs(readme): document greet command",
+    "4f7e4d4 T001 feat(cli): add greet subcommand"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "8d7fa50b-4668-4324-a978-ab349e1ed797.jsonl"
+}

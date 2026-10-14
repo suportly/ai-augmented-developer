@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "unit": "ceil(chars/4)",
+  "verified": {
+    "task": "T056",
+    "date": "2026-10-14",
+    "target": "reducao >= 40% contra origin (T009)",
+    "preset:lean:total": {
+      "origin": 5115,
+      "baseline": 2921,
+      "reduction_pct": 42.9
+    },
+    "path:total": {
+      "origin": 21717,
+      "baseline": 12715,
+      "reduction_pct": 41.5
+    },
+    "preset:django-drf-react:total": {
+      "origin": 5725,
+      "baseline": 3621,
+      "reduction_pct": 36.8
+    },
+    "django-drf-react": "informativo, sem exigencia de 40%"
+  },
+  "entries": {
+    "preset:lean:total": {
+      "origin": 5115,
+      "baseline": 2921,
+      "teto": 2921,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:lean:agent_file": {
+      "baseline": 504,
+      "teto": 504,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:lean:wrapper": {
+      "baseline": 28,
+      "teto": 28
+    },
+    "preset:lean:rules": {
+      "baseline": 1250,
+      "teto": 1250,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:lean:skills": {
+      "baseline": 566,
+      "teto": 566,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:lean:commands": {
+      "baseline": 429,
+      "teto": 429,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:lean:agents": {
+      "baseline": 144,
+      "teto": 144
+    },
+    "preset:django-drf-react:total": {
+      "origin": 5725,
+      "baseline": 3621,
+      "teto": 3621,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:django-drf-react:agent_file": {
+      "baseline": 866,
+      "teto": 866,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:django-drf-react:wrapper": {
+      "baseline": 28,
+      "teto": 28
+    },
+    "preset:django-drf-react:rules": {
+      "baseline": 1250,
+      "teto": 1250,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:django-drf-react:skills": {
+      "baseline": 873,
+      "teto": 873,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:django-drf-react:commands": {
+      "baseline": 460,
+      "teto": 460,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "preset:django-drf-react:agents": {
+      "baseline": 144,
+      "teto": 144
+    },
+    "path:total": {
+      "origin": 21717,
+      "baseline": 12715,
+      "teto": 12715,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/specify/SKILL.md": {
+      "baseline": 1180,
+      "teto": 1180,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:templates/spec-template.md": {
+      "baseline": 549,
+      "teto": 549,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:agents/spec-document-reviewer.md": {
+      "baseline": 718,
+      "teto": 718,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/clarify/SKILL.md": {
+      "baseline": 606,
+      "teto": 606,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/plan/SKILL.md": {
+      "baseline": 772,
+      "teto": 772,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:templates/plan-template.md": {
+      "baseline": 611,
+      "teto": 611,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:constitution.md": {
+      "baseline": 1464,
+      "teto": 1464,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:agents/plan-document-reviewer.md": {
+      "baseline": 770,
+      "teto": 770,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/tasks/SKILL.md": {
+      "baseline": 573,
+      "teto": 573,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:templates/tasks-template.md": {
+      "baseline": 419,
+      "teto": 419,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/implement/SKILL.md": {
+      "baseline": 1500,
+      "teto": 1500,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/test-driven-development/SKILL.md": {
+      "baseline": 358,
+      "teto": 358,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:agents/code-reviewer.md": {
+      "baseline": 789,
+      "teto": 789,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/requesting-code-review/SKILL.md": {
+      "baseline": 747,
+      "teto": 747,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "path:skills/requesting-code-review/references/review-gate.md": {
+      "baseline": 521,
+      "teto": 521
+    },
+    "path:skills/finishing-a-branch/SKILL.md": {
+      "baseline": 349,
+      "teto": 349,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:analyze": {
+      "baseline": 970,
+      "teto": 970
+    },
+    "skill:checklist": {
+      "baseline": 541,
+      "teto": 541,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:clarify": {
+      "baseline": 606,
+      "teto": 606,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:constitution": {
+      "baseline": 838,
+      "teto": 838,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:finishing-a-branch": {
+      "baseline": 349,
+      "teto": 349,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:implement": {
+      "baseline": 1500,
+      "teto": 1500,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:plan": {
+      "baseline": 772,
+      "teto": 772,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:product": {
+      "baseline": 958,
+      "teto": 958,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:requesting-code-review": {
+      "baseline": 747,
+      "teto": 747,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:specify": {
+      "baseline": 1180,
+      "teto": 1180,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:systematic-debugging": {
+      "baseline": 562,
+      "teto": 562,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:task-context": {
+      "baseline": 751,
+      "teto": 751
+    },
+    "skill:tasks": {
+      "baseline": 573,
+      "teto": 573,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:test-driven-development": {
+      "baseline": 358,
+      "teto": 358,
+      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{"timestamp": "2026-10-14T12:51:47.913Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T001", "description": "Review T001"}
+{"timestamp": "2026-10-14T12:52:52.180Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "Review T002"}
+{"timestamp": "2026-10-14T12:53:09.288Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "description": "Review T003"}
+{"timestamp": "2026-10-14T12:53:25.758Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T004", "description": "Review T004"}
+{"timestamp": "2026-10-14T12:53:47.758Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "Branch code review"}

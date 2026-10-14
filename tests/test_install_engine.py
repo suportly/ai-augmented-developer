@@ -8,16 +8,24 @@ conflicts, uninstall with force) has a dedicated test.
 """
 from __future__ import annotations
 
+import hashlib
 import pathlib
+import shutil
 
 import pytest
 
 from aiadev.install_engine import (
     InstallError,
     InstallMode,
+    _collect_skill_references,
     install,
 )
-from aiadev.install_manifest import Manifest, load as load_manifest
+from aiadev.install_manifest import (
+    InstalledFile,
+    compute_sha256,
+    load as load_manifest,
+    save as save_manifest,
+)
 from aiadev.placeholders import find_unresolved
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures" / "mini-preset"
@@ -39,8 +47,27 @@ def _wrapper_file(project_root: pathlib.Path) -> pathlib.Path:
     return project_root / "CLAUDE.md"
 
 
+# platform -> where that platform keeps ``<skill>/SKILL.md`` (the layout
+# the handlers produce); a reference must land in the same skill directory.
+_SKILLS_DIR = {
+    "claude_code": ".claude/skills",
+    "codex": ".codex/skills",
+    "gemini": ".gemini/skills",
+    "cursor": ".cursor/skills",
+    "opencode": ".opencode/skills",
+}
+
+
 def _skill_file(project_root: pathlib.Path, name: str) -> pathlib.Path:
     return project_root / ".claude" / "skills" / name / "SKILL.md"
+
+
+def _reference_file(
+    project_root: pathlib.Path, platform: str = "claude_code"
+) -> pathlib.Path:
+    """The mini-preset's ``hello-world/references/stack.md`` once installed."""
+    skills_dir = project_root / _SKILLS_DIR[platform]
+    return skills_dir / "hello-world" / "references" / "stack.md"
 
 
 def _manifest_file(project_root: pathlib.Path) -> pathlib.Path:
@@ -96,7 +123,12 @@ class TestFreshInstall:
     def test_report_lists_every_new_file(self, tmp_path: pathlib.Path) -> None:
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         assert sorted(p.name for p in report.written) == sorted(
-            [_agent_file(tmp_path).name, _wrapper_file(tmp_path).name, "SKILL.md"]
+            [
+                _agent_file(tmp_path).name,
+                _wrapper_file(tmp_path).name,
+                "SKILL.md",
+                "stack.md",
+            ]
         )
         assert report.skipped == []
         assert report.conflicts == []
@@ -113,7 +145,7 @@ class TestReInstall:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
         assert report.written == []
-        assert len(report.skipped) == 3
+        assert len(report.skipped) == 4  # + the skill's references/stack.md
         assert report.conflicts == []
 
     def test_new_values_rewrite_files(self, tmp_path: pathlib.Path) -> None:
@@ -121,9 +153,19 @@ class TestReInstall:
         updated = {**VARIABLES, "GREETING": "Bonjour"}
         report = install(FIXTURES, tmp_path, updated, now="2026-04-14T13:00:00Z")
         # AGENTS.md + SKILL.md pick up new content; the CLAUDE.md wrapper
-        # is variable-independent and stays a skip.
+        # and references/stack.md (which only uses PROJECT_NAME) are
+        # GREETING-independent and stay skips.
         assert len(report.written) == 2
         assert "Bonjour" in _agent_file(tmp_path).read_text(encoding="utf-8")
+
+    def test_changed_variable_rewrites_the_reference(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
+        updated = {**VARIABLES, "PROJECT_NAME": "Other App"}
+        report = install(FIXTURES, tmp_path, updated, now="2026-04-14T13:00:00Z")
+        assert _reference_file(tmp_path) in report.written
+        assert "Other App" in _reference_file(tmp_path).read_text(encoding="utf-8")
 
     def test_reinstall_preserves_previous_values_for_unspecified_keys(
         self, tmp_path: pathlib.Path
@@ -159,6 +201,16 @@ class TestConflicts:
         report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
         assert _agent_file(tmp_path) in report.conflicts
         assert _agent_file(tmp_path).read_text(encoding="utf-8") == "edited by user\n"
+
+    def test_hand_edited_reference_is_reported_as_conflict(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
+        _reference_file(tmp_path).write_text("edited by user\n", encoding="utf-8")
+
+        report = install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T13:00:00Z")
+        assert _reference_file(tmp_path) in report.conflicts
+        assert _reference_file(tmp_path).read_text(encoding="utf-8") == "edited by user\n"
 
     def test_force_overwrites_hand_edited_file(self, tmp_path: pathlib.Path) -> None:
         install(FIXTURES, tmp_path, VARIABLES, now="2026-04-14T12:00:00Z")
@@ -197,16 +249,35 @@ class TestDryRun:
             mode=InstallMode.DRY_RUN,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.written) == 4
+        assert _reference_file(tmp_path) in report.written
         assert not _agent_file(tmp_path).exists()
         assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
+        assert not _reference_file(tmp_path).exists()
         assert not _manifest_file(tmp_path).exists()
 
 
 # ---------------------------------------------------------------------------
 # Unresolved placeholders
 # ---------------------------------------------------------------------------
+
+
+_SKILL_REL = "skills/hello-world/SKILL.md"
+_REFERENCE_REL = "skills/hello-world/references/stack.md"
+
+
+def _preset_with_token(tmp_path: pathlib.Path, relative: str) -> pathlib.Path:
+    """Copy the mini fixture and append an unresolvable token to one preset file."""
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    broken = preset / relative
+    broken.write_text(
+        broken.read_text(encoding="utf-8") + "\nMissing: {{MISSING_TOKEN}}\n",
+        encoding="utf-8",
+    )
+    return preset
 
 
 class TestUnresolvedPlaceholders:
@@ -232,11 +303,59 @@ class TestUnresolvedPlaceholders:
             allow_unresolved=True,
             now="2026-04-14T12:00:00Z",
         )
-        assert len(report.written) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.written) == 4
         assert "GREETING" in report.unresolved
         # The literal {{GREETING}} survives in the output.
         agent_text = _agent_file(tmp_path).read_text(encoding="utf-8")
         assert "{{GREETING}}" in agent_text
+
+    @pytest.mark.parametrize("mode", [InstallMode.INSTALL, InstallMode.DRY_RUN])
+    def test_error_cites_the_offending_reference_file_and_key(
+        self, tmp_path: pathlib.Path, mode: InstallMode
+    ) -> None:
+        # Spec 0030 Story 4 sc2: a preset author must learn *which* file
+        # holds the stray token; a dry run predicts the same failure.
+        preset = _preset_with_token(tmp_path, _REFERENCE_REL)
+
+        with pytest.raises(InstallError) as excinfo:
+            install(
+                preset,
+                tmp_path / "project",
+                VARIABLES,
+                mode=mode,
+                now="2026-04-14T12:00:00Z",
+            )
+
+        message = str(excinfo.value)
+        assert "unresolved placeholders" in message
+        assert _REFERENCE_REL in message
+        assert "MISSING_TOKEN" in message
+        assert "SKILL.md" not in message  # only the offender is cited
+
+    @pytest.mark.parametrize("broken", [_SKILL_REL, _REFERENCE_REL])
+    def test_failed_install_leaves_nothing_behind_and_rerun_after_fix_succeeds(
+        self, tmp_path: pathlib.Path, broken: str
+    ) -> None:
+        # Every artifact is validated before the first write: a failing
+        # install leaves no file and no manifest, so fixing the variable
+        # and re-running is a clean first install, not a wall of conflicts.
+        preset = _preset_with_token(tmp_path, broken)
+        project = tmp_path / "project"
+        project.mkdir()
+
+        with pytest.raises(InstallError):
+            install(preset, project, VARIABLES, now="2026-04-14T12:00:00Z")
+        assert list(project.rglob("*")) == []  # no artifact, no manifest
+
+        report = install(
+            preset,
+            project,
+            {**VARIABLES, "MISSING_TOKEN": "fixed"},
+            now="2026-04-14T13:00:00Z",
+        )
+        assert report.ok
+        assert _skill_file(project, "hello-world") in report.written
 
 
 # ---------------------------------------------------------------------------
@@ -254,10 +373,12 @@ class TestUninstall:
             mode=InstallMode.UNINSTALL,
         )
         assert report.ok
-        assert len(report.removed) == 3  # AGENTS.md + CLAUDE.md wrapper + SKILL.md
+        # AGENTS.md + CLAUDE.md wrapper + SKILL.md + references/stack.md
+        assert len(report.removed) == 4
         assert not _agent_file(tmp_path).exists()
         assert not _wrapper_file(tmp_path).exists()
         assert not _skill_file(tmp_path, "hello-world").exists()
+        assert not _reference_file(tmp_path).exists()
         assert not _manifest_file(tmp_path).exists()
 
     def test_uninstall_without_prior_install_is_noop(
@@ -342,6 +463,16 @@ class TestUserScope:
         assert not (fake_home / "CLAUDE.md").exists()
         assert not (project / "CLAUDE.md").exists()
 
+    def test_user_scope_installs_references_with_their_skill(
+        self, fake_home: pathlib.Path, tmp_path: pathlib.Path
+    ) -> None:
+        project = tmp_path / "unused-project"
+        project.mkdir()
+        install(FIXTURES, project, VARIABLES, scope="user", now="2026-04-14T12:00:00Z")
+        reference = fake_home / ".claude" / "skills" / "hello-world" / "references" / "stack.md"
+        assert "Demo App" in reference.read_text(encoding="utf-8")
+        assert not (project / ".claude").exists()
+
     def test_user_scope_manifest_is_under_home(
         self, fake_home: pathlib.Path, tmp_path: pathlib.Path
     ) -> None:
@@ -408,3 +539,688 @@ class TestMisconfiguration:
         (preset_dir / "preset.yaml").write_text("- a\n- b\n", encoding="utf-8")
         with pytest.raises(InstallError, match="mapping"):
             install(preset_dir, tmp_path / "project", VARIABLES)
+
+
+# ---------------------------------------------------------------------------
+# Skill references/ collection (spec 0030 Story 4, plan D1)
+# ---------------------------------------------------------------------------
+
+
+def _write(path: pathlib.Path, text: str = "# ref\n") -> pathlib.Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _make_skill(root: pathlib.Path, name: str, *, skill_md: bool = True) -> pathlib.Path:
+    """Create ``<root>/skills/<name>/`` (with a minimal SKILL.md unless told not to)."""
+    skill_dir = root / "skills" / name
+    skill_dir.mkdir(parents=True)
+    if skill_md:
+        _write(skill_dir / "SKILL.md", f"---\nname: {name}\n---\n")
+    return skill_dir
+
+
+class TestCollectSkillReferences:
+    def test_framework_reference_is_collected_verbatim(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        ref = _write(skill / "references" / "guide.md")
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/guide.md", ref, True)
+        ]
+
+    def test_preset_reference_is_collected_not_verbatim(self) -> None:
+        # The mini-preset ships hello-world/references/stack.md.
+        collected = _collect_skill_references(None, FIXTURES)
+
+        assert collected == [
+            (
+                "skill",
+                "hello-world/references/stack.md",
+                FIXTURES / "skills" / "hello-world" / "references" / "stack.md",
+                False,
+            )
+        ]
+
+    def test_preset_wins_on_same_skill_and_relative_path(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        framework = tmp_path / "framework"
+        fw_skill = _make_skill(framework, "alpha")
+        _write(fw_skill / "references" / "shared.md", "framework\n")
+        fw_only = _write(fw_skill / "references" / "fw-only.md")
+        preset = tmp_path / "preset"
+        pr_skill = _make_skill(preset, "alpha")
+        pr_shared = _write(pr_skill / "references" / "shared.md", "preset\n")
+        pr_only = _write(pr_skill / "references" / "pr-only.md")
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/fw-only.md", fw_only, True),
+            ("skill", "alpha/references/pr-only.md", pr_only, False),
+            ("skill", "alpha/references/shared.md", pr_shared, False),
+        ]
+
+    def test_ignores_everything_that_is_not_a_markdown_reference(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        kept = _write(skill / "references" / "kept.md")
+        _write(skill / "references" / ".DS_Store", "junk")
+        _write(skill / "references" / "notes.txt", "plain text")
+        (skill / "references" / "folder.md").mkdir()  # a directory named like a file
+        _write(skill / "notes.md")  # markdown beside SKILL.md, not under references/
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/kept.md", kept, True)
+        ]
+
+    def test_skill_without_skill_md_is_ignored(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        orphan = _make_skill(framework, "orphan", skill_md=False)
+        _write(orphan / "references" / "lost.md")
+        preset = tmp_path / "preset"
+        pr_orphan = _make_skill(preset, "orphan-preset", skill_md=False)
+        _write(pr_orphan / "references" / "lost.md")
+
+        assert _collect_skill_references(framework, preset) == []
+
+    def test_preset_references_only_extend_a_framework_skill(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # Plan D1/D11: a preset delivers stack guidance WITHOUT replacing
+        # the generic SKILL.md — only references/ in the preset.
+        framework = tmp_path / "framework"
+        _make_skill(framework, "alpha")
+        preset = tmp_path / "preset"
+        stack = _write(
+            _make_skill(preset, "alpha", skill_md=False) / "references" / "stack.md"
+        )
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/stack.md", stack, False)
+        ]
+
+    def test_order_is_deterministic(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        # Created out of alphabetical order on purpose.
+        for skill_name, rel in (
+            ("zeta", "references/z.md"),
+            ("alpha", "references/b.md"),
+            ("alpha", "references/a/c.md"),
+            ("alpha", "references/a.md"),
+            ("mid", "references/m.md"),
+        ):
+            skill = framework / "skills" / skill_name
+            if not skill.exists():
+                _make_skill(framework, skill_name)
+            _write(skill / rel)
+        preset = tmp_path / "preset"
+        pr_skill = _make_skill(preset, "beta")
+        _write(pr_skill / "references" / "p.md")
+
+        first = _collect_skill_references(framework, preset)
+        second = _collect_skill_references(framework, preset)
+
+        names = [name for (_role, name, _path, _verbatim) in first]
+        assert names == sorted(names)
+        assert names == [
+            "alpha/references/a.md",
+            "alpha/references/a/c.md",
+            "alpha/references/b.md",
+            "beta/references/p.md",
+            "mid/references/m.md",
+            "zeta/references/z.md",
+        ]
+        assert first == second
+
+    def test_symlink_pointing_outside_the_skills_tree_is_not_followed(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        outside = tmp_path / "outside"
+        secret = _write(outside / "secret.md", "do not install me\n")
+        _write(outside / "dir" / "nested.md")
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        kept = _write(skill / "references" / "kept.md")
+        refs = skill / "references"
+        try:
+            (refs / "leak.md").symlink_to(secret)
+            (refs / "leakdir").symlink_to(outside / "dir", target_is_directory=True)
+        except OSError:  # pragma: no cover - platform without symlink support
+            pytest.skip("symlinks not supported on this platform")
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/references/kept.md", kept, True)
+        ]
+
+    def test_missing_roots_yield_nothing(self, tmp_path: pathlib.Path) -> None:
+        # No framework root, and a preset without a skills/ directory.
+        assert _collect_skill_references(None, tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# Skill references/ installation (spec 0030 Story 4 sc3, plan D1)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("platform", sorted(_SKILLS_DIR))
+class TestInstallSkillReferences:
+    """What varies per handler: the destination and the manifest entry."""
+
+    def test_preset_reference_lands_next_to_the_skill_and_is_recorded(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        report = install(
+            FIXTURES, tmp_path, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z"
+        )
+
+        reference = _reference_file(tmp_path, platform)
+        assert (reference.parent.parent / "SKILL.md").is_file()
+        assert reference in report.written
+        text = reference.read_text(encoding="utf-8")
+        assert "Demo App" in text  # {{PROJECT_NAME}} substituted
+        assert find_unresolved(text) == []
+
+        record = load_manifest(_manifest_file(tmp_path)).find_preset("mini")
+        assert record is not None
+        entry = next(f for f in record.files if f.path.endswith("references/stack.md"))
+        assert entry.path == reference.relative_to(tmp_path).as_posix()
+        assert entry.role == "skill"
+        assert entry.sha256 == hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def test_uninstall_removes_the_reference_and_empty_directories(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        install(FIXTURES, tmp_path, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z")
+        reference = _reference_file(tmp_path, platform)
+
+        report = install(
+            FIXTURES, tmp_path, VARIABLES, platform=platform, mode=InstallMode.UNINSTALL
+        )
+
+        assert reference in report.removed
+        assert not reference.parent.exists()  # references/
+        assert not (tmp_path / _SKILLS_DIR[platform]).exists()  # skill dirs went too
+
+
+def test_framework_reference_is_copied_verbatim(tmp_path: pathlib.Path) -> None:
+    # Guards the ``verbatim`` flag of framework references: their
+    # ``{{UPPER_SNAKE}}`` tokens are runtime markers, never substituted.
+    framework = tmp_path / "framework"
+    skill = _make_skill(framework, "alpha")
+    body = "Runtime markers stay: {{TASK_ID}} and {{PROJECT_NAME}}\n"
+    _write(skill / "references" / "guide.md", body)
+    project = tmp_path / "project"
+
+    report = install(
+        FIXTURES,
+        project,
+        VARIABLES,
+        framework_root=framework,
+        now="2026-04-14T12:00:00Z",
+    )
+
+    installed = project / _SKILLS_DIR["claude_code"] / "alpha" / "references" / "guide.md"
+    assert installed.read_text(encoding="utf-8") == body
+    assert report.unresolved == []
+
+
+# ---------------------------------------------------------------------------
+# Files the framework stopped shipping (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+# What a "new version" of the preset drops, as (preset-relative source,
+# project-relative installed path): a rule, and a skill's references/ file
+# while the skill itself stays.
+_RULE = ("rules/sample-rule.md", ".claude/rules/sample-rule.md")
+_REFERENCE = (_REFERENCE_REL, ".claude/skills/hello-world/references/stack.md")
+
+
+def _installed_v1(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
+    """Install the mini preset plus a rule; return ``(preset, project)``."""
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    _write(preset / _RULE[0], "# Sample rule\n")
+    project = tmp_path / "project"
+    install(preset, project, VARIABLES, now="2026-04-14T12:00:00Z")
+    return preset, project
+
+
+def _ship_v2_without(preset: pathlib.Path, *dropped: tuple[str, str]) -> None:
+    for source, _ in dropped:
+        (preset / source).unlink()
+
+
+def _record_files(project: pathlib.Path, preset: str = "mini") -> list[InstalledFile]:
+    """The preset's recorded files (the mini preset's by default), repeats included."""
+    record = load_manifest(_manifest_file(project)).find_preset(preset)
+    assert record is not None
+    return list(record.files)
+
+
+def _tracked_files(project: pathlib.Path, preset: str = "mini") -> dict[str, str]:
+    """Manifest record of ``preset`` as ``{path: sha256}``."""
+    return {f.path: f.sha256 for f in _record_files(project, preset)}
+
+
+def _tracked_paths(project: pathlib.Path, preset: str = "mini") -> set[str]:
+    return set(_tracked_files(project, preset))
+
+
+def _rewrite_record(project: pathlib.Path, rewrite, preset: str = "mini") -> None:
+    """Replace ``preset``'s recorded files with ``rewrite(files)``."""
+    manifest = load_manifest(_manifest_file(project))
+    record = manifest.find_preset(preset)
+    assert record is not None
+    record.files[:] = rewrite(list(record.files))
+    save_manifest(manifest, _manifest_file(project))
+
+
+class TestStaleFiles:
+    @pytest.mark.parametrize("dropped", [_RULE, _REFERENCE], ids=["rule", "reference"])
+    def test_unedited_file_the_preset_dropped_is_removed(
+        self, tmp_path: pathlib.Path, dropped: tuple[str, str]
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        stale = project / dropped[1]
+        assert stale.is_file()
+        _ship_v2_without(preset, dropped)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [stale]
+        assert report.preserved == []
+        assert not stale.parent.exists()  # the directory it left empty goes too
+        assert dropped[1] not in _tracked_paths(project)
+        assert _agent_file(project).is_file()  # what is still shipped stays
+
+    @pytest.mark.parametrize("force", [False, True])
+    def test_hand_edited_file_is_preserved_and_leaves_the_manifest(
+        self, tmp_path: pathlib.Path, force: bool
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        stale = project / _RULE[1]
+        stale.write_text("my own terse rules\n", encoding="utf-8")
+        _ship_v2_without(preset, _RULE)
+
+        report = install(
+            preset, project, VARIABLES, force=force, now="2026-04-14T13:00:00Z"
+        )
+
+        assert stale.read_text(encoding="utf-8") == "my own terse rules\n"
+        assert report.preserved == [stale]
+        assert report.removed == []
+        assert report.conflicts == []
+        assert report.ok  # the edit is kept and listed, never a failure
+        assert _RULE[1] not in _tracked_paths(project)
+
+    def test_file_the_user_already_deleted_is_dropped_quietly(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        (project / _RULE[1]).unlink()
+        _ship_v2_without(preset, _RULE)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert _RULE[1] not in _tracked_paths(project)
+
+    def test_directory_holding_another_file_survives(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        mine = _write(project / ".claude" / "rules" / "mine.md", "# mine\n")
+        _ship_v2_without(preset, _RULE)
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.removed == [project / _RULE[1]]
+        assert mine.is_file()
+
+    def test_file_still_shipped_but_in_conflict_is_not_stale(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # A conflict is "kept because edited", not "no longer shipped": it
+        # must stay tracked and must not show up as preserved.
+        preset, project = _installed_v1(tmp_path)
+        _agent_file(project).write_text("edited by user\n", encoding="utf-8")
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.conflicts == [_agent_file(project)]
+        assert report.preserved == [] and report.removed == []
+        assert "AGENTS.md" in _tracked_paths(project)
+
+    def test_dry_run_lists_removals_and_preservations_but_deletes_nothing(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        edited = project / _REFERENCE[1]
+        edited.write_text("my own stack notes\n", encoding="utf-8")
+        _ship_v2_without(preset, _RULE, _REFERENCE)
+        manifest_before = _manifest_file(project).read_bytes()
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            mode=InstallMode.DRY_RUN,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert report.removed == [project / _RULE[1]]
+        assert report.preserved == [edited]
+        assert (project / _RULE[1]).is_file()
+        assert edited.read_text(encoding="utf-8") == "my own stack notes\n"
+        assert _manifest_file(project).read_bytes() == manifest_before
+
+    def test_user_scope_run_does_not_retire_files_it_cannot_install(
+        self, tmp_path: pathlib.Path, monkeypatch
+    ) -> None:
+        # Agent files are skipped under --scope user, so a project install
+        # that happened to target $HOME left AGENTS.md/CLAUDE.md that this
+        # run never looked at: out of scope, not dropped by the framework.
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+        install(FIXTURES, home, VARIABLES, now="2026-04-14T12:00:00Z")
+
+        report = install(
+            FIXTURES, home, VARIABLES, scope="user", now="2026-04-14T13:00:00Z"
+        )
+
+        assert report.removed == [] and report.preserved == []
+        assert _agent_file(home).is_file() and _wrapper_file(home).is_file()
+        assert {"AGENTS.md", "CLAUDE.md"} <= _tracked_paths(home)
+
+
+class TestManifestPathContainment:
+    """A manifest entry is only ever a path *inside* the install root."""
+
+    @pytest.mark.parametrize("mode", [InstallMode.INSTALL, InstallMode.UNINSTALL])
+    @pytest.mark.parametrize("escape", ["relative", "absolute"])
+    def test_entry_outside_the_root_is_never_touched(
+        self, tmp_path: pathlib.Path, mode: InstallMode, escape: str
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        victim = _write(tmp_path / "victim.txt", "not ours\n")  # beside the project
+        recorded = "../victim.txt" if escape == "relative" else str(victim)
+        forged = InstalledFile(recorded, compute_sha256(victim), "rule")
+        _rewrite_record(project, lambda files: [*files, forged])
+        _ship_v2_without(preset, _RULE)  # a legitimate stale file goes too
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            mode=mode,
+            force=True,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert victim.read_text(encoding="utf-8") == "not ours\n"
+        legit = project / _RULE[1]
+        assert legit in report.removed  # inside the root, still retired
+        assert not legit.exists()
+        # An install lists the unmanaged entry as preserved and drops it from
+        # the manifest; an uninstall just skips it.
+        assert len(report.preserved) == (0 if mode is InstallMode.UNINSTALL else 1)
+        if mode is InstallMode.INSTALL:
+            assert recorded not in _tracked_paths(project)
+
+
+# ---------------------------------------------------------------------------
+# Removal bounded to the current platform (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+
+def _rich_preset(tmp_path: pathlib.Path) -> pathlib.Path:
+    """The mini preset plus a rule, a command, an agent, a constitution and MCP servers.
+
+    Every managed root then has an occupant, including the ones a platform
+    spells differently (gemini ``.toml`` commands, cursor ``.mdc`` rules,
+    each platform's own MCP file).
+    """
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    _write(preset / "constitution.md", "# Constitution\n")
+    _write(preset / "mcps.yaml", "servers:\n  demo:\n    command: npx\n    args: [demo]\n")
+    _write(preset / "rules" / "sample-rule.md", "# Sample rule\n")
+    _write(preset / "commands" / "ship.md", "---\ndescription: Ship.\n---\nShip $ARGUMENTS\n")
+    _write(preset / "agents" / "reviewer.md", "# Reviewer\n")
+    return preset
+
+
+class TestRetirementIsBoundedToTheCurrentPlatform:
+    @pytest.mark.parametrize(
+        ("first", "second"), [("claude_code", "cursor"), ("gemini", "codex")]
+    )
+    def test_installing_another_platform_keeps_the_first_and_a_later_sync_is_clean(
+        self, tmp_path: pathlib.Path, first: str, second: str
+    ) -> None:
+        preset = _rich_preset(tmp_path)
+        project = tmp_path / "project"
+        install(preset, project, VARIABLES, platform=first, now="2026-04-14T12:00:00Z")
+        before = _tracked_files(project)
+        assert len(before) >= 6
+
+        report = install(
+            preset, project, VARIABLES, platform=second, now="2026-04-14T13:00:00Z"
+        )
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert all((project / path).is_file() for path in before)
+        assert _reference_file(project, second).is_file()
+        after = _tracked_files(project)
+        assert {path: after[path] for path in before} == before  # carried as recorded
+
+        # What ``sync --platform <first>`` does next: nothing to write or fix.
+        again = install(
+            preset, project, VARIABLES, platform=first, now="2026-04-14T14:00:00Z"
+        )
+
+        assert again.removed == [] and again.preserved == []
+        assert set(again.skipped) == {project / path for path in before}
+        assert _tracked_files(project) == after
+
+    @pytest.mark.parametrize("platform", sorted(_SKILLS_DIR))
+    def test_dropping_every_source_retires_every_file_and_only_those(
+        self, tmp_path: pathlib.Path, platform: str
+    ) -> None:
+        # Probes the managed roots of each handler against everything it
+        # installs: a root too narrow leaves an orphan behind, one too wide
+        # (the install root itself) reaches the user's file below. The MCP
+        # file is the exception: every server of the project lives in it,
+        # hand-added ones included, so it is no preset's to delete. It is
+        # outside every root, hence carried in the record, never retired.
+        preset = _rich_preset(tmp_path)
+        project = tmp_path / "project"
+        install(preset, project, VARIABLES, platform=platform, now="2026-04-14T12:00:00Z")
+        installed = _tracked_files(project)
+        (mcp_file,) = (f.path for f in _record_files(project) if f.role == "mcp")
+        mine = _write(project / "src" / "app.py", "print('mine')\n")
+        sha = compute_sha256(mine)
+        forged = [InstalledFile(path, sha, "rule") for path in ("src/app.py", "src/./app.py")]
+        _rewrite_record(project, lambda files: [*files, *forged])
+        for source in ("rules", "commands", "agents", "skills"):
+            shutil.rmtree(preset / source)
+        for source in ("CLAUDE.md", "constitution.md", "mcps.yaml"):
+            (preset / source).unlink()
+
+        report = install(
+            preset,
+            project,
+            VARIABLES,
+            platform=platform,
+            force=True,
+            now="2026-04-14T13:00:00Z",
+        )
+
+        assert report.ok and report.preserved == []
+        removed = {p.relative_to(project).as_posix() for p in report.removed}
+        assert removed == set(installed) - {mcp_file}
+        assert mine.read_text(encoding="utf-8") == "print('mine')\n"
+        # Carried over once, whatever its spelling.
+        assert [(f.path, f.sha256) for f in _record_files(project)] == [
+            (mcp_file, installed[mcp_file]),
+            ("src/app.py", sha),
+        ]
+        left = {p.relative_to(project).as_posix() for p in project.rglob("*") if p.is_file()}
+        # Besides the manifest, the install also leaves its own stubs.
+        assert left - {".aiadev/installed.yaml", ".gitignore", "_aiadev/team.toml"} == {
+            mcp_file,
+            "src/app.py",
+        }
+
+    @pytest.mark.parametrize(
+        ("alias", "replaces_record"),
+        [("docs/../AGENTS.md", False), ("./AGENTS.md", True)],
+        ids=["beside-the-record", "instead-of-the-record"],
+    )
+    def test_alias_of_a_shipped_file_is_neither_retired_nor_duplicated(
+        self, tmp_path: pathlib.Path, alias: str, replaces_record: bool
+    ) -> None:
+        preset, project = _installed_v1(tmp_path)
+        sha = compute_sha256(_agent_file(project))
+        _rewrite_record(
+            project,
+            lambda files: [
+                *(f for f in files if not (replaces_record and f.path == "AGENTS.md")),
+                InstalledFile(alias, sha, "agent_file"),
+            ],
+        )
+
+        report = install(preset, project, VARIABLES, now="2026-04-14T13:00:00Z")
+
+        assert report.ok
+        assert report.removed == [] and report.preserved == []
+        assert _agent_file(project).is_file()
+        paths = [f.path for f in _record_files(project)]
+        assert paths.count("AGENTS.md") == 1 and alias not in paths
+
+
+# ---------------------------------------------------------------------------
+# Shared owner, the MCP file, dry-run fidelity (spec 0030 Story 6 sc1, plan D2)
+# ---------------------------------------------------------------------------
+
+_NOW = "2026-04-14T12:00:00Z"
+
+
+def _ship(tmp_path: pathlib.Path, name: str, *rules: str) -> pathlib.Path:
+    """(Re)write the preset ``name`` so that it ships exactly ``rules``."""
+    preset = tmp_path / "presets" / name
+    shutil.rmtree(preset, ignore_errors=True)
+    _write(preset / "preset.yaml", f"name: {name}\nversion: 1.0.0\n")
+    for rule in rules:
+        _write(preset / "rules" / f"{rule}.md", f"# {rule}\n")
+    return preset
+
+
+class TestSharedOwner:
+    @pytest.mark.parametrize("alias", ["", "./"], ids=["as-written", "aliased"])
+    def test_file_another_preset_still_records_is_released_not_removed(
+        self, tmp_path: pathlib.Path, alias: str
+    ) -> None:
+        project = tmp_path / "project"
+        shared = project / ".claude" / "rules" / "shared.md"
+        alpha, beta = _ship(tmp_path, "alpha", "shared"), _ship(tmp_path, "beta", "shared")
+        install(alpha, project, {}, now=_NOW)
+        install(beta, project, {}, force=True, now=_NOW)  # --force: the file is alpha's
+        _rewrite_record(  # beta's own spelling of the path
+            project,
+            lambda files: [InstalledFile(alias + f.path, f.sha256, f.role) for f in files],
+            preset="beta",
+        )
+        beta_paths = _tracked_paths(project, "beta")
+        _ship(tmp_path, "alpha")  # alpha drops it, beta still ships it
+
+        report = install(alpha, project, {}, now=_NOW)
+
+        assert shared.is_file()
+        assert report.removed == [] and report.preserved == []
+        assert ".claude/rules/shared.md" not in _tracked_paths(project, "alpha")
+        assert _tracked_paths(project, "beta") == beta_paths
+
+        _ship(tmp_path, "beta")  # now nobody ships it: the last owner removes it
+        assert install(beta, project, {}, now=_NOW).removed == [shared]
+        assert not shared.exists()
+
+    def test_mcp_file_is_out_of_reach_whatever_role_the_record_gives_it(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # Every server of the project lives in this one file, hand-added ones
+        # included: a preset dropping ``mcps.yaml`` must not take it with it,
+        # not even through a (hand-edited) record that calls it a rule.
+        preset = _ship(tmp_path, "alpha")
+        _write(preset / "mcps.yaml", "servers:\n  demo:\n    command: npx\n    args: [demo]\n")
+        project = tmp_path / "project"
+        install(preset, project, {}, now=_NOW)
+        target = project / ".mcp.json"
+        written = target.read_text(encoding="utf-8")
+        _rewrite_record(
+            project,
+            lambda files: [InstalledFile(f.path, f.sha256, "rule") for f in files],
+            preset="alpha",
+        )
+        (preset / "mcps.yaml").unlink()
+
+        report = install(preset, project, {}, force=True, now=_NOW)
+
+        assert report.ok and report.removed == [] and report.preserved == []
+        assert target.read_text(encoding="utf-8") == written
+        assert ".mcp.json" in _tracked_paths(project, "alpha")
+
+    def test_dry_run_over_several_presets_removes_what_the_real_run_removes(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # ``aiadev sync`` re-installs presets one after another. A dry run
+        # saves nothing, so each preset must see the previous one's result
+        # through the manifest object it is handed.
+        alpha = _ship(tmp_path, "alpha", "both", "only-alpha", "beta-keeps")
+        beta = _ship(tmp_path, "beta", "both", "only-beta", "beta-keeps")
+        dry, real = tmp_path / "dry", tmp_path / "real"
+        for project in (dry, real):
+            install(alpha, project, {}, now=_NOW)
+            install(beta, project, {}, force=True, now=_NOW)
+        _ship(tmp_path, "alpha")  # alpha drops all three
+        _ship(tmp_path, "beta", "beta-keeps")  # beta drops "both" and "only-beta"
+
+        def sync_loop(project, mode, manifest=None) -> dict[str, list[str]]:
+            removed = {}
+            for preset in (alpha, beta):
+                report = install(
+                    preset, project, {}, mode=mode, manifest=manifest, now=_NOW
+                )
+                removed[report.preset_name] = sorted(
+                    p.relative_to(project).as_posix() for p in report.removed
+                )
+            return removed
+
+        manifest_before = _manifest_file(dry).read_bytes()
+        dry_removed = sync_loop(
+            dry, InstallMode.DRY_RUN, manifest=load_manifest(_manifest_file(dry))
+        )
+        real_removed = sync_loop(real, InstallMode.INSTALL)
+
+        # "both": alpha releases it, beta - the last owner - removes it.
+        assert real_removed == {
+            "alpha": [".claude/rules/only-alpha.md"],
+            "beta": [".claude/rules/both.md", ".claude/rules/only-beta.md"],
+        }
+        assert dry_removed == real_removed
+        assert _manifest_file(dry).read_bytes() == manifest_before
+        assert (dry / ".claude/rules/both.md").is_file()  # a dry run deletes nothing
+        assert (real / ".claude/rules/beta-keeps.md").is_file()

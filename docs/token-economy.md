@@ -13,9 +13,9 @@ context, using an **external** compressor.
 
 ## What this complements
 
-- **`terse-mode` (spec 0009)** already compresses **reviewer output** (one line
-  per finding). It is orthogonal to this doc, which is about **tool output**
-  (test logs, `git status`, build output) entering context.
+- The reviewer-output compression of spec 0009 was removed in spec 0030 for
+  lack of evidence. This doc is about **tool output** (test logs, `git status`,
+  build output) entering context.
 - The checklist category is the lens; this doc is the tool path.
 
 ## External compressors

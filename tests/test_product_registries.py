@@ -46,11 +46,10 @@ def test_claude_md_table_has_product(framework_root: pathlib.Path):
 
 
 # T011 — `product` must also be listed in every remaining registry that
-# enumerates skills by name: the meta-skill's pipeline table, the agent-file
+# enumerates skills by name: the agent-file
 # template's stage table, the lean preset's pipeline line, the slash-commands
 # rule, and the README.
 REGISTRY_FILES = (
-    "skills/using-ai-augmented-developer/SKILL.md",
     "templates/agent-file-template.md",
     "presets/lean/CLAUDE.md",
     "rules/slash-commands.md",

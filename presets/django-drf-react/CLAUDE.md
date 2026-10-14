@@ -1,8 +1,6 @@
 # {{PROJECT_NAME}} — Django + DRF + React preset
 
-> Generated from the `django-drf-react` preset of the AI-Augmented Developer
-> framework. Regenerate with `aiadev install --preset django-drf-react` if
-> the preset changes.
+> Generated from the `django-drf-react` preset; regenerate with `aiadev install`.
 
 You are working inside a full-stack project using the Django + DRF + React
 stack. Follow the pipeline described below. The framework-level
@@ -77,6 +75,7 @@ Loaded from `presets/django-drf-react/skills/`:
 - `autodev-pipeline` — The proactive auto-development pipeline.
 - `deploy` — Cloud Run + EAS deployment runbooks.
 - `run-tests` — pytest backend + Jest frontend entry point.
+- `frontend-design` — Distinctive production-grade UI.
 
 ## Quick commands
 

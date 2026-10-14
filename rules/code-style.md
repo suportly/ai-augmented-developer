@@ -1,6 +1,29 @@
 ---
 description: Baseline code-style conventions — clarity over cleverness, small units, meaningful names.
-alwaysApply: true
+paths:
+  - "**/*.py"
+  - "**/*.js"
+  - "**/*.jsx"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.go"
+  - "**/*.rb"
+  - "**/*.java"
+  - "**/*.kt"
+  - "**/*.rs"
+  - "**/*.php"
+  - "**/*.cs"
+  - "**/*.swift"
+  - "**/*.sh"
+  - "**/*.sql"
+  - "**/*.vue"
+  - "**/*.svelte"
+  - "**/*.c"
+  - "**/*.cpp"
+  - "**/*.h"
+  - "**/*.mjs"
+  - "**/*.cjs"
+  - "**/Dockerfile"
 ---
 
 # Code style

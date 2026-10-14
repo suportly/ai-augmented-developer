@@ -1,0 +1,10 @@
+This repository has the AI-Augmented Developer framework installed (skills under .claude/skills, rules, agents). Deliver the demand below by running the framework pipeline end to end, in this order, invoking each skill with the Skill tool by its bare name and following its instructions exactly: specify, clarify (only if the spec still has [NEEDS CLARIFICATION] markers), plan, tasks, implement (every task), requesting-code-review, then finishing-a-branch.
+
+Demand: in this small Python project (click CLI in src/hello_cli/cli.py, tests with pytest), add a `greet` subcommand that greets a person, with tests.
+- `greet NAME` prints `Hello, NAME!` and exits 0.
+- `greet NAME --shout` prints `HELLO, NAME!`.
+- `greet` without NAME exits with code 2 and click's usage message; add a line about the new command to README.md.
+Out of scope: internationalization, colors, other subcommands.
+Task decomposition is fixed: write tasks.md with exactly these 3 tasks, one commit each: T001 `greet NAME` with tests for output and exit code; T002 `--shout` with a test; T003 the missing-NAME usage error with a test, plus the README.md line.
+
+This run is non-interactive: nobody will answer questions. Whenever a skill asks the user to choose or approve something (clarifications, plan or tasks approval, finishing options), pick the recommended or default option yourself and continue. Write artifacts in English. The repository has no remote: do not push and do not open a pull request; for finishing-a-branch stop after the local steps and the PR description. Do not stop until every task is done, reviewed, the branch review is approved and the tests pass. End with a three-line summary.

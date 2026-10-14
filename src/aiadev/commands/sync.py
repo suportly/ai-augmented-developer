@@ -22,6 +22,10 @@ The sync flow has four steps:
    install time. Framework-generic artifacts (commands/agents/skills)
    come along for the ride, so projects that installed under an older
    ``aiadev`` pick up any new pipeline files the framework grew since.
+   The reverse holds too (spec 0030 Story 6 sc1): a file the framework
+   stopped shipping is removed, and one the user edited is kept and
+   listed as ``keep``; both are reported across all presets, and a kept
+   file never makes the exit code non-zero.
 2. **Regenerate the ``<!-- aiadev:auto-stack -->`` block in the agent
    file.** Reads well-known config files (package.json, pyproject.toml,
    docker-compose.yml, Makefile, .github/workflows/) via
@@ -59,6 +63,8 @@ under ``--dry-run`` it reports what would move without writing anything.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import os
 import pathlib
 import re
 import tempfile
@@ -66,6 +72,7 @@ from dataclasses import dataclass
 
 import click
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from ..frontmatter_migrate import FrontmatterError, migrate_skill_file
@@ -194,6 +201,8 @@ def sync_command(
     total_written: list[pathlib.Path] = []
     total_skipped: list[pathlib.Path] = []
     total_conflicts: list[pathlib.Path] = []
+    total_removed: list[pathlib.Path] = []
+    total_preserved: list[pathlib.Path] = []
 
     # Step 0 — migrate legacy agent files (T012, Story 3 sc2+sc3). Must
     # run before step 1: it turns a pre-T011 CLAUDE.md/GEMINI.md into the
@@ -238,6 +247,10 @@ def sync_command(
         )
 
     # Step 1 — artifact re-sync.
+    #
+    # In a dry run the same manifest object goes to every preset, so a file
+    # they share is judged against the records of the presets before it, as
+    # in a real run (which saves each record before the next preset loads).
     if not skip_artifacts:
         for preset_record in manifest.installed_presets:
             preset_path = _locate_preset(framework_root, preset_record.name)
@@ -258,6 +271,7 @@ def sync_command(
                     mode=mode,
                     force=force,
                     framework_root=framework_root,
+                    manifest=manifest if dry_run else None,
                 )
             except InstallError as exc:
                 console.print(f"[red]error:[/red] {exc}")
@@ -265,6 +279,8 @@ def sync_command(
             total_written.extend(report.written)
             total_skipped.extend(report.skipped)
             total_conflicts.extend(report.conflicts)
+            total_removed.extend(report.removed)
+            total_preserved.extend(report.preserved)
 
     # Step 1.5 — (re-)apply migrated legacy content to AGENTS.md, now
     # that step 1's re-install has already converged AGENTS.md to the
@@ -348,6 +364,15 @@ def sync_command(
     for warning in migration_warnings:
         console.print(f"[yellow]warning:[/yellow] {warning}")
 
+    # The terse mode was removed in 0030: tell whoever still sets its key or
+    # variable that both are ignored (spec 0030 Story 6 sc2).
+    removed_terse = _removed_terse_setting(project)
+    if removed_terse is not None:
+        console.print(
+            f"[yellow]notice:[/yellow] the terse mode was removed in 0030; "
+            f"{escape(removed_terse)} is ignored and can be deleted."
+        )
+
     _render_report(
         console,
         project,
@@ -355,6 +380,10 @@ def sync_command(
         total_written,
         total_skipped,
         total_conflicts,
+        # A path every preset records (a forged out-of-root entry) is reported
+        # by each of them; list it once.
+        removed=list(dict.fromkeys(total_removed)),
+        preserved=list(dict.fromkeys(total_preserved)),
         stack_path=stack_path,
         stack_result=stack_result,
         stack_appended=stack_appended,
@@ -363,6 +392,31 @@ def sync_command(
     )
     if total_conflicts:
         raise SystemExit(1)
+
+
+def _removed_terse_setting(project: pathlib.Path) -> str | None:
+    """Name of the first leftover terse-mode setting found, or ``None``.
+
+    Checks the old flat key or its nested ``aiadev`` object form in the
+    project's ``.claude/settings.json`` and the old environment variable. An
+    unreadable or invalid settings file is not an error.
+    """
+    flat_key = "aiadev.terseMode"
+    env_var = "AIADEV_TERSE"
+    settings = project / ".claude" / "settings.json"
+    try:
+        data = json.loads(settings.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = None
+    if isinstance(data, dict):
+        nested = data.get("aiadev")
+        if flat_key in data or (
+            isinstance(nested, dict) and "terseMode" in nested
+        ):
+            return flat_key
+    if env_var in os.environ:
+        return env_var
+    return None
 
 
 def _resync_agent_file_hash(
@@ -482,6 +536,8 @@ def _migrate_legacy_agent_files(
         return None  # Already the thin wrapper — nothing to migrate.
 
     wrapper_rel = wrapper_name  # Project-root-relative; wrapper always lives at root.
+    legacy_hook = getattr(platform_module, "legacy_wrappers", None)
+    previous_wrappers = legacy_hook("agent_file", "AGENTS.md") if legacy_hook else ()
     tracked_sha: str | None = None
     for preset_record in manifest.installed_presets:
         for entry in preset_record.files:
@@ -500,6 +556,12 @@ def _migrate_legacy_agent_files(
     carries_managed_block = _has_managed_block_marker(current_text)
 
     if not (sync_owned or carries_managed_block):
+        return None
+
+    # A sync-owned file that is a *previous* rendering of the wrapper is
+    # just a stale wrapper: step 1's re-install refreshes it (its hash
+    # matches the manifest). Nothing manual to migrate, no .bak.
+    if sync_owned and current_text in previous_wrappers:
         return None
 
     if dry_run:
@@ -930,6 +992,8 @@ def _render_report(
     skipped: list[pathlib.Path],
     conflicts: list[pathlib.Path],
     *,
+    removed: list[pathlib.Path],
+    preserved: list[pathlib.Path],
     stack_path: pathlib.Path | None,
     stack_result: str | None,
     stack_appended: bool,
@@ -942,10 +1006,12 @@ def _render_report(
     table.add_column("Path")
 
     def _rel(path: pathlib.Path) -> str:
+        # Paths can come from the (untrusted) manifest or carry bracketed
+        # names: escape them so Rich prints them as they are.
         try:
-            return str(path.relative_to(project))
+            return escape(str(path.relative_to(project)))
         except ValueError:
-            return str(path)
+            return escape(str(path))
 
     for path in migrated_agent_files:
         table.add_row("[cyan]migrate-agent-file[/cyan]", _rel(path))
@@ -953,6 +1019,11 @@ def _render_report(
         table.add_row("[green]write[/green]", _rel(path))
     for path in skipped:
         table.add_row("[blue]skip[/blue]", _rel(path))
+    would = "would " if mode is InstallMode.DRY_RUN else ""
+    for path in removed:
+        table.add_row(f"[magenta]{would}remove[/magenta]", _rel(path))
+    for path in preserved:
+        table.add_row(f"[yellow]{would}keep[/yellow]", _rel(path))
     for path in conflicts:
         table.add_row("[red]conflict[/red]", _rel(path))
     if stack_path is not None and stack_result is not None:
@@ -961,7 +1032,16 @@ def _render_report(
     for path in migrated:
         table.add_row("[cyan]migrate[/cyan]", _rel(path))
 
-    if written or skipped or conflicts or stack_result or migrated or migrated_agent_files:
+    if (
+        written
+        or skipped
+        or removed
+        or preserved
+        or conflicts
+        or stack_result
+        or migrated
+        or migrated_agent_files
+    ):
         console.print(table)
     else:
         console.print("[yellow]nothing to do[/yellow]")
@@ -970,6 +1050,10 @@ def _render_report(
         console.print(
             "[red]refusing to overwrite the files above.[/red] "
             "Pass [cyan]--force[/cyan] to override."
+        )
+    if preserved:
+        console.print(
+            "[yellow]note:[/yellow] kept files stay on disk; aiadev no longer manages them."
         )
     if stack_appended:
         console.print(

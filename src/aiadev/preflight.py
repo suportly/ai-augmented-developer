@@ -9,6 +9,7 @@ Spec: ``specs/0010-pipeline-preflight-checks/spec.md``.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
@@ -115,6 +116,13 @@ def check(
                     f"pre-flight: spec.md missing required section anchor {anchor!r}"
                 )
             )
+        for number in _bad_assumptions(spec_text):
+            issues.append(
+                PreflightIssue(
+                    f"pre-flight: spec.md Assumptions item {number} "
+                    "lacks [impact: low|medium]"
+                )
+            )
 
     if skill in _REQUIRES_PLAN and not (feature_dir / "plan.md").is_file():
         issues.append(
@@ -162,10 +170,239 @@ def check(
         if violation is not None:
             issues.append(PreflightIssue(violation))
 
+    if skill == "implement" and spec_path.is_file():
+        tasks_path = feature_dir / "tasks.md"
+        if tasks_path.is_file():
+            issues.extend(_coverage_issues(feature_dir, spec_path, tasks_path, repo_root))
+
+    if skill == "implement":
+        issues.extend(_checklist_issues(feature_dir))
+
     if not _should_abort(env):
         issues = [PreflightIssue(i.message, would_abort=False) for i in issues]
 
     return issues
+
+
+# Artifact template each skill produces (``templates/<name>``); other skills
+# produce none and report ``template: null``.
+_SKILL_TEMPLATE = {
+    "specify": "spec-template.md",
+    "plan": "plan-template.md",
+    "tasks": "tasks-template.md",
+}
+
+
+def build_payload(
+    skill: str,
+    feature_dir: Path,
+    issues: list[PreflightIssue],
+    repo_root: Path,
+) -> dict[str, object]:
+    """Structured context for ``aiadev preflight --format json``.
+
+    ``ok`` is true when no issue ``would_abort`` (so ``AIADEV_PREFLIGHT=warn``
+    yields ``ok: true`` with the downgraded issues still listed). Paths are
+    POSIX strings relative to ``repo_root`` when possible.
+    """
+
+    def rel(path: Path) -> str:
+        try:
+            return path.relative_to(repo_root).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    def existing(name: str) -> str | None:
+        path = feature_dir / name
+        return rel(path) if path.is_file() else None
+
+    checklists_dir = feature_dir / "checklists"
+    checklists = (
+        sorted(rel(p) for p in checklists_dir.glob("*.md") if p.is_file())
+        if checklists_dir.is_dir()
+        else []
+    )
+    template_name = _SKILL_TEMPLATE.get(skill)
+    template_path = repo_root / "templates" / template_name if template_name else None
+    return {
+        "skill": skill,
+        "feature": feature_dir.name,
+        "feature_dir": rel(feature_dir),
+        "ok": not any(i.would_abort for i in issues),
+        "issues": [
+            {"message": i.message, "would_abort": i.would_abort} for i in issues
+        ],
+        "docs": {
+            "spec": existing("spec.md"),
+            "plan": existing("plan.md"),
+            "tasks": existing("tasks.md"),
+            "checklists": checklists,
+        },
+        "template": rel(template_path)
+        if template_path is not None and template_path.is_file()
+        else None,
+        "test_command": _detect_test_command(repo_root),
+    }
+
+
+def _detect_test_command(repo_root: Path) -> str | None:
+    """Test command reported by ``project_introspect``, or ``None``.
+
+    Introspection reads manifests from disk; an unreadable or non-UTF-8 file
+    must not break the preflight, so detection failures yield ``None``.
+    """
+    from aiadev import project_introspect
+
+    try:
+        report = project_introspect.introspect(repo_root)
+    except (OSError, ValueError):
+        return None
+    for command in report.run_commands:
+        if command.split()[-1:] == ["test"] or " test " in f"{command} ":
+            return command
+    return None
+
+
+def _coverage_issues(
+    feature_dir: Path, spec_path: Path, tasks_path: Path, repo_root: Path | None
+) -> list[PreflightIssue]:
+    """Scenario-to-task coverage as preflight issues (D4); never raises."""
+    from . import spec_coverage
+
+    exceptions_path = (repo_root or Path.cwd()) / "docs" / "coverage-exceptions.yaml"
+    try:
+        exceptions = spec_coverage.load_exceptions(exceptions_path)
+    except (OSError, ValueError) as exc:
+        return [PreflightIssue(f"pre-flight: cannot read coverage-exceptions.yaml — {exc}")]
+    if feature_dir.name in exceptions:
+        return []
+    try:
+        if "Spec scenarios" not in tasks_path.read_text(encoding="utf-8"):
+            return [
+                PreflightIssue(
+                    "pre-flight: tasks.md has no Spec scenarios lines (legacy format) — "
+                    "scenario coverage not checked",
+                    would_abort=False,
+                )
+            ]
+        found = spec_coverage.check(spec_path, tasks_path)
+    except (OSError, ValueError) as exc:  # UnicodeDecodeError is a ValueError
+        return [PreflightIssue(f"pre-flight: cannot check scenario coverage in tasks.md — {exc}")]
+    out: list[PreflightIssue] = []
+    for item in found:
+        if item.kind == "uncovered_scenario":
+            text = (
+                f"scenario {item.ref} is not covered by any task — "
+                "add it to a task's Spec scenarios"
+            )
+        elif item.kind == "orphan_task":
+            text = f"{item.ref} cites no scenario, story or success criterion"
+        else:
+            text = item.message
+        out.append(PreflightIssue(f"pre-flight: {text}"))
+    return out
+
+
+def _table_cells(line: str) -> list[str] | None:
+    """Cells of a markdown table row, or ``None`` for non-rows and separators.
+
+    Edge pipes are optional and ``\\|`` stays inside its cell.
+    """
+    import re
+
+    text = line.strip()
+    if "|" not in text:
+        return None
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|") and not text.endswith("\\|"):
+        text = text[:-1]
+    cells = [c.replace("\\|", "|").strip() for c in re.split(r"(?<!\\)\|", text)]
+    if all(c and set(c) <= set("-: ") for c in cells):
+        return None
+    return cells
+
+
+_FAIL_PREFIXES = ("FAIL", "❌", "✗")
+
+
+def _checklist_issues(feature_dir: Path) -> list[PreflightIssue]:
+    """Block on a FAIL check with no owner task in ``tasks.md`` (D3); never raises.
+
+    Checks table = header with ``#`` and ``Status``; failures table = header
+    with ``#`` and ``Owner task``. The template placeholder row (status
+    ``PASS / FAIL / N/A``) is not a FAIL.
+    """
+    import re
+
+    checklists = feature_dir / "checklists"
+    if not checklists.is_dir():
+        return []
+    try:
+        tasks_text = (feature_dir / "tasks.md").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        tasks_text = ""
+    except (OSError, ValueError) as exc:
+        return [PreflightIssue(f"pre-flight: cannot read tasks.md for checklists — {exc}")]
+    task_ids = set(re.findall(r"^###\s+(T\d+)\b", tasks_text, re.MULTILINE))
+
+    out: list[PreflightIssue] = []
+    for path in sorted(checklists.glob("*.md")):
+        label = f"checklists/{path.name}"
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError) as exc:
+            out.append(PreflightIssue(f"pre-flight: cannot read {label} — {exc}"))
+            continue
+        fails: list[str] = []
+        owners: dict[str, str] = {}
+        mode = ""
+        width = column = 0
+        in_fence = False
+        for line in lines:
+            if line.lstrip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence or not line.strip():
+                continue
+            cells = _table_cells(line)
+            if cells is None:
+                if "|" not in line:
+                    mode = ""  # prose or heading ends the table
+                continue
+            names = [c.lower() for c in cells]
+            if "#" in names and "status" in names:
+                mode, width, column = "checks", len(cells), names.index("status")
+                continue
+            if "#" in names and "owner task" in names:
+                mode, width, column = "failed", len(cells), names.index("owner task")
+                continue
+            if not mode:
+                continue
+            if len(cells) < width:
+                out.append(PreflightIssue(f"pre-flight: {label} has a malformed table row"))
+                continue
+            number = cells[0].strip().lstrip("#").strip()
+            if mode == "checks":
+                status = re.sub(r"[*`\s]", "", cells[column]).upper()
+                if status.startswith(_FAIL_PREFIXES):
+                    fails.append(number)
+            elif number:
+                owners[number] = cells[column]
+        for number in fails:
+            owner_cell = owners.get(number, "")
+            owner_ids = re.findall(r"T\d+", owner_cell)
+            if not owner_ids:
+                out.append(PreflightIssue(
+                    f"pre-flight: {label} check #{number} is FAIL without an owner "
+                    "task in tasks.md"
+                ))
+            elif not any(t in task_ids for t in owner_ids):
+                out.append(PreflightIssue(
+                    f"pre-flight: {label} check #{number} is FAIL and its owner task "
+                    f"{owner_ids[0]} is not in tasks.md"
+                ))
+    return out
 
 
 def _should_abort(env: Mapping[str, str] | None) -> bool:
@@ -201,7 +438,46 @@ def _git_current_branch() -> str:
 
 
 def _count_needs_clarification(text: str) -> int:
-    return text.count("[NEEDS CLARIFICATION")
+    from .pipeline_state import count_needs_clarification
+
+    return count_needs_clarification(text)
+
+
+_IMPACT_RE = re.compile(r"\[impact:\s*([^\]]*?)\s*\]", re.IGNORECASE)
+
+
+def _bad_assumptions(text: str) -> list[int]:
+    """1-based numbers of ``## Assumptions`` bullets without a valid impact tag.
+
+    The section is optional; fenced blocks are ignored and the section ends at
+    the next heading. A bullet is valid with non-empty text plus exactly an
+    ``[impact: low]`` or ``[impact: medium]`` marker.
+    """
+    bullets: list[str] = []
+    in_section = in_fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if line.startswith("#"):
+            in_section = line.strip().lower() == "## assumptions"
+            continue
+        if not in_section:
+            continue
+        stripped = line.strip()
+        if stripped[:1] in {"-", "*"} and (len(stripped) == 1 or stripped[1] == " "):
+            bullets.append(stripped[1:].strip())
+        elif stripped and bullets and line[:1].isspace():
+            bullets[-1] += " " + stripped
+    bad: list[int] = []
+    for number, bullet in enumerate(bullets, start=1):
+        tags = _IMPACT_RE.findall(bullet)
+        body = _IMPACT_RE.sub("", bullet).strip()
+        if not body or len(tags) != 1 or tags[0].lower() not in {"low", "medium"}:
+            bad.append(number)
+    return bad
 
 
 def _missing_anchors(text: str, anchors: tuple[str, ...]) -> list[str]:

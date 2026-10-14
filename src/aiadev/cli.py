@@ -12,8 +12,10 @@ from .commands.lang import lang_command
 from .commands.learn import learn_command
 from .commands.manifests import manifests_command
 from .commands.metrics import metrics_command
+from .commands.next import next_command
 from .commands.preflight import preflight_command
 from .commands.sync import sync_command
+from .commands.tasks import tasks_command
 from .commands.validate import validate_command
 
 
@@ -32,8 +34,10 @@ main.add_command(doctor_command)
 main.add_command(extension_command)
 main.add_command(preflight_command)
 main.add_command(metrics_command)
+main.add_command(next_command)
 main.add_command(manifests_command)
 main.add_command(learn_command)
+main.add_command(tasks_command)
 
 
 if __name__ == "__main__":  # pragma: no cover

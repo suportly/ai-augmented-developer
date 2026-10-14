@@ -1,0 +1,54 @@
+{
+  "arm": "after",
+  "pair": 10,
+  "session_id": "72f00b55-4782-4fa8-bc3f-beb7db5fcbe5",
+  "rc": 0,
+  "seconds": 156.5,
+  "total_cost_usd": 0.7374405,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 6,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 6
+    },
+    "started_in_background": 6,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 6,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "0b1f261 docs(greet): document greet, cover missing NAME",
+    "949a255 feat(greet): add --shout flag",
+    "9f79565 feat(greet): add greet NAME command",
+    "1cb362d docs(greet): add tasks 0001",
+    "1f8fce0 docs(greet): add traceability to plan",
+    "4f91ff1 docs(greet): add plan 0001",
+    "7dcc96b docs(greet): add spec 0001"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "72f00b55-4782-4fa8-bc3f-beb7db5fcbe5.jsonl"
+}

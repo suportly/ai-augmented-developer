@@ -1,0 +1,53 @@
+{
+  "arm": "after",
+  "pair": 4,
+  "session_id": "b455c368-467a-4fbd-bda2-3f155984979d",
+  "rc": 0,
+  "seconds": 352.4,
+  "total_cost_usd": 1.6029789000000003,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 12,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 12
+    },
+    "started_in_background": 12,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 12,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 1,
+      "general-purpose": 4,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "7471b81 docs(readme): T004 document greet command",
+    "2546022 test(cli): T003 cover greet input errors",
+    "351a13e feat(cli): T002 add greet --shout flag",
+    "a8a050c feat(cli): T001 add greet command",
+    "36e3bcd docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "b455c368-467a-4fbd-bda2-3f155984979d.jsonl"
+}
