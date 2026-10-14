@@ -5,9 +5,8 @@ Walks ``skills/`` + ``presets/*/skills/`` at the repo root, reads each
 ``SKILL.md``'s YAML frontmatter (``name``, ``description``, and ``handoffs``
 from ``metadata.aiadev`` — falling back to the pre-spec-0016 top level),
 and renders the pipeline commands as a terse Markdown table. Skills that
-are not part of the pipeline (``frontend-design``, ``using-ai-augmented-developer``,
-``systematic-debugging``, ``constitution``, ``test-driven-development``,
-``sync``, anything not reachable from ``specify``) are filtered out so the
+are not part of the pipeline (``systematic-debugging``, ``constitution``,
+``test-driven-development``, ``sync``, anything not reachable from ``specify``) are filtered out so the
 output stays within the 24-line / 600-token budget.
 
 Deterministic: skills are ordered by the canonical pipeline sequence, not
@@ -37,7 +36,6 @@ PIPELINE: tuple[str, ...] = (
     "checklist",
     "requesting-code-review",
     "finishing-a-branch",
-    "help",
 )
 
 

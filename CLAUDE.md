@@ -58,7 +58,7 @@ specify  ─(ambiguity?)→  clarify  ─→  plan  ─→  tasks  ─→  imple
 - [`scripts/`](./scripts) — zero-install fallbacks (`validate_skills.py`, `migrate-to-0.2.sh`); the canonical path is `aiadev` (installed via `pip install -e '.[dev]'` or a PyPI release).
 - [`agents/`](./agents) — bundled subagent definitions.
 
-> **Quick reference:** run `/aia:help` for a one-screen summary of the pipeline commands.
+> **Quick reference:** run `aiadev next` for the pipeline state and the next step.
 
 ## Repository-local commands
 

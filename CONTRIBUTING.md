@@ -29,7 +29,7 @@ Checklist for a skill PR:
 - [ ] Frontmatter has `name`, `description`, `version`. From v0.2: `inputs`, `outputs`, `requires` as applicable.
 - [ ] Body is under 100 lines unless there is a documented reason.
 - [ ] If the skill prescribes a workflow, it is invokable from a fresh context without the agent needing to read any other file first.
-- [ ] No contradictions with existing skills. In particular, `skills/using-ai-augmented-developer/SKILL.md` governs the meta-rules.
+- [ ] No contradictions with existing skills. In particular, the root `CLAUDE.md` skill table governs the meta-rules.
 - [ ] At least one concrete example of usage.
 
 ### The `[NEEDS CLARIFICATION]` marker

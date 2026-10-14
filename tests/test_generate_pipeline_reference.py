@@ -60,11 +60,8 @@ def test_generator_is_deterministic(tmp_path):
 def test_generator_skips_non_pipeline_skills(tmp_path):
     """Frontend, constitution, and similar non-pipeline skills are out of scope.
 
-    The help surface is the pipeline — any help skill entry covers itself
-    but the generator must not dilute the output with frontend-design or
-    other non-pipeline tooling.
+    The generator must not dilute the output with non-pipeline tooling.
     """
     output = _render(tmp_path / "out.md")
-    # frontend-design and using-ai-augmented-developer are not pipeline steps.
-    assert "frontend-design" not in output
-    assert "using-ai-augmented-developer" not in output
+    for name in ("constitution", "systematic-debugging", "test-driven-development", "task-context"):
+        assert f"/aia:{name}" not in output

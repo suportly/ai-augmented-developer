@@ -37,11 +37,11 @@ this file before the first `implement` run — agents rely on them.
 
 The installer dropped the complete framework pipeline into this project:
 
-- `.claude/commands/` — 15 slash commands (pipeline + `/sync`).
+- `.claude/commands/` — 15 slash commands (pipeline + `/sync` + `/lang`).
 - `.claude/agents/` — 3 reviewer agents (spec, plan, code).
 - `.claude/skills/` — 14 framework-generic skills.
-- `.claude/rules/` — 5 coding rules (code-style, testing, api-conventions,
-  security, git-workflow).
+- `.claude/rules/` — 6 rules (code-style, testing, api-conventions,
+  security, git-workflow, slash-commands).
 
 Run `aiadev sync` whenever you pull a new `aiadev` version or edit the
 project's stack so this file's Detected-stack block stays current.

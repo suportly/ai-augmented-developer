@@ -13,4 +13,4 @@ repos:
         files: '^(skills/.*/SKILL\.md|CLAUDE\.md|scripts/generate_pipeline_reference\.py)$'
         description: >-
           Re-emits docs/pipeline-reference.md from the skill catalog whenever a
-          pipeline skill or the root CLAUDE.md changes. Keeps /aia:help in sync.
+          pipeline skill or the root CLAUDE.md changes. Keeps the pipeline reference in sync.

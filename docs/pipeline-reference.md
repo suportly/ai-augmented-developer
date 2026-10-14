@@ -14,4 +14,3 @@
 | `/aia:checklist` | Run a category-specific quality pass (security / performance / accessibility / i18n / p… | → — |
 | `/aia:requesting-code-review` | Use before opening a PR. | → — |
 | `/aia:finishing-a-branch` | Use after code review is approved to finalize, push, open PR, and clean up the developm… | → — |
-| `/aia:help` | _missing_ | — |

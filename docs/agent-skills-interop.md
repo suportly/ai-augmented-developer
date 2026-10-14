@@ -23,7 +23,7 @@ single namespaced key:
 ```yaml
 ---
 name: implement
-description: Dispatches one fresh subagent per task with a two-stage review.
+description: Dispatches one fresh subagent per task with a single review per task.
 metadata:
   aiadev:
     version: "1.4.0"

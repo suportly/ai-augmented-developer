@@ -32,12 +32,11 @@ def _extract_ref_commands(body: str) -> set[str]:
 
 
 # Skills that live in the quick-reference but are deliberately not in the
-# CLAUDE.md pipeline table (the root table is a "when to invoke" cookbook;
-# `help` is a leaf meta-skill that prints the table itself).
-REFERENCE_ONLY = {"help"}
+# CLAUDE.md pipeline table. Empty since `help` was retired (spec 0030).
+REFERENCE_ONLY: set[str] = set()
 
 # Skills that appear in the CLAUDE.md table but are cross-cutting (not
-# pipeline stages the help surface wants to advertise as steps).
+# pipeline stages the reference wants to advertise as steps).
 CLAUDE_ONLY_NON_PIPELINE = {
     "test-driven-development",
     "systematic-debugging",

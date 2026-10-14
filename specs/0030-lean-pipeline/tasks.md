@@ -791,7 +791,7 @@
 
 ### T054 — Repontar documentação e regenerar a referência
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T053
 - **Files:**
   - modify: `CLAUDE.md`
@@ -826,10 +826,32 @@
   - [ ] Evidência de vermelho (Art. II): antes de iniciar T053, rodar este teste contra `main` (worktree) e colar a saída falhando no commit; depois de T054 ele passa.
   - [ ] Commit message: `test(docs): T055 guarda contra referências a recursos removidos`.
 
+### T060 — Corte adicional para a meta de 40%
+
+- **Status:** pending
+- **Depends on:** T054
+- **Files:**
+  - modify: `rules/code-style.md`
+  - modify: `rules/testing.md`
+  - modify: `constitution.md`
+  - modify: `skills/constitution/SKILL.md`
+  - create: `skills/constitution/references/rationale-and-amendment.md`
+  - modify: `agents/code-reviewer.md`
+  - modify: `agents/plan-document-reviewer.md`
+  - modify: `agents/spec-document-reviewer.md`
+  - modify: `docs/pipeline-path.yaml`
+  - test: `tests/test_rules_content.py`
+  - test: `tests/test_gates_canonical.py`
+- **Spec scenarios:** Story 4 scenario 4; Success criterion #2
+- **Acceptance:**
+  - [ ] A medição pós T043–T054 (lean 3.479 contra 5.115 = −32%; percurso 14.978 contra 21.717 = −31%) ficou abaixo da meta; esta task aplica só alavancas que não removem gate: `paths:` em `code-style` e `testing`, Rationale e Amendment process do `constitution.md` para `references/` da skill `constitution`, enxugamento de exemplos e formatos redundantes nos três agents reviewers.
+  - [ ] Os 7 artigos, as regras dos agents e os gates D13 permanecem (teste de comportamento, não de prosa).
+  - [ ] Commit message: `refactor(budget): T060 corte adicional para a meta de 40%`.
+
 ### T056 — Verificar a meta de 40% e rebaixar o baseline
 
 - **Status:** pending
-- **Depends on:** T038, T043, T048, T049, T051, T055
+- **Depends on:** T038, T043, T048, T049, T051, T055, T060
 - **Files:**
   - modify: `docs/instruction-budget.json`
   - modify: `scripts/instruction_budget.py`

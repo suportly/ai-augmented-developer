@@ -16,9 +16,6 @@ def test_0_15_0_section_records_terse_feature():
     assert "0009" in section, (
         "[0.15.0] must reference spec id 0009 for traceability"
     )
-    assert "/aia:help" in section, (
-        "[0.15.0] must mention the new /aia:help surface"
-    )
     assert "breaking" in lower or "!" in section, (
         "[0.15.0] must flag the /aiadev: → /aia: rename as breaking"
     )

@@ -210,6 +210,7 @@ def test_unreadable_spec_dir_is_a_real_error(tmp_path: Path) -> None:
 
 
 def test_plain_mode_is_gone(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The retired plain-mode switch must stay inert.
     monkeypatch.setenv("AIADEV_HELP_PLAIN", "1")
 
     result = recommend_next_command(FIXTURES / "draft_spec", branch="feature/x")

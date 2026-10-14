@@ -51,14 +51,14 @@ cmd /c mklink /J "$env:USERPROFILE\.agents\skills\ai-augmented-developer" "$env:
 ls -la ~/.agents/skills/ai-augmented-developer
 ```
 
-You should see a symlink pointing to the skills directory with all 16 skills listed.
+You should see a symlink pointing to the skills directory with all 14 skills listed.
 
 ## Usage
 
 Skills are discovered automatically. Codex activates them when:
 - You mention a skill by name (e.g., "use specify")
 - The task matches a skill's description
-- The `using-ai-augmented-developer` skill directs Codex to use one
+- The skill table in the generated `AGENTS.md` (from `templates/agent-file-template.md`) directs Codex to use one
 
 ## Updating
 
