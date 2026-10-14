@@ -48,22 +48,12 @@ Review the plan chunk provided against the spec document and verify all quality 
 - [ ] Commit message format specified: `feat(<app>): description` or `fix(<app>): description`
 - [ ] Files to stage explicitly listed
 
-### 7. Stack Conventions
-For Django backend:
-- [ ] Model → Serializer → Service → View → URL order followed
-- [ ] `transaction.on_commit()` used for Celery task dispatch
-- [ ] UserManager used for user-scoped models
-- [ ] `EncryptedTextField` for sensitive data
-
-For React frontend:
-- [ ] TypeScript types defined before components
-- [ ] TanStack Query hooks before components
-- [ ] No `useState` for server data
-
-### 8. Verifiability
+### 7. Verifiability
 - [ ] Each task has explicit verification step
 - [ ] Test commands are copy-pasteable (no placeholders)
 - [ ] Expected output described for each verification
+
+If `references/stack.md` of the `plan` skill exists, read it for stack-specific checks.
 
 ## Output Format
 

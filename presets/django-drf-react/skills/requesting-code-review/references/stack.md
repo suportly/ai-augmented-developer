@@ -34,3 +34,8 @@
 
 ### Performance (stack)
 - [ ] No synchronous HTTP calls in request handlers (use Celery)
+
+### Security (stack)
+- [ ] No IDOR (user can only access their own data — `get_queryset` scoped to user)
+- [ ] Sensitive data in `EncryptedTextField`, not plain `CharField`/`TextField`
+- [ ] API endpoints require authentication (`permission_classes = [IsAuthenticated]`)

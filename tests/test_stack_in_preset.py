@@ -97,3 +97,45 @@ def test_preset_stack_md_keeps_stack_content():
         "EncryptedTextField", "UserManager", "useState", "TanStack",
     ):
         assert needle in joined, needle
+
+
+# --- T040: reviewer agents carry no stack -----------------------------------
+
+AGENT_STACK_WORDS = re.compile(
+    r"\b(django|celery|drf|react|mui|expo)\b|manage\.py|select_related|on_commit"
+    r"|EncryptedTextField|permission_classes|get_queryset",
+    re.IGNORECASE,
+)
+AGENT_READ_LINES = {
+    "code-reviewer": (
+        "If `references/stack.md` of the `requesting-code-review` skill exists, "
+        "read it for stack-specific checks."
+    ),
+    "plan-document-reviewer": (
+        "If `references/stack.md` of the `plan` skill exists, "
+        "read it for stack-specific checks."
+    ),
+}
+
+
+@pytest.mark.parametrize("agent", sorted(AGENT_READ_LINES))
+def test_reviewer_agent_has_no_stack_words_and_reads_stack_md(agent):
+    text = (ROOT / "agents" / f"{agent}.md").read_text(encoding="utf-8")
+    assert AGENT_STACK_WORDS.findall(text) == []
+    assert AGENT_READ_LINES[agent] in text
+
+
+def test_code_reviewer_stack_sections_moved_to_preset():
+    stack = (
+        ROOT / "presets/django-drf-react/skills/requesting-code-review"
+        / "references/stack.md"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "### Django/DRF Patterns",
+        "`transaction.on_commit()` used before Celery task dispatch",
+        "### Celery Tasks",
+        "Exponential backoff on retry",
+        "### TypeScript/React",
+        "No `useEffect` for data fetching (TanStack Query used)",
+    ):
+        assert needle in stack

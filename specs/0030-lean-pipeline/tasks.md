@@ -576,7 +576,7 @@
 
 ### T040 — Agents sem stack
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T039
 - **Files:**
   - modify: `agents/code-reviewer.md`
