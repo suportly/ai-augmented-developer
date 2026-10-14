@@ -1,6 +1,18 @@
 ---
 description: REST/HTTP API conventions — URLs, payloads, error shapes, status codes.
-alwaysApply: true
+paths:
+  - "**/api/**"
+  - "**/views.py"
+  - "**/views/**"
+  - "**/serializers.py"
+  - "**/serializers/**"
+  - "**/routers.py"
+  - "**/urls.py"
+  - "**/routes/**"
+  - "**/controllers/**"
+  - "**/openapi*.yaml"
+  - "**/openapi*.yml"
+  - "**/openapi*.json"
 ---
 
 # API conventions

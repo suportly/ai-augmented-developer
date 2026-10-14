@@ -619,7 +619,7 @@
 
 ### T043 — rules: paths e slash-commands curto
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009
 - **Files:**
   - modify: `rules/api-conventions.md`

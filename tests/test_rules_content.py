@@ -44,17 +44,18 @@ RULES_WITHOUT_FRONTMATTER = {
     "terse-mode.md",
 }
 RULES_WITH_FRONTMATTER_NO_PATHS = {
-    "api-conventions.md",
     "code-style.md",
     "git-workflow.md",
     "security.md",
 }
 RULE_WITH_PATHS = "testing.md"
+# spec 0030 T043: api-conventions became path-scoped (no longer always loaded).
+RULES_PATHS_SCOPED = {RULE_WITH_PATHS, "api-conventions.md"}
 
 EXPECTED_INVENTORY = (
     RULES_WITHOUT_FRONTMATTER
     | RULES_WITH_FRONTMATTER_NO_PATHS
-    | {RULE_WITH_PATHS}
+    | RULES_PATHS_SCOPED
 )
 
 
@@ -154,3 +155,21 @@ class TestOtherRulesStayGlobal:
             assert fm.get("alwaysApply") is True, (
                 f"rules/{name} should remain alwaysApply: true (global rule)"
             )
+
+
+class TestLeanRulesT043:
+    """spec 0030 T043: api-conventions is path-scoped; slash-commands is tiny."""
+
+    def test_api_conventions_declares_paths_and_drops_always_apply(self) -> None:
+        fm = _read_frontmatter(RULES_DIR / "api-conventions.md")
+        assert fm is not None
+        paths = fm.get("paths")
+        assert isinstance(paths, list) and paths, "api-conventions needs paths:"
+        assert all(isinstance(p, str) and "," not in p and "{" not in p for p in paths)
+        assert "alwaysApply" not in fm
+
+    def test_slash_commands_body_fits_two_lines(self) -> None:
+        text = (RULES_DIR / "slash-commands.md").read_text(encoding="utf-8")
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        assert len(lines) <= 2, f"slash-commands.md has {len(lines)} non-blank lines"
+        assert "/aia:" in text, "namespaced form must still be stated"
