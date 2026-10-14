@@ -648,7 +648,7 @@
 
 ### T045 — Preflight: Assumptions opcional
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T044
 - **Files:**
   - modify: `src/aiadev/preflight.py`

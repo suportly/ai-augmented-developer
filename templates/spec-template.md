@@ -82,8 +82,6 @@ As a {{ROLE}}, I want {{ACTION}} so that {{OUTCOME}}.
 
 <!-- Optional. Low-impact, reversible premises, one per bullet, each tagged [impact: low] or [impact: medium]. -->
 
--
-
 <!-- section: Traceability -->
 ## Traceability
 

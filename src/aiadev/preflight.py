@@ -9,6 +9,7 @@ Spec: ``specs/0010-pipeline-preflight-checks/spec.md``.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
@@ -113,6 +114,13 @@ def check(
             issues.append(
                 PreflightIssue(
                     f"pre-flight: spec.md missing required section anchor {anchor!r}"
+                )
+            )
+        for number in _bad_assumptions(spec_text):
+            issues.append(
+                PreflightIssue(
+                    f"pre-flight: spec.md Assumptions item {number} "
+                    "lacks [impact: low|medium]"
                 )
             )
 
@@ -425,6 +433,43 @@ def _count_needs_clarification(text: str) -> int:
     from .pipeline_state import count_needs_clarification
 
     return count_needs_clarification(text)
+
+
+_IMPACT_RE = re.compile(r"\[impact:\s*([^\]]*?)\s*\]", re.IGNORECASE)
+
+
+def _bad_assumptions(text: str) -> list[int]:
+    """1-based numbers of ``## Assumptions`` bullets without a valid impact tag.
+
+    The section is optional; fenced blocks are ignored and the section ends at
+    the next heading. A bullet is valid with non-empty text plus exactly an
+    ``[impact: low]`` or ``[impact: medium]`` marker.
+    """
+    bullets: list[str] = []
+    in_section = in_fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if line.startswith("#"):
+            in_section = line.strip().lower() == "## assumptions"
+            continue
+        if not in_section:
+            continue
+        stripped = line.strip()
+        if stripped[:1] in {"-", "*"} and (len(stripped) == 1 or stripped[1] == " "):
+            bullets.append(stripped[1:].strip())
+        elif stripped and bullets and line[:1].isspace():
+            bullets[-1] += " " + stripped
+    bad: list[int] = []
+    for number, bullet in enumerate(bullets, start=1):
+        tags = _IMPACT_RE.findall(bullet)
+        body = _IMPACT_RE.sub("", bullet).strip()
+        if not body or len(tags) != 1 or tags[0].lower() not in {"low", "medium"}:
+            bad.append(number)
+    return bad
 
 
 def _missing_anchors(text: str, anchors: tuple[str, ...]) -> list[str]:
