@@ -529,7 +529,7 @@
 
 ### T037 — Teste de task-context como comportamento
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `tests/test_implement_task_context_integration.py`
