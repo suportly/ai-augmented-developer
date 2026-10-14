@@ -34,6 +34,7 @@ Review the spec document provided and verify it meets all quality criteria below
 - [ ] Security considerations noted (authentication, data privacy)
 - [ ] Breaking changes explicitly flagged
 - [ ] Dependencies on other features/systems identified
+- [ ] If `## Assumptions` exists: each item is low-impact and reversible; FAIL any that decides scope, security or privacy (it must be a `[NEEDS CLARIFICATION]` marker)
 
 ### 4. Testability
 - [ ] Every acceptance scenario can be verified by a test
@@ -54,8 +55,6 @@ Return ONE of:
 APPROVED
 
 The spec is complete, clear, and implementable. Ready for plan writing.
-
-[Optional: 1-2 sentences noting any minor observations that don't block approval]
 ```
 
 ### ISSUES_FOUND

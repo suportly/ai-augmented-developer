@@ -661,7 +661,7 @@
 
 ### T046 — spec-document-reviewer: critério de premissas
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T044
 - **Files:**
   - modify: `agents/spec-document-reviewer.md`
