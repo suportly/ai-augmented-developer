@@ -290,7 +290,7 @@
 
 ### T020 — Medir a cobertura nas specs existentes
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T018
 - **Files:**
   - create: `docs/coverage-baseline.md`

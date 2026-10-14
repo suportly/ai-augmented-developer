@@ -252,3 +252,68 @@ def test_missing_files_raise(tmp_path: Path) -> None:
 def test_real_lean_pipeline_spec_is_clean() -> None:
     root = Path(__file__).resolve().parent.parent / "specs" / "0030-lean-pipeline"
     assert check(root / "spec.md", root / "tasks.md") == []
+
+
+# --- T020: baseline de cobertura das specs existentes -----------------------
+
+import collections
+from pathlib import Path
+
+import yaml
+
+from aiadev.spec_coverage import check
+
+_ROOT = Path(__file__).resolve().parent.parent
+_EXCEPTIONS_FILE = _ROOT / "docs" / "coverage-exceptions.yaml"
+
+
+def _load_exceptions(path: Path = _EXCEPTIONS_FILE) -> dict[str, str]:
+    # T022 move este loader para spec_coverage.py (o preflight o reutiliza).
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    assert isinstance(data, dict), "coverage-exceptions.yaml deve ser um mapa"
+    return {str(k): str(v or "") for k, v in data.items()}
+
+
+def _features() -> list[Path]:
+    return [
+        d
+        for d in sorted((_ROOT / "specs").iterdir())
+        if (d / "spec.md").is_file() and (d / "tasks.md").is_file()
+    ]
+
+
+def _issues_by_feature() -> dict[str, list]:
+    return {d.name: check(d / "spec.md", d / "tasks.md") for d in _features()}
+
+
+def test_every_exception_has_a_reason_and_names_a_feature() -> None:
+    exceptions = _load_exceptions()
+    names = {d.name for d in _features()}
+    assert exceptions, "lista de exceções vazia: remova o arquivo e este teste"
+    for feature, reason in exceptions.items():
+        assert feature in names, f"{feature}: não é uma feature de specs/"
+        assert reason.strip(), f"{feature}: motivo vazio"
+
+
+def test_dirty_features_are_listed_as_exceptions() -> None:
+    exceptions = _load_exceptions()
+    unlisted = {
+        name: dict(collections.Counter(i.kind for i in issues))
+        for name, issues in _issues_by_feature().items()
+        if issues and name not in exceptions
+    }
+    assert not unlisted, f"features com issues fora de coverage-exceptions.yaml: {unlisted}"
+
+
+def test_no_stale_exceptions() -> None:
+    exceptions = _load_exceptions()
+    by_feature = _issues_by_feature()
+    stale = [f for f in exceptions if f in by_feature and not by_feature[f]]
+    assert not stale, f"exceções obsoletas (já passam limpas), remova: {stale}"
+
+
+def test_exception_loader_rejects_non_mapping(tmp_path: Path) -> None:
+    bad = tmp_path / "x.yaml"
+    bad.write_text("- a\n- b\n", encoding="utf-8")
+    with pytest.raises(AssertionError):
+        _load_exceptions(bad)

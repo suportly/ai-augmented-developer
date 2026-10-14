@@ -1,0 +1,18 @@
+# Features cuja cobertura cenário→task ainda não passa limpa (T020, spec 0030).
+# Chave = nome do diretório em specs/; valor = motivo curto (uma linha).
+# O teste tests/test_spec_coverage.py falha se uma feature listada aqui passa
+# limpa (exceção obsoleta) ou se uma feature suja não está listada.
+# O preflight (T022) lê este arquivo para tratar estas features como aviso.
+0008-llm-tool-integration: tasks anteriores à linha "Spec scenarios"; 11 tasks sem referência e 2 cenários sem task
+0009-token-economy-terse-mode: tasks anteriores à linha "Spec scenarios"; sem referência a cenários
+0010-pipeline-preflight-checks: tasks anteriores à linha "Spec scenarios"; sem referência a cenários
+0011-specify-reconnaissance: tasks sem referência, um cenário sem task e critério de sucesso inexistente citado
+0012-vscode-spec-explorer: tasks anteriores à linha "Spec scenarios"; sem referência a cenários
+0014-bmad-inspired-evolutions: duas tasks sem referência a cenários
+0015-aiadev-metrics: uma task sem referência a cenários
+0017-knowledge-graph-context-provider: três cenários sem task correspondente
+feature-codex-opencode-gemini-handlers: referências em formato antigo que não casam com a spec (seis desconhecidas)
+feature-extensions-system-mvp: uma task sem referência a cenários
+feature-install-interactive: uma task sem referência a cenários
+feature-pypi-packaging-and-publish: uma task sem referência e dois cenários sem task
+feature-scope-user-per-home-install: uma task sem referência a cenários
