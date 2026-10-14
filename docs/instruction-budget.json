@@ -152,10 +152,6 @@
       "baseline": 1142,
       "teto": 1142
     },
-    "skill:help": {
-      "baseline": 928,
-      "teto": 928
-    },
     "skill:implement": {
       "baseline": 3552,
       "teto": 1500,
@@ -197,10 +193,6 @@
       "baseline": 1179,
       "teto": 358,
       "reason": "T048: skill enxuta, teto desce para o valor medido."
-    },
-    "skill:using-ai-augmented-developer": {
-      "baseline": 941,
-      "teto": 941
     }
   }
 }

@@ -772,7 +772,7 @@
 
 ### T053 — Remover help e using-ai-augmented-developer
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T029
 - **Files:**
   - modify: `skills/help/SKILL.md` (removed)
