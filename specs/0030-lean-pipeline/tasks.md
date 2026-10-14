@@ -759,7 +759,7 @@
 
 ### T052 — sync: aviso da chave e variável antigas
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T016, T050
 - **Files:**
   - modify: `src/aiadev/commands/sync.py`

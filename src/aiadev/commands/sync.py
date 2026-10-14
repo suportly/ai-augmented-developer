@@ -63,6 +63,8 @@ under ``--dry-run`` it reports what would move without writing anything.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import os
 import pathlib
 import re
 import tempfile
@@ -362,6 +364,15 @@ def sync_command(
     for warning in migration_warnings:
         console.print(f"[yellow]warning:[/yellow] {warning}")
 
+    # The terse mode was removed in 0030: tell whoever still sets its key or
+    # variable that both are ignored (spec 0030 Story 6 sc2).
+    removed_terse = _removed_terse_setting(project)
+    if removed_terse is not None:
+        console.print(
+            f"[yellow]notice:[/yellow] the terse mode was removed in 0030; "
+            f"{escape(removed_terse)} is ignored and can be deleted."
+        )
+
     _render_report(
         console,
         project,
@@ -381,6 +392,31 @@ def sync_command(
     )
     if total_conflicts:
         raise SystemExit(1)
+
+
+def _removed_terse_setting(project: pathlib.Path) -> str | None:
+    """Name of the first leftover terse-mode setting found, or ``None``.
+
+    Checks the old flat key or its nested ``aiadev`` object form in the
+    project's ``.claude/settings.json`` and the old environment variable. An
+    unreadable or invalid settings file is not an error.
+    """
+    flat_key = "aiadev.terseMode"
+    env_var = "AIADEV_TERSE"
+    settings = project / ".claude" / "settings.json"
+    try:
+        data = json.loads(settings.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = None
+    if isinstance(data, dict):
+        nested = data.get("aiadev")
+        if flat_key in data or (
+            isinstance(nested, dict) and "terseMode" in nested
+        ):
+            return flat_key
+    if env_var in os.environ:
+        return env_var
+    return None
 
 
 def _resync_agent_file_hash(
