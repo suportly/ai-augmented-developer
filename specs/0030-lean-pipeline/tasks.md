@@ -705,7 +705,7 @@
 
 ### T049 — Checklist sem todas as categorias
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T023
 - **Files:**
   - modify: `templates/checklist-template.md`
