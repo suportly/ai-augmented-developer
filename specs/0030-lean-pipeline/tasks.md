@@ -453,7 +453,7 @@
 
 ### T032 — Reviewer único: checklists em sequência e log
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T030
 - **Files:**
   - modify: `skills/implement/SKILL.md`

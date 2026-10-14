@@ -135,3 +135,39 @@ def test_correction_rereview_limit_exists() -> None:
     assert any(
         pattern.search(effective_text(s)) for s in ORCHESTRATOR_SKILLS
     ), "no correction -> re-review iteration limit stated in implement or requesting-code-review"
+
+
+def _implement_prompt() -> str:
+    text = effective_text("skills/implement/SKILL.md")
+    start = text.index("## Reviewer prompt")
+    return text[start: text.index("## Reviewer re-dispatch gate")]
+
+
+def test_single_reviewer_prompt_runs_conformance_then_quality_and_stops() -> None:
+    prompt = _implement_prompt()
+    low = prompt.lower()
+    assert low.index("conformance") < low.index("quality")
+    assert re.search(r"stop[^.\n]{0,80}(skip|without|no)[^.\n]{0,40}quality|skip[^.\n]{0,20}quality", low)
+    assert "CHANGES_REQUESTED" in prompt
+    assert re.search(r"diff", low) and re.search(r"test output", low)
+    assert re.search(r"not (?:paste|whole files)|no whole files|excerpt", low)
+
+
+def test_implement_keeps_both_iteration_limits_and_log_names_code_reviewer() -> None:
+    text = effective_text("skills/implement/SKILL.md")
+    assert re.search(r"\b2 re-dispatches per reviewer", text)
+    assert re.search(r"exceeds?\s+\d+\s+iterations|after\s+\d+\s+(?:fix|correction)", text, re.I)
+    assert '"reviewer": "code-reviewer"' in text
+
+
+def test_code_reviewer_agent_absorbs_conformance_checklist() -> None:
+    agent = (ROOT / "agents/code-reviewer.md").read_text(encoding="utf-8")
+    assert "### Why no issues" in agent
+    assert re.search(
+        r"stop:[^\n]{0,40}CHANGES_REQUESTED with only those[^\n]{0,40}skip", agent
+    ), "per-task stop rule missing"
+    assert re.search(r"branch[^\n]{0,160}stop rule does not apply", agent, re.I)
+    assert re.search(r"Scope under review: a task or the branch", agent)
+    assert re.search(r"each acceptance", agent, re.I)
+    assert "architectural refactors beyond the scope" in agent
+    assert "weren't in the spec" in agent

@@ -188,22 +188,28 @@ Project-specific conventions (stack, patterns, commit style) belong in the activ
 
 ## Reviewer prompt
 
+Dispatch `code-reviewer` with this prompt:
+
 ```markdown
 You are the single reviewer for one task. Two passes, in order.
 
-Inputs: spec acceptance scenarios, task description, diff (from git),
-test output, active preset `CLAUDE.md`.
+Inputs, embedded (excerpts only — no whole files): the task's acceptance
+scenarios, the diff, the test output, preset `CLAUDE.md` rules.
 
-Pass 1 — conformance. Every acceptance scenario is exercised by a test;
-API shape, data model and error paths match the spec.
-If pass 1 finds violations, stop: report them and skip pass 2.
+Pass 1 — conformance. Each acceptance scenario of the task is exercised
+by a test; API shape, data model and error paths match the spec; nothing
+beyond the task's scope was added.
+If pass 1 has findings: STOP. Return CHANGES_REQUESTED with only those
+findings and skip quality.
 
-Pass 2 — quality. Preset patterns followed; no security issues
-(injection, IDOR, XSS, secrets); no performance traps; explicit error
-handling; no gratuitous abstraction; tests cover happy path and a failure.
+Pass 2 — quality. Preset patterns; security (injection, IDOR, XSS,
+secrets); performance traps; explicit error handling; no gratuitous
+abstraction; tests cover happy path and a failure.
 
-First line: APPROVED, or CHANGES_REQUESTED followed by file:line fixes.
+First line: APPROVED or CHANGES_REQUESTED, then file:line fixes.
 ```
+
+Correction loop: after 5 fix → re-review iterations on one task, stop and escalate to the user.
 
 ## Reviewer re-dispatch gate
 
@@ -235,7 +241,7 @@ For the reviewer dispatched in step 6 of the loop:
    from the CLI.
 4. **Append a review-log entry** to `specs/<branch>/.review-log.jsonl`
    regardless of verdict. Shape:
-   `{"timestamp": <ISO-8601 UTC>, "reviewer": <name>, "verdict":
+   `{"timestamp": <ISO-8601 UTC>, "reviewer": "code-reviewer", "verdict":
    "APPROVED"|"CHANGES_REQUESTED", "has_why_no_issues_block": <bool>,
    "task_id": <TID>}`. Use `aiadev.review_log.append_review_entry`.
 5. **Re-dispatch when the rule is violated.** If verdict is `APPROVED`,
