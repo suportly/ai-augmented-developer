@@ -1,0 +1,6 @@
+{"timestamp": "2026-10-14T13:02:13.229Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T001", "description": "Review T001 spec and quality"}
+{"timestamp": "2026-10-14T13:02:30.654Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T001", "description": "Re-review T001"}
+{"timestamp": "2026-10-14T13:02:58.415Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "Review T002"}
+{"timestamp": "2026-10-14T13:03:22.718Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T003", "description": "Review T003"}
+{"timestamp": "2026-10-14T13:03:38.797Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T003", "description": "Re-review T003"}
+{"timestamp": "2026-10-14T13:03:55.576Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "Branch review greet"}

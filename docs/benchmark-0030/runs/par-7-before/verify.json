@@ -1,0 +1,17 @@
+{
+  "pytest_rc": 0,
+  "pytest_tail": "6 passed in 0.01s",
+  "greet_ok": true,
+  "shout_ok": true,
+  "usage_ok": true,
+  "readme_mentions_greet": true,
+  "spec_dirs": [
+    "0001-greet"
+  ],
+  "has_spec_plan_tasks": true,
+  "tasks_total": 3,
+  "tasks_done": 3,
+  "open_markers": 0,
+  "review_yaml": "status: approved | timestamp: 2026-10-14T12:57:57Z",
+  "branch_clean": true
+}

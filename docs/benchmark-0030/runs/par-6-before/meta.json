@@ -1,0 +1,57 @@
+{
+  "arm": "before",
+  "pair": 6,
+  "session_id": "12c2b463-7c3b-4a62-9dae-4c95c899d041",
+  "rc": 0,
+  "seconds": 207.2,
+  "total_cost_usd": 1.4385347999999998,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 11,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 11
+    },
+    "started_in_background": 11,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 11,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 3,
+      "code-reviewer": 6
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "5445c48 docs(pr): add PR description",
+    "e9aba85 docs(review): add review context",
+    "f3bc5f3 T003 feat(cli): pin missing-NAME usage error and document greet",
+    "283b013 T002 feat(cli): add --shout flag to greet",
+    "8a112ff T001 feat(cli): add greet NAME command",
+    "4c618d4 docs(tasks): add greet command tasks",
+    "1f119d1 docs(plan): add greet command plan",
+    "f438c09 docs(spec): address review feedback",
+    "e2f96a5 docs(spec): add greet command spec"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "12c2b463-7c3b-4a62-9dae-4c95c899d041.jsonl"
+}

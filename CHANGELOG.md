@@ -62,10 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   paid for instructions the task did not need, and cost per task was not
   observable.
 
-  **Benchmark status:** the before/after benchmark (at least 5 pairs) is
-  PENDING — the maintainer still has to run it with `scripts/benchmark_pairs.py`
-  (see `docs/benchmark-0030.md`). No benchmark result is claimed here; the
-  figures below are static measurements of instruction text only.
+  **Benchmark:** 10 real pairs (20 `claude -p` sessions, before = `cc072ef`,
+  after = this branch) on a 3-task micro-feature; see `docs/benchmark-0030.md`.
+  Round 1 (free task decomposition) FAILED the acceptance rule: median cost
+  ratio 1.17, first-pass approval +14 pp. Round 2 (fixed 3-task decomposition,
+  run after seeing round 1) PASSED: median ratio 0.85, first-pass +20 pp. Both
+  are reported; variance between pairs is large and the review-log was mostly
+  not written in either arm, so first-pass comes from a log derived from the
+  reviewer transcripts. All 20 runs delivered a working `greet` command.
 
 ### Changed
 

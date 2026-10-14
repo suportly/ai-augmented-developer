@@ -1,0 +1,56 @@
+{
+  "arm": "before",
+  "pair": 10,
+  "session_id": "607613c6-b867-4afa-8564-ce0d5265b34a",
+  "rc": 0,
+  "seconds": 143.4,
+  "total_cost_usd": 0.836577,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 6,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 6
+    },
+    "started_in_background": 6,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 6,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "b60be5d docs(greet): add review context",
+    "f9be230 T003 add missing-NAME usage test and README line",
+    "5fa39de T002 add --shout flag to greet",
+    "551db69 T001 add greet NAME command",
+    "c9e0b38 docs(greet): add tasks",
+    "3b39080 docs(greet): refine plan after review",
+    "ea1c65c docs(greet): add plan",
+    "8f1dc2a docs(greet): address spec review",
+    "a584b50 docs(greet): add spec"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "607613c6-b867-4afa-8564-ce0d5265b34a.jsonl"
+}

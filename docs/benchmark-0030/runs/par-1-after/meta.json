@@ -1,0 +1,59 @@
+{
+  "arm": "after",
+  "pair": 1,
+  "session_id": "811559db-8757-4eaa-b9f6-8d82ce8d3c39",
+  "rc": 0,
+  "seconds": 241.7,
+  "total_cost_usd": 1.1102148999999997,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 8,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 8
+    },
+    "started_in_background": 8,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 8,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 2,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "c024048 docs(greet): record branch review verdict",
+    "6c48984 docs(greet): tick completed task acceptance",
+    "51abb3a docs(greet): T004 document greet command (prose tier, no reviewer; grep verified)",
+    "3812de9 test(greet): T003 cover missing NAME",
+    "828112b feat(greet): T002 add --shout flag",
+    "46e3fb1 feat(greet): T001 add greet command",
+    "f95e1b1 docs(greet): align tasks notation with template",
+    "8c6ebe1 docs(greet): add tasks 0001",
+    "33e09b6 docs(greet): map scenarios to tests in plan",
+    "3a81875 docs(greet): add plan 0001",
+    "0ba571c docs(greet): add spec 0001"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "811559db-8757-4eaa-b9f6-8d82ce8d3c39.jsonl"
+}

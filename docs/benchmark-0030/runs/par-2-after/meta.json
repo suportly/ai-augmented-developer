@@ -1,0 +1,59 @@
+{
+  "arm": "after",
+  "pair": 2,
+  "session_id": "3dd90944-5e12-42bb-ae04-948c447a9188",
+  "rc": 0,
+  "seconds": 283.0,
+  "total_cost_usd": 1.4406416,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 12,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 12
+    },
+    "started_in_background": 12,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 12,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 1,
+      "general-purpose": 4,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "a118153 docs(greet): mention greet in README",
+    "2ccf519 test(greet): cover usage errors",
+    "a0a56d8 feat(greet): add --shout flag",
+    "557d3c2 feat(greet): add greet subcommand",
+    "7beee00 docs(greet): fix scenario notation in tasks",
+    "9ebde3b docs(greet): add tasks",
+    "27a46e7 docs(greet): refine plan after review",
+    "4d2ddf4 docs(greet): add plan",
+    "89ab136 docs(greet): use non-ASCII example",
+    "40fcdb4 docs(greet): address spec review",
+    "5a807f2 docs(greet): add spec 0001"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "3dd90944-5e12-42bb-ae04-948c447a9188.jsonl"
+}

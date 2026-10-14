@@ -1,0 +1,55 @@
+{
+  "arm": "after",
+  "pair": 6,
+  "session_id": "4fe5c0d9-6ff7-4d9e-b036-4e819b820480",
+  "rc": 0,
+  "seconds": 316.8,
+  "total_cost_usd": 1.3843126000000003,
+  "num_turns": 7,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 9,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 9
+    },
+    "started_in_background": 9,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 9,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 3,
+      "code-reviewer": 4
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "0f87d53 docs(greet): mark spec implemented, add PR description",
+    "00e9cda docs(greet): mark spec implemented, add PR description",
+    "757d915 docs(greet): tick task acceptance checklists",
+    "d08bb4d feat(cli): T003 test missing-NAME usage error, document greet",
+    "f3d629a feat(cli): T002 add greet --shout",
+    "1b69857 feat(cli): T001 add greet NAME",
+    "bc7f879 docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "4fe5c0d9-6ff7-4d9e-b036-4e819b820480.jsonl"
+}

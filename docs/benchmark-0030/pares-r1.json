@@ -1,0 +1,77 @@
+[
+  {
+    "feature": "par-1",
+    "before": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-1-before-proj/e2ac711b-e149-4891-9cff-4b3b0e21d555.jsonl"
+      ],
+      "review_log": "runs/par-1-before/derived-review-log.jsonl"
+    },
+    "after": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-1-after-proj/811559db-8757-4eaa-b9f6-8d82ce8d3c39.jsonl"
+      ],
+      "review_log": "runs/par-1-after/derived-review-log.jsonl"
+    }
+  },
+  {
+    "feature": "par-2",
+    "before": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-2-before-proj/8d7fa50b-4668-4324-a978-ab349e1ed797.jsonl"
+      ],
+      "review_log": "runs/par-2-before/derived-review-log.jsonl"
+    },
+    "after": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-2-after-proj/3dd90944-5e12-42bb-ae04-948c447a9188.jsonl"
+      ],
+      "review_log": "runs/par-2-after/derived-review-log.jsonl"
+    }
+  },
+  {
+    "feature": "par-3",
+    "before": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-3-before-proj/4323b113-48dc-4be0-bf98-52b37cf27691.jsonl"
+      ],
+      "review_log": "runs/par-3-before/derived-review-log.jsonl"
+    },
+    "after": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-3-after-proj/08a3aff2-a209-4a5f-802a-9875f50122e9.jsonl"
+      ],
+      "review_log": "runs/par-3-after/derived-review-log.jsonl"
+    }
+  },
+  {
+    "feature": "par-4",
+    "before": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-4-before-proj/7a8c37fa-ccbe-4f39-a574-68a3e2685b06.jsonl"
+      ],
+      "review_log": "runs/par-4-before/derived-review-log.jsonl"
+    },
+    "after": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-4-after-proj/b455c368-467a-4fbd-bda2-3f155984979d.jsonl"
+      ],
+      "review_log": "runs/par-4-after/derived-review-log.jsonl"
+    }
+  },
+  {
+    "feature": "par-5",
+    "before": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-5-before-proj/c721edb9-3cf3-462b-be0f-9730bf949bdd.jsonl"
+      ],
+      "review_log": "runs/par-5-before/derived-review-log.jsonl"
+    },
+    "after": {
+      "sessions": [
+        "/Users/alairjt/.claude/projects/-private-tmp-claude-501--Users-alairjt-Workspace-ai-augmented-developer-8b8621a8-abca-453b-9cec-192644ae9912-scratchpad-bench-runs-par-5-after-proj/b0f37519-2558-40c5-8d48-be5ded624d8f.jsonl"
+      ],
+      "review_log": "runs/par-5-after/derived-review-log.jsonl"
+    }
+  }
+]

@@ -1,0 +1,4 @@
+{"timestamp": "2026-10-14T13:10:39.810Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": true, "task_id": "T001", "description": "Review T001 diff"}
+{"timestamp": "2026-10-14T13:10:59.645Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T002", "description": "Review T002 diff"}
+{"timestamp": "2026-10-14T13:11:15.925Z", "reviewer": "code-reviewer", "verdict": "CHANGES_REQUESTED", "has_why_no_issues_block": false, "task_id": "T003", "description": "Review T003 diff"}
+{"timestamp": "2026-10-14T13:11:41.268Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "Branch code review"}

@@ -1,0 +1,55 @@
+{
+  "arm": "before",
+  "pair": 1,
+  "session_id": "e2ac711b-e149-4891-9cff-4b3b0e21d555",
+  "rc": 0,
+  "seconds": 291.6,
+  "total_cost_usd": 1.6565539499999993,
+  "num_turns": 6,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 16,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 16
+    },
+    "started_in_background": 16,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 16,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 4,
+      "code-reviewer": 10
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "e4f5b00 docs(greet): record branch review verdict",
+    "018695e docs(greet): add review context",
+    "39da516 T004 docs(greet): document greet command in README",
+    "9ed2d78 T003 test(greet): cover missing NAME exit code",
+    "ac22840 T002 feat(greet): add --shout flag",
+    "4e95029 T001 feat(greet): add greet command",
+    "9cb92ef docs(greet): add spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "e2ac711b-e149-4891-9cff-4b3b0e21d555.jsonl"
+}

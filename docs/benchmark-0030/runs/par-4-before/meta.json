@@ -1,0 +1,54 @@
+{
+  "arm": "before",
+  "pair": 4,
+  "session_id": "7a8c37fa-ccbe-4f39-a574-68a3e2685b06",
+  "rc": 0,
+  "seconds": 262.7,
+  "total_cost_usd": 1.1928702500000004,
+  "num_turns": 33,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 10,
+    "requested": {
+      "background": 0,
+      "foreground": 9,
+      "unset": 1
+    },
+    "started_in_background": 1,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 10,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "plan-document-reviewer": 1,
+      "general-purpose": 2,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "55afa97 docs(specs): add review context and review log for greet",
+    "48571f5 T004 docs(readme): document greet command",
+    "3f2394d T003 test(cli): cover greet missing NAME",
+    "250801d T002 feat(cli): add --shout flag to greet",
+    "7ffce56 T001 feat(cli): add greet subcommand",
+    "4cce4f4 docs(specs): add greet subcommand spec, plan and tasks"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "7a8c37fa-ccbe-4f39-a574-68a3e2685b06.jsonl"
+}

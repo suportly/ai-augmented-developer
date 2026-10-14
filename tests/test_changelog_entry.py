@@ -21,11 +21,11 @@ def test_0_15_0_section_records_terse_feature():
     )
 
 
-def test_unreleased_records_0030_with_breaking_note_and_pending_benchmark():
+def test_unreleased_records_0030_with_breaking_note_and_benchmark_result():
     body = CHANGELOG.read_text(encoding="utf-8")
     section = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
     assert "0030" in section
     for heading in ("### Added", "### Changed", "### Removed", "### Breaking"):
         assert heading in section, heading
-    assert "PENDING" in section
+    assert "benchmark" in section.lower() and "FAILED" in section and "PASSED" in section
     assert "lean" in section.split("### Breaking", 1)[1]

@@ -1,0 +1,54 @@
+{
+  "arm": "before",
+  "pair": 3,
+  "session_id": "4323b113-48dc-4be0-bf98-52b37cf27691",
+  "rc": 0,
+  "seconds": 170.6,
+  "total_cost_usd": 0.9875968000000003,
+  "num_turns": 31,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 9,
+    "requested": {
+      "background": 0,
+      "foreground": 8,
+      "unset": 1
+    },
+    "started_in_background": 1,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 9,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 2,
+      "Explore": 1,
+      "plan-document-reviewer": 1,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "fe4259c chore(specs): record branch review log",
+    "9c94ad3 docs(specs): add review context for greet",
+    "853f1c1 T004 docs: document greet in README",
+    "50d12eb T003 test(cli): cover greet argument errors and help",
+    "f6fd648 T002 feat(cli): add --shout flag to greet",
+    "cd51960 T001 feat(cli): add greet subcommand"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "4323b113-48dc-4be0-bf98-52b37cf27691.jsonl"
+}

@@ -1,0 +1,57 @@
+{
+  "arm": "before",
+  "pair": 7,
+  "session_id": "b716dbf2-b88f-459d-867e-5ae4aed77002",
+  "rc": 0,
+  "seconds": 163.5,
+  "total_cost_usd": 1.2372559000000005,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 10,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 10
+    },
+    "started_in_background": 10,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 10,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "spec-document-reviewer": 1,
+      "plan-document-reviewer": 1,
+      "general-purpose": 3,
+      "code-reviewer": 5
+    }
+  },
+  "review_log": true,
+  "commits": [
+    "28659bb docs(greet): record review log and spec status",
+    "5fea27e docs(greet): add review context",
+    "c723649 T003 cover missing NAME usage error and document greet",
+    "6c3589a T002 add --shout flag to greet",
+    "373ac65 T001 add greet NAME command",
+    "dca01d4 docs(greet): use bold status lines in tasks",
+    "4bc67a7 docs(greet): add tasks 0001",
+    "d057c44 docs(greet): add plan 0001",
+    "97f1dff docs(greet): add spec 0001"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "b716dbf2-b88f-459d-867e-5ae4aed77002.jsonl"
+}

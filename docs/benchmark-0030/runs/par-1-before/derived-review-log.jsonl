@@ -1,0 +1,10 @@
+{"timestamp": "2026-10-14T12:29:17.838Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T001", "description": "Spec review T001"}
+{"timestamp": "2026-10-14T12:29:25.380Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T001", "description": "Quality review T001"}
+{"timestamp": "2026-10-14T12:30:07.576Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T002", "description": "Spec review T002"}
+{"timestamp": "2026-10-14T12:30:14.304Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T002", "description": "Quality review T002"}
+{"timestamp": "2026-10-14T12:30:48.652Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T003", "description": "Spec review T003"}
+{"timestamp": "2026-10-14T12:30:55.775Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T003", "description": "Quality review T003"}
+{"timestamp": "2026-10-14T12:31:28.292Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T004", "description": "Spec review T004"}
+{"timestamp": "2026-10-14T12:31:36.815Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "T004", "description": "Quality review T004"}
+{"timestamp": "2026-10-14T12:31:38.567Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": false, "task_id": "T004", "description": "Quality review T004"}
+{"timestamp": "2026-10-14T12:32:17.065Z", "reviewer": "code-reviewer", "verdict": "APPROVED", "has_why_no_issues_block": true, "task_id": "branch-review", "description": "Branch code review"}

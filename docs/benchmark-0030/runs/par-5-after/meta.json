@@ -1,0 +1,50 @@
+{
+  "arm": "after",
+  "pair": 5,
+  "session_id": "b0f37519-2558-40c5-8d48-be5ded624d8f",
+  "rc": 0,
+  "seconds": 62.9,
+  "total_cost_usd": 0.3966025,
+  "num_turns": 5,
+  "is_error": false,
+  "subtype": "success",
+  "terminal_reason": "completed",
+  "stop_reason": "end_turn",
+  "subagent_stats": {
+    "spawned": 2,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 2
+    },
+    "started_in_background": 2,
+    "max_depth": 1,
+    "spawned_by_subagents": 0,
+    "completed": 2,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {
+      "code-reviewer": 2
+    }
+  },
+  "review_log": false,
+  "commits": [
+    "d8d109e docs(greet): mention greet in README",
+    "654081f feat(greet): add greet subcommand",
+    "e022355 docs(greet): add tasks",
+    "57420b7 docs(greet): add plan",
+    "03689c6 docs(greet): add spec 0001"
+  ],
+  "branch": "feature/greet",
+  "status_dirty": false,
+  "transcript_file": "b0f37519-2558-40c5-8d48-be5ded624d8f.jsonl"
+}
