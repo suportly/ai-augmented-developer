@@ -103,3 +103,71 @@ def test_wrapper_carries_tool_mapping_in_parity_with_docs(framework_root: pathli
 def test_agent_file_template_keeps_meta_skill_rules(framework_root: pathlib.Path) -> None:
     text = (framework_root / "templates" / "agent-file-template.md").read_text(encoding="utf-8")
     assert "activate_skill" in text and "upstream" in text and "Priority" in text
+
+
+def _gemini_project_with_old_wrapper(framework_root, tmp_path, monkeypatch):
+    """Install for gemini while render_wrapper emits the pre-0030 wrapper."""
+    framework = tmp_path / "framework"
+    (framework / "templates").mkdir(parents=True)
+    (framework / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
+    shutil.copytree(framework_root / "schemas", framework / "schemas")
+    monkeypatch.setenv("AIADEV_ROOT", str(framework))
+    preset = framework / "presets" / "oldp"
+    preset.mkdir(parents=True)
+    (preset / "CLAUDE.md").write_text("# Project\n\nBody.\n", encoding="utf-8")
+    (preset / "preset.yaml").write_text("name: oldp\nversion: 1.0.0\n", encoding="utf-8")
+    project = tmp_path / "project"
+    old = gemini.legacy_wrappers("agent_file", "AGENTS.md")[0]
+    current = gemini.render_wrapper
+    monkeypatch.setattr(
+        gemini, "render_wrapper",
+        lambda role, name: old if role == "agent_file" else current(role, name),
+    )
+    install(preset, project, {}, force=True, framework_root=framework, platform="gemini")
+    monkeypatch.setattr(gemini, "render_wrapper", current)
+    assert (project / "GEMINI.md").read_text(encoding="utf-8") == old
+    return project
+
+
+def test_sync_refreshes_previous_wrapper_without_migrating(
+    framework_root: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> None:
+    project = _gemini_project_with_old_wrapper(framework_root, tmp_path, monkeypatch)
+    result = CliRunner().invoke(
+        sync_command, ["--project-root", str(project), "--platform", "gemini"]
+    )
+    assert result.exit_code == 0, result.output
+    assert (project / "GEMINI.md").read_text(encoding="utf-8") == gemini.render_wrapper(
+        "agent_file", "AGENTS.md"
+    )
+    assert not (project / "GEMINI.md.bak").exists()
+    assert "aiadev:migrated-legacy" not in (project / "AGENTS.md").read_text(encoding="utf-8")
+    assert "migrate-agent-file" not in result.output
+
+
+def test_sync_still_migrates_previous_wrapper_with_manual_content(
+    framework_root: pathlib.Path, tmp_path: pathlib.Path, monkeypatch
+) -> None:
+    project = _gemini_project_with_old_wrapper(framework_root, tmp_path, monkeypatch)
+    wrapper = project / "GEMINI.md"
+    wrapper.write_text(
+        wrapper.read_text(encoding="utf-8") + "\nMy own manual rule: never deploy on Friday.\n",
+        encoding="utf-8",
+    )
+    from aiadev.install_manifest import InstalledFile, compute_sha256, load, save
+
+    mpath = project / ".aiadev" / "installed.yaml"
+    manifest = load(mpath)
+    sha = compute_sha256(wrapper)
+    for rec in manifest.installed_presets:
+        rec.files = [
+            InstalledFile(path=f.path, sha256=sha, role=f.role) if f.path == "GEMINI.md" else f
+            for f in rec.files
+        ]
+    save(manifest, mpath)
+    result = CliRunner().invoke(
+        sync_command, ["--project-root", str(project), "--platform", "gemini"]
+    )
+    assert result.exit_code == 0, result.output
+    assert (project / "GEMINI.md.bak").is_file()
+    assert "never deploy on Friday" in (project / "AGENTS.md").read_text(encoding="utf-8")

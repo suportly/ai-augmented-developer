@@ -536,6 +536,8 @@ def _migrate_legacy_agent_files(
         return None  # Already the thin wrapper — nothing to migrate.
 
     wrapper_rel = wrapper_name  # Project-root-relative; wrapper always lives at root.
+    legacy_hook = getattr(platform_module, "legacy_wrappers", None)
+    previous_wrappers = legacy_hook("agent_file", "AGENTS.md") if legacy_hook else ()
     tracked_sha: str | None = None
     for preset_record in manifest.installed_presets:
         for entry in preset_record.files:
@@ -554,6 +556,12 @@ def _migrate_legacy_agent_files(
     carries_managed_block = _has_managed_block_marker(current_text)
 
     if not (sync_owned or carries_managed_block):
+        return None
+
+    # A sync-owned file that is a *previous* rendering of the wrapper is
+    # just a stale wrapper: step 1's re-install refreshes it (its hash
+    # matches the manifest). Nothing manual to migrate, no .bak.
+    if sync_owned and current_text in previous_wrappers:
         return None
 
     if dry_run:
