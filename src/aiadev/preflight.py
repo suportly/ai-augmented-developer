@@ -225,7 +225,26 @@ def build_payload(
         "template": rel(template_path)
         if template_path is not None and template_path.is_file()
         else None,
+        "test_command": _detect_test_command(repo_root),
     }
+
+
+def _detect_test_command(repo_root: Path) -> str | None:
+    """Test command reported by ``project_introspect``, or ``None``.
+
+    Introspection reads manifests from disk; an unreadable or non-UTF-8 file
+    must not break the preflight, so detection failures yield ``None``.
+    """
+    from aiadev import project_introspect
+
+    try:
+        report = project_introspect.introspect(repo_root)
+    except (OSError, ValueError):
+        return None
+    for command in report.run_commands:
+        if command.split()[-1:] == ["test"] or " test " in f"{command} ":
+            return command
+    return None
 
 
 def _should_abort(env: Mapping[str, str] | None) -> bool:

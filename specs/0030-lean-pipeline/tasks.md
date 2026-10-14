@@ -358,7 +358,7 @@
 
 ### T025 — test_command no payload do preflight
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T024
 - **Files:**
   - modify: `src/aiadev/preflight.py`

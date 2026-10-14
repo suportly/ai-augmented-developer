@@ -302,3 +302,51 @@ def test_json_format_all_without_specs_dir_is_empty_list(tmp_path, monkeypatch) 
     assert result.exit_code == 0
     assert result.stderr == ""
     assert result.stdout.strip() == "[]"
+
+
+# -- T025: test_command no payload (D3) ---------------------------------------
+
+
+def _payload_for(tmp_path, monkeypatch, files: dict[str, str]) -> dict:
+    import json
+
+    repo, feature_dir = _json_env(tmp_path, monkeypatch)
+    for name, body in files.items():
+        (repo / name).write_text(body, encoding="utf-8")
+    result = _run_json(
+        ["preflight", "tasks", "--feature", feature_dir.name, "--format", "json"]
+    )
+    return json.loads(result.stdout)
+
+
+def test_test_command_from_node_test_script(tmp_path, monkeypatch) -> None:
+    payload = _payload_for(
+        tmp_path,
+        monkeypatch,
+        {"package.json": '{"scripts": {"test": "vitest run", "build": "tsc"}}'},
+    )
+    assert payload["test_command"] == "npm run test"
+
+
+def test_test_command_null_without_detectable_command(tmp_path, monkeypatch) -> None:
+    payload = _payload_for(tmp_path, monkeypatch, {})
+    assert "test_command" in payload and payload["test_command"] is None
+    # pure Python (pyproject only): no test command is detected today
+    (tmp_path / "py").mkdir()
+    payload = _payload_for(
+        tmp_path / "py", monkeypatch, {"pyproject.toml": "[project]\nname='x'\n"}
+    )
+    assert payload["test_command"] is None
+
+
+def test_test_command_never_raises_on_detection_failure(
+    tmp_path, monkeypatch
+) -> None:
+    def boom(_root):
+        raise OSError("manifest unreadable")
+
+    monkeypatch.setattr("aiadev.project_introspect.introspect", boom)
+    payload = _payload_for(
+        tmp_path, monkeypatch, {"package.json": '{"scripts": {"test": "x"}}'}
+    )
+    assert payload["test_command"] is None
