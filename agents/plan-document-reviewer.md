@@ -89,8 +89,8 @@ artifacts.
 When emitting `APPROVED` on a non-trivial change (or on any plan
 creation/structural edit), you MUST append a `### Why no issues` block
 listing **at least 3** specific verifications you actually performed,
-each in the form `<file:line> — <verification>` (verbose: bullets under the
-block; terse-mode: one `🟢 file:line — verification` line each, ≤ 140 chars).
+each in the form `<file:line> — <verification>` (bullets under the
+block).
 If you cannot list 3, the change is trivial (this rule does not apply) or the
 review was too shallow: re-read, or report `CHANGES_REQUESTED`/`ISSUES_FOUND`.
 
@@ -101,21 +101,3 @@ Orchestrator-side detection, the 2-re-dispatch limit and the review-log entry ar
 - Do not approve if file paths are vague or missing
 - Do not add implementation details beyond what's needed for the plan
 - Do not request style changes to working code examples
-
-## Terse-mode output contract
-
-When terse-mode is on (see `.claude/rules/terse-mode.md`), replace the
-verbose `ISSUES_FOUND` / `APPROVED` prose with **one line per finding**.
-Each line:
-
-- starts with a severity glyph — `🔴` blocking, `🟡` should-fix, `🟢` nit,
-- names a location — `plan.md:<line>` or `tasks.md:T0NN`,
-- carries a ≤ 140-char single-line message.
-
-Example: `plan.md:42 🔴 Constitution Check row blank for Article II`
-
-The structured shape lives in
-[`schemas/terse-output.schema.json`](../schemas/terse-output.schema.json).
-A validator rejects multi-paragraph findings, so keep every finding on
-one line per finding and add another line rather than wrapping prose.
-When terse-mode is off, fall back to the verbose output above.

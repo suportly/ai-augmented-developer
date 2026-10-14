@@ -720,7 +720,7 @@
 
 ### T050 — Remover o terse-mode (código, rule, schema, agents, testes)
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009
 - **Files:**
   - modify: `rules/terse-mode.md` (removed)

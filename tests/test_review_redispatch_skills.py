@@ -189,8 +189,6 @@ GATE_MARKERS = (
     r"and proceed",
     r"<base>\.\.\.head",
 )
-# Separate group: T050 removes terse-mode; drop only this tuple then.
-TERSE_MARKERS = (r"🟢 file:line",)
 # Agents legitimately keep this part of their own output rule.
 AGENT_KEEPS = (r"always non-trivial",)
 REFERENCING = (
@@ -208,7 +206,7 @@ def _norm(text: str) -> str:
 
 def test_gate_text_lives_only_in_canonical_file() -> None:
     gate = _norm((ROOT / GATE).read_text(encoding="utf-8"))
-    for marker in GATE_MARKERS + TERSE_MARKERS:
+    for marker in GATE_MARKERS:
         assert re.search(marker, gate), f"gate file lacks {marker!r}"
     for path in REFERENCING:
         raw = (ROOT / path).read_text(encoding="utf-8")

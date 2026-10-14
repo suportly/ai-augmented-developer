@@ -83,8 +83,8 @@ artifacts.
 When emitting `APPROVED` on a non-trivial change (or on any spec
 creation/structural edit), you MUST append a `### Why no issues` block
 listing **at least 3** specific verifications you actually performed,
-each in the form `<file:line> — <verification>` (verbose: bullets under the
-block; terse-mode: one `🟢 file:line — verification` line each, ≤ 140 chars).
+each in the form `<file:line> — <verification>` (bullets under the
+block).
 If you cannot list 3, the change is trivial (this rule does not apply) or the
 review was too shallow: re-read, or report `CHANGES_REQUESTED`/`ISSUES_FOUND`.
 
@@ -95,20 +95,3 @@ Orchestrator-side detection, the 2-re-dispatch limit and the review-log entry ar
 - Do not request changes for style preferences only
 - Do not add new requirements — only verify existing ones are clear
 - Do not comment on implementation details unless they reveal a spec gap
-
-## Terse-mode output contract
-
-When terse-mode is on (see `.claude/rules/terse-mode.md`), replace the
-verbose review prose with **one line per finding**. Each line:
-
-- starts with a severity glyph — `🔴` blocking, `🟡` should-fix, `🟢` nit,
-- names a location — `file:line` or `file:section`,
-- carries a ≤ 140-char single-line message.
-
-Example: `spec.md:42 🔴 acceptance scenario lacks Given/When/Then`
-
-The structured shape lives in
-[`schemas/terse-output.schema.json`](../schemas/terse-output.schema.json).
-A validator rejects multi-paragraph findings, so do not smuggle context
-across newlines — fold it into the message or add another finding line.
-When terse-mode is off, fall back to the verbose output above.

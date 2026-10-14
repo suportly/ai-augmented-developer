@@ -6,8 +6,7 @@ detecting violations and re-dispatching lives HERE, once. Run it after every rev
 response: per task in `implement`, once per pass in `requesting-code-review`.
 
 1. **Detect.** If the first line is `APPROVED`, look for the `### Why no issues`
-   block: an H3 with ≥ 3 bullets shaped `<file:line> — <verification>`, or (terse-mode,
-   `.claude/rules/terse-mode.md`) ≥ 3 lines `🟢 file:line — verification`.
+   block: an H3 with ≥ 3 bullets shaped `<file:line> — <verification>`.
    Anything else is a missing block.
 2. **Log.** Append to `specs/<branch>/.review-log.jsonl` regardless of verdict, via
    `aiadev.review_log.append_review_entry`:
