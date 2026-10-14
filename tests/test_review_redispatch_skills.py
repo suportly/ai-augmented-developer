@@ -171,3 +171,50 @@ def test_code_reviewer_agent_absorbs_conformance_checklist() -> None:
     assert re.search(r"each acceptance", agent, re.I)
     assert "architectural refactors beyond the scope" in agent
     assert "weren't in the spec" in agent
+
+
+GATE = "skills/requesting-code-review/references/review-gate.md"
+# Regexes run on whitespace-collapsed lowercase text (tolerant to reflow).
+GATE_MARKERS = (
+    r"assume there is at least one bug",
+    r"2 re-dispatches per reviewer",
+    r"reviewer exhausted re-dispatch budget",
+    r"has_why_no_issues_block",
+    r"> 10 loc",
+    r"\"task_id\": <tid>",
+    r"branch-review",
+    r"≥ 3",
+    r"always non-trivial",
+    r"same reviewer",
+    r"and proceed",
+    r"<base>\.\.\.head",
+)
+# Separate group: T050 removes terse-mode; drop only this tuple then.
+TERSE_MARKERS = (r"🟢 file:line",)
+# Agents legitimately keep this part of their own output rule.
+AGENT_KEEPS = (r"always non-trivial",)
+REFERENCING = (
+    "skills/implement/SKILL.md",
+    "skills/requesting-code-review/SKILL.md",
+    "agents/code-reviewer.md",
+    "agents/spec-document-reviewer.md",
+    "agents/plan-document-reviewer.md",
+)
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", " ", text.lower())
+
+
+def test_gate_text_lives_only_in_canonical_file() -> None:
+    gate = _norm((ROOT / GATE).read_text(encoding="utf-8"))
+    for marker in GATE_MARKERS + TERSE_MARKERS:
+        assert re.search(marker, gate), f"gate file lacks {marker!r}"
+    for path in REFERENCING:
+        raw = (ROOT / path).read_text(encoding="utf-8")
+        assert "references/review-gate.md" in raw, f"{path} does not cite the gate"
+        norm = _norm(raw)
+        for marker in GATE_MARKERS:
+            if path.startswith("agents/") and marker in AGENT_KEEPS:
+                continue
+            assert not re.search(marker, norm), f"{path} duplicates gate text {marker!r}"

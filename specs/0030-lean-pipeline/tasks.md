@@ -511,7 +511,7 @@
 
 ### T036 — Gate de re-dispatch em um arquivo canônico
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T011, T031, T034
 - **Files:**
   - create: `skills/requesting-code-review/references/review-gate.md`

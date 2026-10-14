@@ -99,40 +99,12 @@ artifacts.
 When emitting `APPROVED` on a non-trivial change (or on any plan
 creation/structural edit), you MUST append a `### Why no issues` block
 listing **at least 3** specific verifications you actually performed,
-each in the form `<file:line> — <verification>`. Examples:
+each in the form `<file:line> — <verification>` (verbose: bullets under the
+block; terse-mode: one `🟢 file:line — verification` line each, ≤ 140 chars).
+If you cannot list 3, the change is trivial (this rule does not apply) or the
+review was too shallow: re-read, or report `CHANGES_REQUESTED`/`ISSUES_FOUND`.
 
-- `plan.md:31 — confirmed Constitution Check addresses every framework
-  article with a Pass/Waiver row`
-- `plan.md:74 — verified each task has explicit RED → GREEN steps with
-  copy-pasteable commands and expected output`
-- `plan.md:120 — confirmed every spec acceptance scenario maps to at
-  least one task (no orphan AC)`
-
-Verbose-mode shape:
-
-```
-APPROVED
-
-### Why no issues
-
-- file:line — verification 1
-- file:line — verification 2
-- file:line — verification 3
-```
-
-Terse-mode shape (per `.claude/rules/terse-mode.md` and
-`schemas/terse-output.schema.json`): one line per verification, prefixed
-with the green glyph and a single-line message ≤ 140 chars.
-
-```
-🟢 file:line — verification text
-```
-
-If you cannot list at least 3 verifications, the plan is either trivial
-(≤ 10 LOC after exclusions and not a creation/structural edit, in which
-case this rule does not apply) or you have not actually reviewed deeply
-enough — re-read the document or honestly report the review as
-`ISSUES_FOUND`.
+Orchestrator-side detection, the 2-re-dispatch limit and the review-log entry are defined in `references/review-gate.md` of the `requesting-code-review` skill; do not restate them here.
 
 ## What NOT to Do
 - Do not approve if any task lacks a failing test before implementation

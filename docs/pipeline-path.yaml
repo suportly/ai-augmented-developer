@@ -48,6 +48,7 @@ stages:
   - name: requesting-code-review
     files:
       - skills/requesting-code-review/SKILL.md
+      - skills/requesting-code-review/references/review-gate.md
       - agents/code-reviewer.md
 
   - name: finishing-a-branch
