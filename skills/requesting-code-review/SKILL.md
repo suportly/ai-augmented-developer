@@ -40,7 +40,7 @@ provider is absent.
 
 ## Dispatching the Reviewer
 
-This is the only review of the branch. Use the `code-reviewer` agent. No
+This is the only review of the branch. Use the `code-reviewer` agent, `description` `review: branch <slug>`. No
 side document: the prompt carries the paths and the base ref, and the reviewer
 reads the diff itself.
 

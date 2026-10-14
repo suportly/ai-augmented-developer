@@ -495,7 +495,7 @@
 
 ### T035 — Convenção de descrição do dispatch
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T031, T034
 - **Files:**
   - modify: `skills/implement/SKILL.md`

@@ -54,10 +54,10 @@ aiadev tasks done
 The **orchestrator** (the agent following this skill) — not the implementer subagent — owns every step that reads or mutates `tasks.md`. The subagent's "Files to create or modify" list never includes `tasks.md`.
 
 0. **First call.** Issue in parallel, in one message: `aiadev preflight implement --feature <slug> --format json` and `Read` of `tasks.md`, `plan.md`, `spec.md`. Take the doc paths from the JSON `docs` and the test command from `test_command`; do not rediscover them. `ok: false` aborts (see above).
-1. **Read the row.** Apply the parse/validate rules of `aiadev.tasks_status` (owner of the `**Status:**` grammar) to `tasks.md`. On any malformed status line, value outside `pending|in_progress|blocked|done`, or `done`-prefix violation, halt with a non-zero exit and surface the error verbatim — do not auto-repair. Example: `ERROR: tasks.md inconsistency — T003 is done but T002 is pending. Fix tasks.md manually before resuming.`
+1. **Read the row.** Apply the parse/validate rules of `aiadev.tasks_status` (owner of the `**Status:**` grammar) to `tasks.md`. On any malformed status line, value outside `pending|in_progress|blocked|done`, or `done`-prefix violation, halt with a non-zero exit and surface the error verbatim — do not auto-repair.
 2. **Skip if already done.** A row with `**Status:** done` advances with no dispatch — the resume guard.
 3. **Treat `in_progress` as `pending`.** It means a previous run crashed before its commit landed; re-dispatch from scratch.
-4. **Dispatch implementer** with the prompt below. Hand-craft the context — do not forward conversation history.
+4. **Dispatch implementer** with the prompt below, `description` `implement: <TID> <title>` (reviewer: `review: <TID> <title>`). Hand-craft the context — no conversation history.
 5. **Wait for the return status** (taxonomy below) and act on it.
 6. **Prose tier: no reviewer.** If every file of the task is prose markdown under `docs/` or root docs (README, CHANGELOG, CONTRIBUTING), run `npx markdownlint-cli2 <files>` and `python3 scripts/validate_skills.py`, record the result in the commit message and do not dispatch a reviewer. Not prose: `docs/instruction-budget.json`, `docs/pipeline-path.yaml` (baselines the budget reads), and anything under `skills/`, `agents/`, `rules/`, `templates/`, `commands/`, `src/`, `tests/`.
    Otherwise **dispatch the single reviewer** only after the implementer reports `DONE`. It receives the diff and the test output and checks spec conformance first, code quality second (prompt below).
