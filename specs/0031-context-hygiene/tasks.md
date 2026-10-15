@@ -77,7 +77,7 @@
 
 ### T005 — Totais conferem com a dedupe independente
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - test: `tests/test_token_metrics_manual_rule.py`
