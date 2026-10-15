@@ -164,7 +164,7 @@
 
 ### T011 — Convenção doc-review em specify e plan
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T010
 - **Files:**
   - modify: `skills/specify/SKILL.md`

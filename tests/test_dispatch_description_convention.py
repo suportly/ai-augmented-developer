@@ -1,9 +1,9 @@
 """Dispatch ``description`` convention (spec 0030 T035, Story 1 sc2).
 
 ``aiadev.token_metrics`` classifies a subagent only by the
-``implement:`` / ``review:`` prefix of its ``description``; the skills
-that dispatch must state it. Document reviewers (specify, plan) stay
-unclassified on purpose.
+``implement:`` / ``review:`` / ``doc-review:`` prefix of its ``description``;
+the skills that dispatch must state it. Document reviewers (specify, plan)
+declare ``doc-review: spec <slug>`` / ``doc-review: plan <slug>`` (spec 0031 T011).
 """
 from __future__ import annotations
 
@@ -32,9 +32,26 @@ def test_requesting_code_review_declares_branch_prefix() -> None:
     assert re.search(r"description[^\n]*`review: branch <slug>`", _skill("requesting-code-review"))
 
 
-def test_document_reviewers_are_not_classified() -> None:
-    for name in ("specify", "plan"):
-        assert not re.search(r"description[^\n]*`(?:implement|review):", _skill(name))
+def test_document_reviewers_declare_doc_review_prefix() -> None:
+    for name, kind in (("specify", "spec"), ("plan", "plan")):
+        assert re.search(
+            rf"Dispatch[^\n]*`description` `doc-review: {kind} <slug>`", _skill(name)
+        ), name
+
+
+def test_doc_review_description_from_skill_text_is_classified(tmp_path: Path) -> None:
+    import json
+
+    from aiadev import token_metrics as tm
+
+    for name, kind in (("specify", "spec"), ("plan", "plan")):
+        m = re.search(rf"`(doc-review: {kind} <slug>)`", _skill(name))
+        assert m, name
+        desc = m.group(1).replace("<slug>", "0031-context-hygiene")
+        (tmp_path / f"agent-{name}.meta.json").write_text(
+            json.dumps({"description": desc}), encoding="utf-8"
+        )
+        assert tm._subagent_role(tmp_path / f"agent-{name}.jsonl") == tm.ROLE_DOC_REVIEW
 
 
 def test_prefix_convention_matches_token_metrics(tmp_path: Path) -> None:
