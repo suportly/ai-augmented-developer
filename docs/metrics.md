@@ -148,11 +148,11 @@ os subagentes aparecem no bloco "Subagents by role" (texto) e em `subagents`,
 `subagent_totals` e `subagents_by_role` (JSON).
 
 O papel vem do campo `description` do `agent-<id>.meta.json` ao lado do
-transcript, pelo prefixo `implement:` ou `review:` (sem diferenciar maiúsculas,
+transcript, pelo prefixo `implement:`, `review:` ou `doc-review:` (sem diferenciar maiúsculas,
 espaços iniciais tolerados, os dois pontos são obrigatórios). Qualquer outra
 descrição, ou um `meta.json` ausente, ilegível ou malformado, deixa o subagente
 como `unclassified`, e o relatório informa quantos ficaram assim
-(`Unclassified subagents: N` / `unclassified_subagents`). Nem o texto das
+(`Unclassified subagents: N` / `unclassified_subagents`; acima de 30% do custo dos subagentes o texto avisa e o JSON traz `unclassified_share`). Nem o texto das
 mensagens nem o `agentType` entram na decisão. Para o relatório agrupar, quem
 despacha o subagente precisa pôr esse prefixo na descrição.
 
@@ -225,7 +225,7 @@ principal). Acrescentadas:
 | `sessions[].equivalent_cost`, `totals.equivalent_cost` | Custo equivalente da thread principal. |
 | `sessions[].subagents[]` | `agent_id`, `role`, `turns`, `input_tokens`, `cache_creation_tokens`, `cache_read_tokens`, `output_tokens`, `equivalent_cost`. |
 | `subagent_totals` | Soma de todos os subagentes (`agents`, os mesmos campos de uso e `equivalent_cost`). |
-| `subagents_by_role` | `implement`, `review` e `unclassified` (sempre os três, com zeros quando vazios): `agents`, os campos de uso e `equivalent_cost`. |
+| `subagents_by_role` | `implement`, `review`, `doc-review` e `unclassified` (sempre os quatro, com zeros quando vazios): `agents`, os campos de uso e `equivalent_cost`. |
 | `unclassified_subagents` | Quantos subagentes ficaram sem papel. |
 | `total_equivalent_cost` | Thread principal mais subagentes: o número para comparar entre sessões. |
 | `cost_model` | `approximation: true`, `unit` e `weights`. |

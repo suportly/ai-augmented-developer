@@ -577,6 +577,12 @@ def test_subagent_role_comes_from_the_meta_json_description_prefix(subagent_dir:
         ("review: branch feature/0030-lean-pipeline", "review"),
         ("  IMPLEMENT: T003", "implement"),  # case-insensitive, leading whitespace tolerated
         ("\tReview: T003", "review"),
+        ("doc-review: spec 0031", "doc-review"),  # spec 0031 T010
+        ("Doc-Review: plan x", "doc-review"),
+        ("  DOC-REVIEW: tasks", "doc-review"),
+        ("doc-review spec", "unclassified"),  # the colon is required
+        ("doc-review : spec", "unclassified"),
+        ("doc-reviewer: spec", "unclassified"),
         ("implement:", "implement"),  # the prefix alone is enough
         ("implement T003", "unclassified"),  # the colon is required
         ("implement : T003", "unclassified"),
@@ -971,7 +977,7 @@ def _role_rows(text: str) -> Dict[str, List[str]]:
         if not line.strip():
             break
         cells = line.split()
-        if cells[0] in ("implement", "review", "unclassified", "TOTAL"):
+        if cells[0] in ("implement", "review", "doc-review", "unclassified", "TOTAL"):
             rows[cells[0]] = cells[1:]
     return rows
 
@@ -1010,6 +1016,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
         "subagent_totals",
         "subagents_by_role",
         "unclassified_subagents",
+        "unclassified_share",  # spec 0031 T010
         "total_equivalent_cost",
         "cost_model",
         "context_distribution",  # spec 0031 T004
@@ -1027,7 +1034,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
     assert data["total_equivalent_cost"] == 900.0 + 872.5
 
     by_role = data["subagents_by_role"]
-    assert set(by_role) == {"implement", "review", "unclassified"}
+    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}  # JSON keys are sorted
     assert by_role["implement"] == {
         "agents": 1,
         "turns": 2,
@@ -1038,6 +1045,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
         "equivalent_cost": 525.0,
     }
     assert by_role["review"]["agents"] == 1 and by_role["review"]["equivalent_cost"] == 347.5
+    assert by_role["doc-review"]["agents"] == 0 and by_role["doc-review"]["equivalent_cost"] == 0
     assert by_role["unclassified"]["agents"] == 0 and by_role["unclassified"]["equivalent_cost"] == 0
     assert data["unclassified_subagents"] == 0
 
@@ -1081,7 +1089,12 @@ def test_json_by_role_sums_to_the_subagent_totals_across_sessions(tmp_path: path
 
     data = _json(tmp_path)
     by_role = data["subagents_by_role"]
-    assert {role: by_role[role]["agents"] for role in by_role} == {"implement": 2, "review": 1, "unclassified": 1}
+    assert {role: by_role[role]["agents"] for role in by_role} == {
+        "implement": 2,
+        "review": 1,
+        "doc-review": 0,
+        "unclassified": 1,
+    }
     assert data["unclassified_subagents"] == 1
     for field in ("agents", "turns", "input_tokens", "output_tokens", "equivalent_cost"):
         assert sum(r[field] for r in by_role.values()) == pytest.approx(data["subagent_totals"][field])
@@ -1447,11 +1460,11 @@ def test_subagent_table_stays_aligned_with_large_sums(tmp_path: pathlib.Path) ->
 
     lines = text.splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith("Subagents by role"))
-    header, rule, *rows = lines[start + 1 : start + 1 + 7]  # header, rule, 3 roles, rule, TOTAL
+    header, rule, *rows = lines[start + 1 : start + 1 + 8]  # header, rule, 4 roles, rule, TOTAL
     assert header.split() == ["role", "agents", "turns", "input", "cache_w", "cache_r", "output", "cost"]
     assert set(rule) == {"-"}
     data_rows = [row for row in rows if set(row) != {"-"}]
-    assert [row.split()[0] for row in data_rows] == ["implement", "review", "unclassified", "TOTAL"]
+    assert [row.split()[0] for row in data_rows] == ["implement", "review", "doc-review", "unclassified", "TOTAL"]
     # Every line has the same length, and every right-aligned column ends where its header ends.
     assert len({len(line) for line in [header, rule, *rows]}) == 1
     header_ends = _numbers_by_end(header)
@@ -1793,7 +1806,9 @@ _GOLDEN_BEFORE_T004 = json.loads(
     '"role": "review", "turns": 2}], "tool_calls": 1, "tool_result_chars": 2, "total_input_tokens": 215, '
     '"turns": 2}], "subagent_totals": {"agents": 2, "cache_creation_tokens": 250, "cache_read_tokens": 500, '
     '"equivalent_cost": 872.5, "input_tokens": 10, "output_tokens": 100, "turns": 4}, "subagents_by_role": '
-    '{"implement": {"agents": 1, "cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": '
+    '{"doc-review": {"agents": 0, "cache_creation_tokens": 0, "cache_read_tokens": 0, "equivalent_cost": 0.0, '
+    '"input_tokens": 0, "output_tokens": 0, "turns": 0}, '
+    '"implement": {"agents": 1, "cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": '
     '525.0, "input_tokens": 5, "output_tokens": 50, "turns": 2}, "review": {"agents": 1, '
     '"cache_creation_tokens": 50, "cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, '
     '"output_tokens": 50, "turns": 2}, "unclassified": {"agents": 0, "cache_creation_tokens": 0, '
@@ -1804,7 +1819,7 @@ _GOLDEN_BEFORE_T004 = json.loads(
     '"sidechain_turns": 4, "started_at": null, "tool_calls": 1, "tool_result_chars": 2, '
     '"total_input_tokens": 215, "turns": 2}, "unclassified_subagents": 0}'
 )
-_NEW_KEYS = {"context_distribution", "top_sessions", "model_shares", "subagent_share"}
+_NEW_KEYS = {"context_distribution", "top_sessions", "model_shares", "subagent_share", "unclassified_share"}
 
 
 def test_json_keeps_every_previous_key_and_value_and_adds_the_context_keys(subagent_dir: pathlib.Path) -> None:
@@ -1899,3 +1914,65 @@ def test_text_top_sessions_and_models_have_headers_and_aligned_columns(tmp_path:
     rows = [ln for ln in text.splitlines() if ln.startswith("  ") and ln.rstrip().endswith("%")]
     widths = {len(ln) for ln in rows}
     assert len(widths) <= 2, "model rows share one width"
+
+
+# ---------------------------------------------------------------------
+# Spec 0031, Story 3 sc1-3 — doc-review role and the unclassified warning
+# ---------------------------------------------------------------------
+
+
+def _agents_report(tmp_path: pathlib.Path, descriptions: List[Any]) -> tm.TokenReport:
+    """One equal-cost subagent per description (``None``: no meta.json)."""
+    names = [f"a{i}" for i in range(len(descriptions))]
+    _session_with_agents(tmp_path, names)
+    for name, description in zip(names, descriptions):
+        if description is not None:
+            _write_meta(tmp_path, name, {"description": description})
+    return tm.build_token_report(tmp_path)
+
+
+def test_review_prefix_does_not_capture_doc_review_and_vice_versa(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["review: branch", "doc-review: spec 0031", "implement: T010"])
+    assert [a.role for a in report.sessions[0].subagents] == ["review", "doc-review", "implement"]
+
+
+def test_doc_review_row_in_text_and_json(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["doc-review: spec", "Doc-Review: plan x", "review: b"])
+    rows = _role_rows(tm.format_text(report))
+    assert rows["doc-review"][0] == "2" and rows["review"][0] == "1"
+    by_role = report.to_dict()["subagents_by_role"]
+    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}
+    assert by_role["doc-review"]["agents"] == 2
+    assert report.unclassified_subagents == 0
+
+
+def test_warning_when_unclassified_cost_passes_30_percent(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a", None, None, None, None, None, None, None, None, None])
+    text = tm.format_text(report)
+    assert report.unclassified_share == pytest.approx(0.9)
+    warnings = [line for line in text.splitlines() if line.startswith("Warning: unclassified subagents")]
+    assert len(warnings) == 1
+    assert "are 90% of" in warnings[0] and "threshold 30%" in warnings[0] and '"doc-review:"' in warnings[0]
+    lines = text.splitlines()
+    unclassified_line = next(i for i, line in enumerate(lines) if line.startswith("Unclassified subagents:"))
+    assert lines[unclassified_line + 1] == warnings[0]
+    assert report.to_dict()["unclassified_share"] == pytest.approx(0.9)
+
+
+def test_warning_shows_the_share_as_a_rounded_percentage(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a", "review: b", "doc-review: c"] + [None] * 10)
+    assert "are 77% of subagent cost" in tm.format_text(report)
+
+
+def test_no_warning_at_exactly_30_percent(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a"] * 7 + [None] * 3)
+    assert report.unclassified_share == 0.3
+    assert "Warning:" not in tm.format_text(report)
+    assert report.to_dict()["unclassified_share"] == 0.3
+
+
+def test_no_warning_and_zero_share_without_subagents(pinned_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(pinned_dir)
+    assert report.unclassified_share == 0.0
+    assert "Warning:" not in tm.format_text(report)
+    assert report.to_dict()["unclassified_share"] == 0.0

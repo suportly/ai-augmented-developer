@@ -150,7 +150,7 @@
 
 ### T010 — Papel doc-review e aviso de não classificado
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`

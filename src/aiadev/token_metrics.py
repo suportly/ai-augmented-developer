@@ -35,7 +35,7 @@ goes through the same ``message.id`` deduplication, including across files.
 
 Subagent role (spec ``0030-lean-pipeline``, Story 1): each ``agent-<id>.jsonl``
 may have an ``agent-<id>.meta.json`` next to it whose ``description`` starts
-with ``implement:`` or ``review:`` (case-insensitive, leading whitespace
+with ``implement:``, ``review:`` or ``doc-review:`` (case-insensitive, leading whitespace
 tolerated; the colon is required). That prefix is the **only** source of the
 role: message text and ``agentType`` are never consulted, and the description
 itself is not kept, only the derived role. A missing, unreadable or malformed
@@ -85,8 +85,11 @@ class ToolUsage:
 
 ROLE_IMPLEMENT = "implement"
 ROLE_REVIEW = "review"
+ROLE_DOC_REVIEW = "doc-review"
 ROLE_UNCLASSIFIED = "unclassified"
-ROLES = (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_UNCLASSIFIED)
+ROLES = (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_DOC_REVIEW, ROLE_UNCLASSIFIED)
+# Above this share of the subagents' equivalent cost, ``format_text`` warns (spec 0031, Story 3).
+UNCLASSIFIED_WARN_SHARE = 0.30
 
 # Cost weights (plan D7): the price of each usage component relative to a plain
 # input token, so a cost reads as "equivalent input tokens". One documented set
@@ -158,7 +161,7 @@ def cost_model() -> Dict[str, Any]:
 class SubagentTokens(_EquivalentCost):
     """Usage of one subagent transcript (``agent-<agent_id>.jsonl``).
 
-    ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW`` or ``ROLE_UNCLASSIFIED``.
+    ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW``, ``ROLE_DOC_REVIEW`` or ``ROLE_UNCLASSIFIED``.
     The cache-write tier fields mean what they do on ``SessionTokens``.
     """
 
@@ -291,6 +294,14 @@ class TokenReport:
         return self.subagents_by_role[ROLE_UNCLASSIFIED].agents
 
     @property
+    def unclassified_share(self) -> float:
+        """Fraction (0..1) of the subagents' equivalent cost spent by unclassified ones; 0 without cost."""
+        total = self.subagent_totals.equivalent_cost
+        if not total:
+            return 0.0
+        return self.subagents_by_role[ROLE_UNCLASSIFIED].equivalent_cost / total
+
+    @property
     def subagent_count(self) -> int:
         return sum(len(s.subagents) for s in self.sessions)
 
@@ -399,6 +410,7 @@ class TokenReport:
             "subagent_totals": {"agents": self.subagent_count, **_usage_dict(self.subagent_totals)},
             "subagents_by_role": {role: r.to_dict() for role, r in self.subagents_by_role.items()},
             "unclassified_subagents": self.unclassified_subagents,
+            "unclassified_share": self.unclassified_share,
             "total_equivalent_cost": self.total_equivalent_cost,
             "cost_model": cost_model(),
             "context_distribution": {
@@ -662,7 +674,7 @@ def _subagent_role(agent_path: pathlib.Path) -> str:
     """Role of ``agent-<id>.jsonl`` from ``description`` in the ``agent-<id>.meta.json`` beside it.
 
     Only that field is read, never message text. Anything that is not an
-    ``implement:`` / ``review:`` prefix (including a file that is missing,
+    ``implement:`` / ``review:`` / ``doc-review:`` prefix (including a file that is missing,
     unreadable or not a JSON object) is ``ROLE_UNCLASSIFIED``; never raises.
     """
     meta_path = agent_path.with_name(agent_path.stem + ".meta.json")
@@ -675,7 +687,7 @@ def _subagent_role(agent_path: pathlib.Path) -> str:
     description = meta.get("description") if isinstance(meta, dict) else None
     if isinstance(description, str):
         head = description.lstrip().lower()
-        for role in (ROLE_IMPLEMENT, ROLE_REVIEW):
+        for role in (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_DOC_REVIEW):
             if head.startswith(role + ":"):
                 return role
     return ROLE_UNCLASSIFIED
@@ -828,8 +840,14 @@ def _subagent_lines(report: TokenReport) -> List[str]:
     lines.extend([rule, render(total)])
     lines.append(
         f"Unclassified subagents: {report.unclassified_subagents} "
-        '(description without an "implement:" or "review:" prefix, or no readable meta.json)'
+        '(description without a "doc-review:", "implement:" or "review:" prefix, or no readable meta.json)'
     )
+    if report.unclassified_share > UNCLASSIFIED_WARN_SHARE:
+        lines.append(
+            f"Warning: unclassified subagents are {report.unclassified_share:.0%} of subagent cost "
+            f"(threshold {UNCLASSIFIED_WARN_SHARE:.0%}); dispatch with a "
+            '"doc-review:", "implement:" or "review:" description prefix to classify them.'
+        )
     return lines
 
 
