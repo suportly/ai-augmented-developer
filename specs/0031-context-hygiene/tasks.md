@@ -35,7 +35,7 @@
 
 ### T002 — Faixas e modelos acumulados por sessão e por subagente
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`

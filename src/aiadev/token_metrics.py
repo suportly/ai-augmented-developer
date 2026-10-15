@@ -171,6 +171,12 @@ class SubagentTokens(_EquivalentCost):
     cache_write_5m_tokens: int = 0
     cache_write_1h_tokens: int = 0
     role: str = ROLE_UNCLASSIFIED
+    # Requests and context tokens by ``BANDS`` label, and context + output tokens by
+    # model (``unknown`` when the transcript names none), over the messages this
+    # transcript claimed after deduplication.
+    band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    band_context_tokens: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    model_tokens: Dict[str, int] = dataclasses.field(default_factory=dict)  # context tokens per model, same definition as the bands
 
     @property
     def total_input_tokens(self) -> int:
@@ -220,6 +226,12 @@ class SessionTokens(_EquivalentCost):
     models: List[str] = dataclasses.field(default_factory=list)
     by_tool: Dict[str, ToolUsage] = dataclasses.field(default_factory=dict)
     subagents: List[SubagentTokens] = dataclasses.field(default_factory=list)
+    # Requests and context tokens by ``BANDS`` label, and context + output tokens by
+    # model (``unknown`` when the transcript names none), over the messages this
+    # transcript claimed after deduplication.
+    band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    band_context_tokens: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    model_tokens: Dict[str, int] = dataclasses.field(default_factory=dict)
 
     @property
     def total_input_tokens(self) -> int:
@@ -230,6 +242,9 @@ class SessionTokens(_EquivalentCost):
         # The tier split also holds the cache writes the transcript does not break down
         # (see the cost rule above), so only ``equivalent_cost`` is exposed.
         for name in ("cache_write_5m_tokens", "cache_write_1h_tokens"):
+            d.pop(name)
+        # The shares by band and model are not serialized yet (the report exposes them later).
+        for name in ("band_requests", "band_context_tokens", "model_tokens"):
             d.pop(name)
         d["total_input_tokens"] = self.total_input_tokens
         d["by_tool"] = {k: dataclasses.asdict(v) for k, v in sorted(self.by_tool.items())}
@@ -368,6 +383,13 @@ def context_band(context: int) -> str:
     return BANDS[3]
 
 
+UNKNOWN_MODEL = "unknown"
+
+
+def _zero_bands() -> Dict[str, int]:
+    return {band: 0 for band in BANDS}
+
+
 @dataclasses.dataclass
 class _MessageUsage:
     """``usage`` of one assistant message, named after the ``SessionTokens`` fields.
@@ -429,6 +451,11 @@ def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
         session.sidechain_turns += 1
     for name in _TOKEN_FIELDS:
         setattr(session, name, getattr(session, name) + getattr(message, name))
+    band = context_band(message.context)
+    session.band_requests[band] += 1
+    session.band_context_tokens[band] += message.context
+    model = message.model or UNKNOWN_MODEL
+    session.model_tokens[model] = session.model_tokens.get(model, 0) + message.context
 
 
 def _iter_lines(path: pathlib.Path) -> Iterable[Dict[str, Any]]:
@@ -608,7 +635,17 @@ def _attach_subagents(session: SessionTokens, agents: List[_Agent]) -> None:
             continue  # nothing countable: garbage file, or every message was counted elsewhere
         agent_id = agent.session_id.removeprefix("agent-")
         usage = {name: getattr(agent, name) for name in _TOKEN_FIELDS}
-        session.subagents.append(SubagentTokens(agent_id=agent_id, turns=agent.turns, role=role, **usage))
+        session.subagents.append(
+            SubagentTokens(
+                agent_id=agent_id,
+                turns=agent.turns,
+                role=role,
+                band_requests=dict(agent.band_requests),
+                band_context_tokens=dict(agent.band_context_tokens),
+                model_tokens=dict(agent.model_tokens),
+                **usage,
+            )
+        )
         session.sidechain_turns += agent.turns
 
 

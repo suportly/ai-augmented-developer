@@ -1535,3 +1535,133 @@ def test_read_transcript_passes_model_and_drops_synthetic(tmp_path: pathlib.Path
 def test_context_band_boundaries(context: int, band: str) -> None:
     assert tm.context_band(context) == band
     assert band in tm.BANDS
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T002 — bands and models per session and per subagent
+# ---------------------------------------------------------------------
+
+def _ctx_event(ts: str, *, message_id: Optional[str], context: int, model: Optional[str] = "claude-opus-5",
+               output: int = 1, **usage: int) -> Dict[str, Any]:
+    event = _assistant(ts, message_id=message_id, output=output, cache_r=context)
+    if model is None:
+        del event["message"]["model"]
+    else:
+        event["message"]["model"] = model
+    event["message"]["usage"].update(usage)
+    return event
+
+
+def _ts(i: int) -> str:
+    return f"2026-09-16T10:00:{i:02d}.000Z"
+
+
+def _zero() -> Dict[str, int]:
+    return {band: 0 for band in tm.BANDS}
+
+
+def test_session_counts_requests_and_context_tokens_per_band(tmp_path: pathlib.Path) -> None:
+    contexts = [30_000, 50_000, 120_000, 150_000, 200_000, 250_000]
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_ctx_event(_ts(i), message_id=f"m{i}", context=c) for i, c in enumerate(contexts)],
+    )
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.band_requests == {"<50k": 1, "50k-150k": 2, "150k-200k": 2, ">200k": 1}
+    assert s.band_context_tokens == {
+        "<50k": 30_000, "50k-150k": 170_000, "150k-200k": 350_000, ">200k": 250_000,
+    }
+    assert sum(s.band_context_tokens.values()) == s.total_input_tokens
+
+
+def test_bands_start_at_zero_for_every_label_and_are_not_shared(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="a", context=10)])
+    a = tm.read_session(tmp_path / "s.jsonl")
+    b = tm.SessionTokens(session_id="x", file="")
+    assert b.band_requests == _zero() and b.band_context_tokens == _zero() and b.model_tokens == {}
+    assert a.band_requests["<50k"] == 1 and b.band_requests["<50k"] == 0
+
+
+def test_missing_model_counts_as_unknown_and_tokens_are_kept_per_model(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _ctx_event(_ts(1), message_id="a", context=100, output=5),
+            _ctx_event(_ts(2), message_id="b", context=200, output=7, model=None),
+            _ctx_event(_ts(3), message_id="c", context=300, output=9, model="<synthetic>"),
+        ],
+    )
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.model_tokens == {"claude-opus-5": 100, "unknown": 200 + 300}
+    assert s.models == ["claude-opus-5"]  # unchanged: only real model names
+
+
+def test_streaming_partials_without_message_id_land_in_the_band_of_the_max(tmp_path: pathlib.Path) -> None:
+    # Same request, three partials with growing usage, no id: each counts as its own event
+    # (as today); with an id, they merge by field maximum and fall in the band of that maximum.
+    events = [
+        _ctx_event(_ts(1), message_id="m", context=10_000, output=1),
+        _ctx_event(_ts(2), message_id="m", context=0, output=5, cache_creation_input_tokens=0, input_tokens=60_000),
+        _ctx_event(_ts(3), message_id="m", context=120_000, output=9),
+    ]
+    _write_transcript(tmp_path / "s.jsonl", events)
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.turns == 1
+    # max per field (cache_read 120k, input 60k) = 180k, not the last partial (120k) nor the first (10k)
+    assert s.band_requests == {"<50k": 0, "50k-150k": 0, "150k-200k": 1, ">200k": 0}
+    assert s.band_context_tokens["150k-200k"] == 180_000
+    noid = [dict(e) for e in events]
+    for e in noid:
+        e["message"] = {k: v for k, v in e["message"].items() if k != "id"}
+    _write_transcript(tmp_path / "t.jsonl", noid)
+    t = tm.read_session(tmp_path / "t.jsonl")
+    assert t.turns == 3 and sum(t.band_requests.values()) == 3
+
+
+def test_partial_usage_without_id_does_not_raise(tmp_path: pathlib.Path) -> None:
+    event = {"type": "assistant", "timestamp": _ts(1), "message": {"usage": {"output_tokens": 4}}}
+    _write_transcript(tmp_path / "s.jsonl", [event])
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.band_requests["<50k"] == 1 and s.model_tokens == {"unknown": 0}
+
+
+def test_subagent_keeps_its_own_bands_and_models(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="main", context=60_000)])
+    _write_agent(
+        tmp_path, "s", "agent-a.jsonl",
+        [
+            _ctx_event(_ts(2), message_id="a1", context=10_000, model="claude-sonnet-5"),
+            _ctx_event(_ts(3), message_id="a2", context=160_000, model="claude-sonnet-5"),
+            _ctx_event(_ts(4), message_id="a3", context=250_000, model=None),
+        ],
+    )
+    main = tm.read_session(tmp_path / "s.jsonl")
+    (sub,) = main.subagents
+    assert sub.band_requests == {"<50k": 1, "50k-150k": 0, "150k-200k": 1, ">200k": 1}
+    assert sub.band_context_tokens == {"<50k": 10_000, "50k-150k": 0, "150k-200k": 160_000, ">200k": 250_000}
+    assert sub.model_tokens == {"claude-sonnet-5": 10_000 + 160_000, "unknown": 250_000}
+    assert main.band_requests == {"<50k": 0, "50k-150k": 1, "150k-200k": 0, ">200k": 0}  # main only
+
+
+def test_message_shared_by_main_and_subagent_counts_once_as_main_and_bands_sum_to_totals() -> None:
+    report = tm.build_token_report(FIXTURES / "shared_message")
+    (main,) = report.sessions
+    (sub,) = main.subagents
+    # main claims SHARED (60,010) and MAIN (171,005); the subagent keeps SUB (30,002) and SUB2 (230,002)
+    assert main.turns == 2 and sub.turns == 2
+    assert main.band_requests == {"<50k": 0, "50k-150k": 1, "150k-200k": 1, ">200k": 0}
+    assert sub.band_requests == {"<50k": 1, "50k-150k": 0, "150k-200k": 0, ">200k": 1}
+    assert main.model_tokens == {"claude-opus-5": 60_010 + 171_005}
+    assert sub.model_tokens == {"claude-sonnet-5": 30_002 + 230_002}
+    both = report.totals.total_input_tokens + report.subagent_totals.total_input_tokens
+    assert sum(main.band_context_tokens.values()) + sum(sub.band_context_tokens.values()) == both
+    assert sum(main.band_requests.values()) + sum(sub.band_requests.values()) == (
+        report.totals.turns + report.subagent_totals.turns
+    ) == 4
+
+
+def test_bands_and_models_are_not_serialized_yet(tmp_path: pathlib.Path) -> None:
+    d = tm.build_token_report(FIXTURES / "shared_message").to_dict()
+    for name in ("band_requests", "band_context_tokens", "model_tokens"):
+        assert name not in d["totals"] and name not in d["sessions"][0]
+        assert name not in d["sessions"][0]["subagents"][0]
