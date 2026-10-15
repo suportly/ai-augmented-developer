@@ -50,7 +50,7 @@
 
 ### T003 — Participações no `TokenReport`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`

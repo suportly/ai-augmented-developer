@@ -317,6 +317,78 @@ class TokenReport:
         """Main thread plus subagents: the figure to compare between sessions."""
         return round(self.totals.equivalent_cost + self.subagent_totals.equivalent_cost, 2)
 
+    def _sum_bands(self, field: str, include_subagents: bool) -> Dict[str, int]:
+        bands = _zero_bands()
+        for s in self.sessions:
+            owners: List[Any] = [s, *s.subagents] if include_subagents else [s]
+            for owner in owners:
+                for band, n in getattr(owner, field).items():
+                    bands[band] += n
+        return bands
+
+    @property
+    def band_requests(self) -> Dict[str, int]:
+        """Requests per context band, main thread plus subagents; every band is present."""
+        return self._sum_bands("band_requests", True)
+
+    @property
+    def band_context_tokens(self) -> Dict[str, int]:
+        """Context tokens per band, main thread plus subagents; every band is present."""
+        return self._sum_bands("band_context_tokens", True)
+
+    @property
+    def main_band_requests(self) -> Dict[str, int]:
+        """Requests per context band, main thread only."""
+        return self._sum_bands("band_requests", False)
+
+    @property
+    def main_band_context_tokens(self) -> Dict[str, int]:
+        """Context tokens per band, main thread only."""
+        return self._sum_bands("band_context_tokens", False)
+
+    @property
+    def subagent_share(self) -> Dict[str, float]:
+        """Fraction (0..1) of requests and of context tokens that went through subagents."""
+        sub = self.subagent_totals
+        main = self.totals
+        requests = main.turns + sub.turns
+        tokens = main.total_input_tokens + sub.total_input_tokens
+        return {
+            "requests": sub.turns / requests if requests else 0.0,
+            "tokens": sub.total_input_tokens / tokens if tokens else 0.0,
+        }
+
+    @property
+    def model_shares(self) -> List[Dict[str, Any]]:
+        """Context tokens per model, main thread plus subagents, with each one's fraction of the total.
+
+        Largest first (ties by model name); models with no tokens are left out.
+        """
+        by_model: Dict[str, int] = {}
+        for s in self.sessions:
+            for owner in (s, *s.subagents):
+                for model, n in owner.model_tokens.items():
+                    by_model[model] = by_model.get(model, 0) + n
+        total = sum(by_model.values())
+        ranked = sorted(((m, n) for m, n in by_model.items() if n > 0), key=lambda mn: (-mn[1], mn[0]))
+        return [{"model": m, "tokens": n, "share": n / total} for m, n in ranked]
+
+    def top_sessions(self, top: int = 3) -> List[Dict[str, Any]]:
+        """The ``top`` costliest sessions, main thread plus that session's own subagents.
+
+        ``share`` is the session cost over ``total_equivalent_cost``. Ties break by session id.
+        """
+        total = self.total_equivalent_cost
+        costs = [
+            (s.session_id, round(s.equivalent_cost + sum(a.equivalent_cost for a in s.subagents), 2))
+            for s in self.sessions
+        ]
+        costs.sort(key=lambda sc: (-sc[1], sc[0]))
+        return [
+            {"session_id": sid, "cost": cost, "share": cost / total if total else 0.0}
+            for sid, cost in costs[:top]
+        ]
+
     def to_dict(self) -> Dict[str, Any]:
         totals = self.totals.to_dict()
         totals.pop("subagents")  # the totals row is the main thread; subagents sit at the report level

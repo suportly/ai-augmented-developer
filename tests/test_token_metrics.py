@@ -1665,3 +1665,107 @@ def test_bands_and_models_are_not_serialized_yet(tmp_path: pathlib.Path) -> None
     for name in ("band_requests", "band_context_tokens", "model_tokens"):
         assert name not in d["totals"] and name not in d["sessions"][0]
         assert name not in d["sessions"][0]["subagents"][0]
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T003 — shares by band, subagent, model and session
+# ---------------------------------------------------------------------
+
+def _share_report(tmp_path: pathlib.Path) -> tm.TokenReport:
+    """Five sessions, two models. Costs (0.1 per context token + 5 per request):
+    B 55020 (cheap main, heavy sonnet subagents), A 20010, D 14010, C 12015 (main only), E 505."""
+    n = iter(range(1, 60))
+
+    def main(session: str, contexts: List[int]) -> None:
+        _write_transcript(
+            tmp_path / f"{session}.jsonl",
+            [_ctx_event(_ts(next(n)), message_id=f"{session}{i}", context=c) for i, c in enumerate(contexts)],
+        )
+
+    def agent(session: str, contexts: List[int]) -> None:
+        _write_agent(
+            tmp_path, session, f"agent-{session}.jsonl",
+            [_ctx_event(_ts(next(n)), message_id=f"{session}s{i}", context=c, model="claude-sonnet-5")
+             for i, c in enumerate(contexts)],
+        )
+
+    main("A", [100_000, 100_000])
+    main("B", [10_000])
+    agent("B", [200_000, 300_000, 40_000])
+    main("C", [40_000, 40_000, 40_000])
+    main("D", [20_000])
+    agent("D", [120_000])
+    main("E", [5_000])
+    return tm.build_token_report(tmp_path)
+
+
+def test_band_distribution_all_requests_and_main_thread(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    assert r.band_requests == {"<50k": 7, "50k-150k": 3, "150k-200k": 1, ">200k": 1}
+    assert r.band_context_tokens == {
+        "<50k": 195_000, "50k-150k": 320_000, "150k-200k": 200_000, ">200k": 300_000,
+    }
+    assert r.main_band_requests == {"<50k": 6, "50k-150k": 2, "150k-200k": 0, ">200k": 0}
+    assert r.main_band_context_tokens == {
+        "<50k": 155_000, "50k-150k": 200_000, "150k-200k": 0, ">200k": 0,
+    }
+    assert sum(r.band_context_tokens.values()) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+
+
+def test_subagent_share_in_requests_and_tokens(tmp_path: pathlib.Path) -> None:
+    share = _share_report(tmp_path).subagent_share
+    assert share["requests"] == pytest.approx(4 / 12)
+    assert share["tokens"] == pytest.approx(660_000 / 1_015_000)
+
+
+def test_subagent_share_is_zero_without_subagents_or_sessions(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="m", context=1_000)])
+    assert tm.build_token_report(tmp_path).subagent_share == {"requests": 0.0, "tokens": 0.0}
+    only_empty = tm.TokenReport(transcripts_dir="", sessions=[])
+    assert only_empty.subagent_share == {"requests": 0.0, "tokens": 0.0}
+
+
+def test_model_shares_sorted_summing_to_the_total(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    shares = r.model_shares
+    assert [(m["model"], m["tokens"]) for m in shares] == [
+        ("claude-sonnet-5", 660_000), ("claude-opus-5", 355_000),
+    ]
+    assert shares[0]["share"] == pytest.approx(660_000 / 1_015_000)
+    assert sum(m["tokens"] for m in shares) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+    assert sum(m["share"] for m in shares) == pytest.approx(1.0, abs=1e-9)
+
+
+def test_model_shares_tie_by_name_and_omit_zero_tokens() -> None:
+    def session(sid: str, models: Dict[str, int]) -> tm.SessionTokens:
+        return tm.SessionTokens(session_id=sid, file="", model_tokens=models)
+
+    r = tm.TokenReport("", [session("a", {"zeta": 10, "alpha": 10, "idle": 0})])
+    assert [m["model"] for m in r.model_shares] == ["alpha", "zeta"]
+
+
+def test_top_sessions_count_subagent_cost_of_the_same_session(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    assert r.total_equivalent_cost == 101_560.0
+    top = r.top_sessions()
+    assert [t["session_id"] for t in top] == ["B", "A", "D"]  # C (main only, 12015) falls out
+    assert [t["cost"] for t in top] == [55_020.0, 20_010.0, 14_010.0]
+    assert [t["share"] for t in top] == pytest.approx([55_020 / 101_560, 20_010 / 101_560, 14_010 / 101_560])
+    assert [t["session_id"] for t in r.top_sessions(top=1)] == ["B"]
+
+
+def test_top_sessions_tie_by_id_and_empty_report() -> None:
+    def session(sid: str) -> tm.SessionTokens:
+        return tm.SessionTokens(session_id=sid, file="", input_tokens=100)
+
+    r = tm.TokenReport("", [session("z"), session("b"), session("m"), session("a")])
+    assert [t["session_id"] for t in r.top_sessions()] == ["a", "b", "m"]
+    empty = tm.TokenReport("", [])
+    assert empty.top_sessions() == [] and empty.model_shares == []
+    assert empty.band_requests == {band: 0 for band in tm.BANDS}
+    assert empty.main_band_context_tokens == {band: 0 for band in tm.BANDS}
+
+
+def test_top_sessions_with_zero_total_cost_does_not_divide_by_zero() -> None:
+    report = tm.TokenReport("", [tm.SessionTokens("a", "a.jsonl")])
+    assert report.top_sessions() == [{"session_id": "a", "cost": 0.0, "share": 0.0}]
