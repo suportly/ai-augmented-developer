@@ -7,9 +7,15 @@ Message text and ``tool_result`` bodies are never stored, returned or logged.
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import os
+import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+from aiadev.token_metrics import default_transcripts_dir
 
 _WINDOWS = (256 * 1024, 1024 * 1024, 4 * 1024 * 1024)
 _MAX_TOKENS = 2**63 - 1  # same bound as token_metrics._int
@@ -26,7 +32,7 @@ def _usage_of(raw: bytes) -> tuple[str | None, tuple[int, int, int]] | None:
     """Return ``(message id, counters)`` for an assistant usage line, else None."""
     try:
         obj = json.loads(raw)
-    except ValueError:
+    except (ValueError, RecursionError):  # deeply nested line: unreadable, skip it
         return None
     if not isinstance(obj, dict) or obj.get("type") != "assistant":
         return None
@@ -92,3 +98,88 @@ def last_context(path: Path) -> int | None:
     except OSError:
         return None
     return None
+
+
+ACTIVE_WINDOW_SECONDS = 600
+DEFAULT_WARN = 150_000
+WARN_ENV = "AIADEV_CONTEXT_WARN"
+
+
+@dataclasses.dataclass(frozen=True)
+class SessionContext:
+    session_id: str
+    tokens: int
+    age_seconds: int
+
+
+def active_contexts(
+    workspace: Path, now: float | None = None, home: Path | None = None
+) -> list[SessionContext]:
+    """Most recent session plus every one modified within the last 600 s (inclusive)."""
+    moment = time.time() if now is None else now
+    directory = default_transcripts_dir(workspace, home)
+    entries: list[tuple[float, Path]] = []
+    try:
+        for path in directory.glob("*.jsonl"):
+            try:
+                if path.is_file():
+                    entries.append((path.stat().st_mtime, path))
+            except OSError:
+                continue
+    except OSError:
+        return []
+    entries.sort(key=lambda e: e[0], reverse=True)
+    result: list[SessionContext] = []
+    for index, (mtime, path) in enumerate(entries):
+        age = max(0, int(moment - mtime))
+        if index > 0 and moment - mtime > ACTIVE_WINDOW_SECONDS:
+            break
+        tokens = last_context(path)
+        if tokens is not None:
+            result.append(SessionContext(path.stem, tokens, age))
+    return result
+
+
+def warn_threshold(env: Mapping[str, str] | None = None) -> int:
+    """Token threshold from ``AIADEV_CONTEXT_WARN``; invalid or absent uses 150_000."""
+    source = os.environ if env is None else env
+    raw = source.get(WARN_ENV, "").strip()
+    if raw.isascii() and raw.isdigit() and len(raw) <= 12 and int(raw) > 0:
+        return int(raw)
+    return DEFAULT_WARN
+
+
+def format_age(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s ago"
+    if seconds < 3600:
+        return f"{seconds // 60} min ago"
+    return f"{seconds // 3600} h ago"
+
+
+def format_lines(contexts: list[SessionContext], threshold: int) -> list[str]:
+    lines: list[str] = []
+    for ctx in contexts:
+        lines.append(
+            f"context: {ctx.tokens // 1000}k tokens "
+            f"(session {ctx.session_id[:8]}, {format_age(ctx.age_seconds)})"
+        )
+        if ctx.tokens > threshold:
+            lines.append(
+                f"checkpoint: context is above {threshold // 1000}k; the state is in "
+                "tasks.md and git, so compact or restart the session and resume with `aiadev next`"
+            )
+    return lines
+
+
+def context_lines(
+    workspace: Path,
+    now: float | None = None,
+    home: Path | None = None,
+    env: Mapping[str, str] | None = None,
+) -> list[str]:
+    """Single entry point for ``next`` and ``tasks done``; never raises."""
+    try:
+        return format_lines(active_contexts(workspace, now, home), warn_threshold(env))
+    except (OSError, ValueError, RecursionError):
+        return []

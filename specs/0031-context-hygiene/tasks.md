@@ -105,7 +105,7 @@
 
 ### T007 — Sessões ativas, limiar e formato das linhas
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T006
 - **Files:**
   - modify: `src/aiadev/session_context.py`
