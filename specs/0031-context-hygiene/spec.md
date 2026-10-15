@@ -77,7 +77,7 @@ Como agente que executa `implement`, quero ver o contexto da sessão e um aviso 
 3. Given uma última request abaixo do limiar (ou `AIADEV_CONTEXT_WARN` acima do contexto), When rodo `aiadev next` ou `aiadev tasks done`, Then a saída mostra só a linha `context:`, sem `checkpoint:`.
 4. Given que não há transcript legível para o diretório corrente, When rodo qualquer um dos dois comandos, Then nenhuma linha de contexto aparece e a saída e o código de saída são os de hoje.
 5. Given um transcript de 50 MB, When rodo `aiadev next`, Then o comando termina dentro de 200 ms lendo só um trecho de tamanho fixo do fim do arquivo.
-6. Given dois transcripts do mesmo diretório modificados com menos de 10 minutos de diferença, When rodo `aiadev next`, Then a saída traz uma linha `context:` para cada sessão ativa, com o id de cada uma, e o `checkpoint:` aparece só para as que passam do limiar.
+6. Given dois transcripts do mesmo diretório, ambos modificados nos últimos 10 minutos, When rodo `aiadev next`, Then a saída traz uma linha `context:` para cada sessão ativa, com o id de cada uma, e o `checkpoint:` aparece só para as que passam do limiar.
 
 ### Story 3 — Custo de subagente classificado (P2)
 
