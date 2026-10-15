@@ -234,7 +234,7 @@
 
 ### T015 — Medição nos transcripts reais
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T008, T009, T014
 - **Files:**
   - create: `docs/context-hygiene-baseline.md`
