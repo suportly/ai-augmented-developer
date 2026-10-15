@@ -199,7 +199,7 @@
 
 ### T013 — implement despacha o agent e o percurso não cresce
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T012
 - **Files:**
   - modify: `skills/implement/SKILL.md`

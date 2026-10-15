@@ -94,8 +94,8 @@
     "path:total": {
       "origin": 21717,
       "baseline": 12715,
-      "teto": 12715,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 12637,
+      "reason": "T013"
     },
     "path:skills/specify/SKILL.md": {
       "baseline": 1180,
@@ -149,8 +149,8 @@
     },
     "path:skills/implement/SKILL.md": {
       "baseline": 1500,
-      "teto": 1500,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 1345,
+      "reason": "T013"
     },
     "path:skills/test-driven-development/SKILL.md": {
       "baseline": 358,
@@ -202,8 +202,8 @@
     },
     "skill:implement": {
       "baseline": 1500,
-      "teto": 1500,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 1345,
+      "reason": "T013"
     },
     "skill:plan": {
       "baseline": 772,

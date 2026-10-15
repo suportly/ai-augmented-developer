@@ -4,6 +4,8 @@ description: Implements one task test-first; returns a status.
 model: sonnet
 ---
 
+You implement one task of an approved plan.
+
 Workflow: test-first. Write a failing test, confirm it fails for the
 right reason, implement the minimum code to pass, confirm it passes.
 Run only the tests that exercise the changed code.

@@ -109,3 +109,58 @@ def test_prose_only_tasks_self_verify_without_reviewer() -> None:
         assert excluded in para, f"{excluded} must be named as outside the tier"
     for root in ("skills/", "agents/", "rules/", "templates/", "commands/", "src/", "tests/"):
         assert root in para, f"{root} must be named as not prose"
+
+
+AGENT = ROOT / "agents" / "implementer.md"
+_STATUSES = ("DONE", "DONE_WITH_CONCERNS", "NEEDS_CONTEXT", "BLOCKED")
+
+
+def _effective() -> str:
+    """Skill plus the agent it dispatches (rules moved there by spec 0031 T013)."""
+    return _text() + "\n" + AGENT.read_text(encoding="utf-8")
+
+
+def _implementer_prompt() -> str:
+    text = _text()
+    start = text.index("## Implementer prompt")
+    return text[start: text.index("## Status handling")]
+
+
+def test_step_4_dispatches_the_implementer_agent() -> None:
+    step = re.search(r"^4\..*$", _text(), re.M)
+    assert step, "step 4 missing"
+    assert re.search(r"`implementer` agent", step.group(0))
+    assert re.search(r"`implement: <TID> <title>`", step.group(0))
+
+
+def test_effective_text_keeps_test_first_flow_and_four_statuses() -> None:
+    text = _effective()
+    assert re.search(r"failing test[\s\S]{0,80}right reason", text)
+    assert "Run only the tests that exercise the changed code" in text
+    for status in _STATUSES:
+        assert f"- {status} " in text, f"{status} status lost"
+
+
+def test_skill_prompt_carries_only_per_task_context() -> None:
+    prompt = _implementer_prompt()
+    for needed in ("Task:", "Spec context", "Plan context", "Files to create or modify"):
+        assert needed in prompt
+    assert "Workflow: test-first" not in prompt
+    assert "Return exactly one status" not in prompt
+    assert "failing test" not in _text()
+    assert "- DONE — complete" not in _text()
+
+
+def test_status_handling_stays_in_the_skill() -> None:
+    text = _text()
+    section = text[text.index("## Status handling"): text.index("## Reviewer prompt")]
+    for status in _STATUSES:
+        assert f"**{status}**" in section
+
+
+def test_path_lists_the_implementer_agent_at_implement_stage() -> None:
+    import yaml
+
+    stages = yaml.safe_load((ROOT / "docs" / "pipeline-path.yaml").read_text(encoding="utf-8"))["stages"]
+    files = next(s["files"] for s in stages if s["name"] == "implement")
+    assert "agents/implementer.md" in files
