@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews code for bugs, security issues, code quality, and adherence to spec/project conventions. Returns APPROVED or CHANGES_REQUESTED with actionable feedback.
+description: Reviews code for bugs, security, spec alignment. Returns APPROVED or CHANGES_REQUESTED.
 tools: Read, Glob, Grep, Bash
 model: sonnet
 ---

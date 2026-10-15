@@ -1,6 +1,6 @@
 ---
 name: spec-document-reviewer
-description: Reviews spec.md documents for completeness, clarity, and testability before any code-writing begins. Returns APPROVED or CHANGES_REQUESTED with specific edits.
+description: Reviews spec.md for completeness, clarity, testability. Returns APPROVED or CHANGES_REQUESTED.
 tools: Read, Glob, Grep
 model: sonnet
 ---

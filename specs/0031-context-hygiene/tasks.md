@@ -182,7 +182,7 @@
 
 ### T012 — Agent implementer e descrições dos revisores
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `agents/implementer.md`
