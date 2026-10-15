@@ -177,6 +177,44 @@ a nota com os pesos e o JSON traz `cost_model` (`approximation: true`, `unit`,
 `weights`). Os pesos são as constantes `WEIGHT_*` de
 `src/aiadev/token_metrics.py`; a nota e o JSON são montados a partir delas.
 
+### Distribuição de contexto (spec 0031)
+
+Além dos blocos acima, `--tokens` mostra, depois do custo equivalente e antes de
+"Top tools by result chars", quatro seções. Todas somam a thread principal e os
+subagentes, exceto onde está dito.
+
+- **Context distribution**: quantas requests (e quantos tokens de contexto)
+  caíram em cada faixa de tamanho do contexto da própria request. Tabela com as
+  quatro faixas, colunas `requests`/`tokens` (todas as requests) e
+  `main requests`/`main tokens` (só a thread principal) e linha `TOTAL`. As
+  faixas ficam sempre presentes, com zero quando vazias.
+- **Top sessions by cost**: as 3 sessões mais caras (id cortado em 8
+  caracteres), com o custo equivalente da thread principal mais os subagentes
+  da mesma sessão e a participação (%).
+- **Tokens by model**: tokens de contexto por modelo, em ordem decrescente, com
+  a participação (%). Request sem modelo conta como `unknown`.
+- **Subagent share**: `x% of requests, y% of tokens` que passaram por subagentes.
+
+Faixas (contexto da request): `<50k` (menos de 50.000), `50k-150k`
+(\[50.000, 150.000)), `150k-200k` (\[150.000, 200.000], o 200.000 inclusive) e
+`>200k` (mais de 200.000).
+
+**Contexto** de uma request é `input + cache_creation + cache_read` da request
+já deduplicada por `message.id` (a saída não entra). A soma dos tokens das
+faixas é, portanto, o `total_input_tokens` da thread principal mais o dos
+subagentes, e a soma das requests é o total de turnos dos dois.
+
+**Participação** é a fração do total: na sessão, o custo equivalente dela sobre
+`total_equivalent_cost`; no modelo, os tokens dele sobre os tokens de todos os
+modelos; no subagente, requests e tokens dos subagentes sobre os totais. O top é
+ordenado por custo equivalente (empate pelo id da sessão).
+
+No JSON (`--format json`) entram quatro chaves novas no objeto de topo, sem
+alterar as existentes: `context_distribution` (`all` e `main_thread`, cada um
+com `requests` e `context_tokens` por faixa), `top_sessions`
+(`session_id`, `cost`, `share`), `model_shares` (`model`, `tokens`, `share`) e
+`subagent_share` (`requests`, `tokens`; frações de 0 a 1).
+
 ### Chaves do JSON
 
 Mantidas como estavam: `transcripts_dir`, `sessions[]` e `totals` (só a thread

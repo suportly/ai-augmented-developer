@@ -401,6 +401,13 @@ class TokenReport:
             "unclassified_subagents": self.unclassified_subagents,
             "total_equivalent_cost": self.total_equivalent_cost,
             "cost_model": cost_model(),
+            "context_distribution": {
+                "all": {"requests": self.band_requests, "context_tokens": self.band_context_tokens},
+                "main_thread": {"requests": self.main_band_requests, "context_tokens": self.main_band_context_tokens},
+            },
+            "top_sessions": self.top_sessions(),
+            "model_shares": self.model_shares,
+            "subagent_share": self.subagent_share,
         }
 
 
@@ -842,6 +849,51 @@ def _cost_lines(report: TokenReport) -> List[str]:
     ]
 
 
+def _pct(fraction: float) -> str:
+    return f"{fraction * 100:.1f}%"
+
+
+def _context_lines(report: TokenReport) -> List[str]:
+    """Context distribution by band, top sessions by cost, tokens by model and the subagent share."""
+    columns = ("band", "requests", "tokens", "main requests", "main tokens")
+    all_r, all_t = report.band_requests, report.band_context_tokens
+    main_r, main_t = report.main_band_requests, report.main_band_context_tokens
+    rows = [[b, _fmt(all_r[b]), _fmt(all_t[b]), _fmt(main_r[b]), _fmt(main_t[b])] for b in BANDS]
+    total = [
+        "TOTAL", _fmt(sum(all_r.values())), _fmt(sum(all_t.values())),
+        _fmt(sum(main_r.values())), _fmt(sum(main_t.values())),
+    ]
+    widths = [max(len(c), len(total[i]), *(len(r[i]) for r in rows)) for i, c in enumerate(columns)]
+
+    def render(cells: Iterable[str]) -> str:
+        return " ".join(c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths)))
+
+    header = render(columns)
+    rule = "-" * len(header)
+    lines = [
+        "Context distribution (requests and context tokens by size of each request's context):",
+        header, rule, *(render(r) for r in rows), rule, render(total), "",
+        "Top sessions by cost (equivalent cost, main thread plus its subagents):",
+    ]
+    top = report.top_sessions()
+    if top:
+        lines.append(f"  {'session':<8} {'cost':>12} {'share':>7}")
+    lines.extend(f"  {t['session_id'][:8]:<8} {_fmt_cost(t['cost']):>12} {_pct(t['share']):>7}" for t in top)
+    if not top:
+        lines.append("  (none)")
+    lines.extend(["", "Tokens by model:"])
+    shares = report.model_shares
+    width = max([len(m["model"]) for m in shares] + [len("model")])
+    if shares:
+        lines.append(f"  {'model':<{width}} {'tokens':>14} {'share':>7}")
+    lines.extend(f"  {m['model']:<{width}} {_fmt(m['tokens']):>14} {_pct(m['share']):>7}" for m in shares)
+    if not shares:
+        lines.append("  (none)")
+    sub = report.subagent_share
+    lines.extend(["", f"Subagent share: {_pct(sub['requests'])} of requests, {_pct(sub['tokens'])} of tokens"])
+    return lines
+
+
 def format_text(report: TokenReport, top_tools: int = 8) -> str:
     """Human-readable report: the main thread per session, its totals, the subagents by role, the cost, top tools.
 
@@ -885,6 +937,8 @@ def format_text(report: TokenReport, top_tools: int = 8) -> str:
     lines.extend(_subagent_lines(report))
     lines.append("")
     lines.extend(_cost_lines(report))
+    lines.append("")
+    lines.extend(_context_lines(report))
     if t.by_tool:
         lines.append("")
         lines.append(f"Top tools by result chars (chars entering context):")

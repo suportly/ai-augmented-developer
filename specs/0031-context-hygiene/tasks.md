@@ -63,7 +63,7 @@
 
 ### T004 — Texto e JSON do relatório, e docs/metrics.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`

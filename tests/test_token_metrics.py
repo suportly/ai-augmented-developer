@@ -1012,6 +1012,10 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
         "unclassified_subagents",
         "total_equivalent_cost",
         "cost_model",
+        "context_distribution",  # spec 0031 T004
+        "top_sessions",
+        "model_shares",
+        "subagent_share",
     }
 
     # main thread: 1.0*15 + 1.25*100 + 0.1*100 + 5.0*150
@@ -1769,3 +1773,129 @@ def test_top_sessions_tie_by_id_and_empty_report() -> None:
 def test_top_sessions_with_zero_total_cost_does_not_divide_by_zero() -> None:
     report = tm.TokenReport("", [tm.SessionTokens("a", "a.jsonl")])
     assert report.top_sessions() == [{"session_id": "a", "cost": 0.0, "share": 0.0}]
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T004 — context report in text and JSON
+# ---------------------------------------------------------------------
+
+# JSON of ``with_subagents/`` produced before T004 (without ``transcripts_dir``).
+_GOLDEN_BEFORE_T004 = json.loads(
+    '{"cost_model": {"approximation": true, "unit": "equivalent_input_tokens", "weights": {"cache_read": 0.1, '
+    '"cache_write_1h": 2.0, "cache_write_5m": 1.25, "input": 1.0, "output": 5.0}}, "sessions": [{"by_tool": '
+    '{"Bash": {"calls": 1, "result_chars": 2}}, "cache_creation_tokens": 100, "cache_read_tokens": 100, '
+    '"ended_at": "2026-10-01T10:00:09.000Z", "equivalent_cost": 900.0, "file": "sess-main.jsonl", '
+    '"input_tokens": 15, "models": ["claude-opus-5"], "output_tokens": 150, "session_id": "sess-main", '
+    '"sidechain_turns": 4, "started_at": "2026-10-01T10:00:00.000Z", "subagents": [{"agent_id": "aaa", '
+    '"cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": 525.0, "input_tokens": 5, '
+    '"output_tokens": 50, "role": "implement", "turns": 2}, {"agent_id": "bbb", "cache_creation_tokens": 50, '
+    '"cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, "output_tokens": 50, '
+    '"role": "review", "turns": 2}], "tool_calls": 1, "tool_result_chars": 2, "total_input_tokens": 215, '
+    '"turns": 2}], "subagent_totals": {"agents": 2, "cache_creation_tokens": 250, "cache_read_tokens": 500, '
+    '"equivalent_cost": 872.5, "input_tokens": 10, "output_tokens": 100, "turns": 4}, "subagents_by_role": '
+    '{"implement": {"agents": 1, "cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": '
+    '525.0, "input_tokens": 5, "output_tokens": 50, "turns": 2}, "review": {"agents": 1, '
+    '"cache_creation_tokens": 50, "cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, '
+    '"output_tokens": 50, "turns": 2}, "unclassified": {"agents": 0, "cache_creation_tokens": 0, '
+    '"cache_read_tokens": 0, "equivalent_cost": 0.0, "input_tokens": 0, "output_tokens": 0, "turns": 0}}, '
+    '"total_equivalent_cost": 1772.5, "totals": {"by_tool": {"Bash": {"calls": 1, "result_chars": 2}}, '
+    '"cache_creation_tokens": 100, "cache_read_tokens": 100, "ended_at": null, "equivalent_cost": 900.0, '
+    '"file": "", "input_tokens": 15, "models": [], "output_tokens": 150, "session_id": "TOTAL", '
+    '"sidechain_turns": 4, "started_at": null, "tool_calls": 1, "tool_result_chars": 2, '
+    '"total_input_tokens": 215, "turns": 2}, "unclassified_subagents": 0}'
+)
+_NEW_KEYS = {"context_distribution", "top_sessions", "model_shares", "subagent_share"}
+
+
+def test_json_keeps_every_previous_key_and_value_and_adds_the_context_keys(subagent_dir: pathlib.Path) -> None:
+    d = json.loads(tm.format_json(tm.build_token_report(subagent_dir)))
+    assert set(d) == set(_GOLDEN_BEFORE_T004) | _NEW_KEYS | {"transcripts_dir"}
+    for key, value in _GOLDEN_BEFORE_T004.items():
+        assert d[key] == value, key
+
+
+def test_json_context_distribution_has_the_four_bands_always(tmp_path: pathlib.Path) -> None:
+    d = json.loads(tm.format_json(_share_report(tmp_path)))
+    assert d["context_distribution"] == {
+        "all": {
+            "requests": {"<50k": 7, "50k-150k": 3, "150k-200k": 1, ">200k": 1},
+            "context_tokens": {"<50k": 195_000, "50k-150k": 320_000, "150k-200k": 200_000, ">200k": 300_000},
+        },
+        "main_thread": {
+            "requests": {"<50k": 6, "50k-150k": 2, "150k-200k": 0, ">200k": 0},
+            "context_tokens": {"<50k": 155_000, "50k-150k": 200_000, "150k-200k": 0, ">200k": 0},
+        },
+    }
+    assert [t["session_id"] for t in d["top_sessions"]] == ["B", "A", "D"]
+    assert [m["model"] for m in d["model_shares"]] == ["claude-sonnet-5", "claude-opus-5"]
+    assert d["subagent_share"]["requests"] == pytest.approx(4 / 12)
+
+
+def test_json_of_an_empty_report_still_has_the_bands_at_zero() -> None:
+    d = json.loads(tm.format_json(tm.TokenReport("x", [])))
+    zero = {band: 0 for band in tm.BANDS}
+    assert d["context_distribution"] == {
+        "all": {"requests": zero, "context_tokens": zero},
+        "main_thread": {"requests": zero, "context_tokens": zero},
+    }
+    assert d["top_sessions"] == [] and d["model_shares"] == []
+    assert d["subagent_share"] == {"requests": 0.0, "tokens": 0.0}
+
+
+def test_text_has_the_four_context_sections_with_exact_numbers(tmp_path: pathlib.Path) -> None:
+    text = tm.format_text(_share_report(tmp_path))
+    lines = text.splitlines()
+    start = next(i for i, ln in enumerate(lines) if ln.startswith("Context distribution (requests and context"))
+    assert "size of each request's context" in lines[start]
+    rows = {ln.split()[0]: ln.split()[1:] for ln in lines[start + 1:start + 12] if ln.split()[:1] and
+            ln.split()[0] in (*tm.BANDS, "TOTAL")}
+    assert rows == {
+        "<50k": ["7", "195,000", "6", "155,000"],
+        "50k-150k": ["3", "320,000", "2", "200,000"],
+        "150k-200k": ["1", "200,000", "0", "0"],
+        ">200k": ["1", "300,000", "0", "0"],
+        "TOTAL": ["12", "1,015,000", "8", "355,000"],
+    }
+    top = lines.index("Top sessions by cost (equivalent cost, main thread plus its subagents):")
+    assert lines[top + 1].split() == ["session", "cost", "share"]
+    assert [ln.split() for ln in lines[top + 2:top + 5]] == [
+        ["B", "55,020.00", "54.2%"], ["A", "20,010.00", "19.7%"], ["D", "14,010.00", "13.8%"],
+    ]
+    models = lines.index("Tokens by model:")
+    assert lines[models + 1].split() == ["model", "tokens", "share"]
+    assert [ln.split() for ln in lines[models + 2:models + 4]] == [
+        ["claude-sonnet-5", "660,000", "65.0%"], ["claude-opus-5", "355,000", "35.0%"],
+    ]
+    assert "Subagent share: 33.3% of requests, 65.0% of tokens" in lines
+    # what was there before stays, and the new sections sit before the tool table
+    assert text.index("Equivalent cost (approximation)") < text.index("Context distribution")
+
+
+def test_text_top_session_id_is_cut_at_eight_characters(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "0123456789abcdef.jsonl", [_ctx_event(_ts(1), message_id="m", context=10)])
+    text = tm.format_text(tm.build_token_report(tmp_path))
+    assert "  01234567 " in text and "012345678" not in text.split("Top sessions by cost")[1]
+
+
+def test_text_context_bands_sum_to_the_requests_and_input_tokens(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    total = next(ln.split() for ln in tm.format_text(r).splitlines() if ln.startswith("TOTAL") and "1,015,000" in ln)
+    assert int(total[1]) == r.totals.turns + r.subagent_totals.turns
+    assert int(total[2].replace(",", "")) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+
+
+def test_text_without_sessions_or_subagents_does_not_break(tmp_path: pathlib.Path) -> None:
+    empty = tm.format_text(tm.TokenReport("x", []))
+    assert "Context distribution" in empty and "Subagent share: 0.0% of requests, 0.0% of tokens" in empty
+    assert empty.count("  (none)") == 2, "top sessions and models both print (none)"
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="m", context=1_000)])
+    text = tm.format_text(tm.build_token_report(tmp_path))
+    assert "Subagent share: 0.0% of requests, 0.0% of tokens" in text
+
+
+def test_text_top_sessions_and_models_have_headers_and_aligned_columns(tmp_path: pathlib.Path) -> None:
+    text = tm.format_text(tm.build_token_report(FIXTURES / "with_subagents"))
+    assert "  session" in text and "  model" in text
+    rows = [ln for ln in text.splitlines() if ln.startswith("  ") and ln.rstrip().endswith("%")]
+    widths = {len(ln) for ln in rows}
+    assert len(widths) <= 2, "model rows share one width"
