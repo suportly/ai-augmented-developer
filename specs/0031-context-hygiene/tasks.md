@@ -219,7 +219,7 @@
 
 ### T014 — Documentação e CHANGELOG
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T009, T011, T013
 - **Files:**
   - modify: `docs/token-economy.md`
