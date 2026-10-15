@@ -31,9 +31,9 @@ def test_release_0_25_0_records_0030_with_breaking_note_and_benchmark_result():
     assert "lean" in section.split("### Breaking", 1)[1]
 
 
-def test_unreleased_records_0031_context_hygiene():
+def test_release_0_26_0_records_0031_context_hygiene():
     body = CHANGELOG.read_text(encoding="utf-8")
-    section = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    section = body.split("## [0.26.0]", 1)[1].split("\n## [", 1)[0]
     assert "### Added" in section and "### Changed" in section
     assert "0031" in section
     for needle in ("context:", "checkpoint:", "AIADEV_CONTEXT_WARN", "doc-review", "implementer"):
