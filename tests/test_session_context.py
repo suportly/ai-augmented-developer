@@ -177,7 +177,8 @@ def test_invalid_values_count_zero(tmp_path: Path) -> None:
             },
         }
     )
-    assert last_context(_write(tmp_path / "t.jsonl", [line])) == 0
+    # every counter invalid -> counts as zero usage -> not a real request (see the synthetic-line test)
+    assert last_context(_write(tmp_path / "t.jsonl", [line])) is None
     line2 = line.replace("true", "7").replace("-5", '"3"')
     assert last_context(_write(tmp_path / "u.jsonl", [line2])) == 7
 
@@ -392,3 +393,15 @@ def test_context_k_truncates_instead_of_rounding() -> None:
 
     (line,) = format_lines([SessionContext("abcdefgh1234", 412_900, 5)], 1_000_000)
     assert line.startswith("context: 412k tokens (session abcdefgh,")
+
+
+def test_trailing_synthetic_or_zero_usage_line_is_not_the_last_request(tmp_path: Path) -> None:
+    real = {"type": "assistant", "message": {"id": "r", "model": "claude-x", "usage": {"input_tokens": 3, "cache_read_input_tokens": 327_784}}}
+    synthetic = {"type": "assistant", "message": {"id": "s", "model": "<synthetic>", "usage": {"input_tokens": 0, "output_tokens": 0}}}
+    zero = {"type": "assistant", "message": {"id": "z", "model": "claude-x", "usage": {}}}
+    path = tmp_path / "s.jsonl"
+    path.write_text("\n".join(json.dumps(x) for x in (real, synthetic, zero)) + "\n")
+    assert last_context(path) == 327_787
+    only_synthetic = tmp_path / "t.jsonl"
+    only_synthetic.write_text(json.dumps(synthetic) + "\n")
+    assert last_context(only_synthetic) is None

@@ -1976,3 +1976,17 @@ def test_no_warning_and_zero_share_without_subagents(pinned_dir: pathlib.Path) -
     assert report.unclassified_share == 0.0
     assert "Warning:" not in tm.format_text(report)
     assert report.to_dict()["unclassified_share"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("path", "slug"),
+    [
+        ("/Users/a/Workspace/maycrm/.claude/worktrees/0183-x", "-Users-a-Workspace-maycrm--claude-worktrees-0183-x"),
+        ("/Users/a/my.project/sub_dir", "-Users-a-my-project-sub-dir"),
+        ("/Users/a/with space/x", "-Users-a-with-space-x"),
+    ],
+)
+def test_slug_for_maps_every_non_alphanumeric_character(tmp_path: pathlib.Path, monkeypatch, path: str, slug: str) -> None:
+    """Claude Code names the transcript directory after the cwd with every non-alphanumeric char as ``-``."""
+    monkeypatch.setattr(pathlib.Path, "resolve", lambda self, *a, **k: self)
+    assert tm.slug_for(pathlib.Path(path)) == slug

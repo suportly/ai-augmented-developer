@@ -209,11 +209,12 @@ subagentes, e a soma das requests é o total de turnos dos dois.
 modelos; no subagente, requests e tokens dos subagentes sobre os totais. O top é
 ordenado por custo equivalente (empate pelo id da sessão).
 
-No JSON (`--format json`) entram quatro chaves novas no objeto de topo, sem
+No JSON (`--format json`) entram cinco chaves novas no objeto de topo, sem
 alterar as existentes: `context_distribution` (`all` e `main_thread`, cada um
 com `requests` e `context_tokens` por faixa), `top_sessions`
 (`session_id`, `cost`, `share`), `model_shares` (`model`, `tokens`, `share`) e
-`subagent_share` (`requests`, `tokens`; frações de 0 a 1).
+`subagent_share` (`requests`, `tokens`; frações de 0 a 1) e
+`unclassified_share` (fração do custo dos subagentes sem papel).
 
 ### Chaves do JSON
 
@@ -228,6 +229,11 @@ principal). Acrescentadas:
 | `subagents_by_role` | `implement`, `review`, `doc-review` e `unclassified` (sempre os quatro, com zeros quando vazios): `agents`, os campos de uso e `equivalent_cost`. |
 | `unclassified_subagents` | Quantos subagentes ficaram sem papel. |
 | `total_equivalent_cost` | Thread principal mais subagentes: o número para comparar entre sessões. |
+| `context_distribution` | `all` e `main_thread`, cada um com `requests` e `context_tokens` por faixa (`<50k`, `50k-150k`, `150k-200k`, `>200k`). |
+| `top_sessions` | As 3 sessões de maior custo: `session_id`, `cost`, `share`. |
+| `model_shares` | `model`, `tokens`, `share`, por tokens decrescentes. |
+| `subagent_share` | `requests` e `tokens`, frações de 0 a 1. |
+| `unclassified_share` | Fração do custo dos subagentes sem papel. |
 | `cost_model` | `approximation: true`, `unit` e `weights`. |
 
 `sidechain_turns` continua somando duas coisas: turnos da thread principal

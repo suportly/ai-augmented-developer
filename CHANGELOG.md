@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Spec **0031 — context-hygiene**. `aiadev metrics --tokens` now reports the
-  distribution of requests and tokens by context size (`< 50k`, `50k-150k`,
-  `150k-200k`, `> 200k`), for all requests and for the main thread only, plus
+  distribution of requests and tokens by context size (the band keys
+  `<50k`, `50k-150k`, `150k-200k` and `>200k`), for all requests and for the main thread only, plus
   the three costliest sessions, the share per model and the subagents' share
   of the total. The JSON output gains the keys `context_distribution`,
   `top_sessions`, `model_shares`, `subagent_share` and `unclassified_share`;
@@ -38,6 +38,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `path:total`).
 - `agents/code-reviewer.md` now carries the conformance and quality checklists
   in full (part of them used to live in the skill's prompt).
+- `plan` no longer says "Do not enumerate tasks" and no longer ends with a
+  "Report in 3-5 lines" step, and `specify` no longer mentions
+  `aiadev init --feature`; the text was trimmed to pay for the `doc-review:`
+  dispatch convention without raising any instruction budget.
+- `slug_for` (the transcript directory name) now replaces every
+  non-alphanumeric character with `-`, as Claude Code does; projects whose path
+  has dots (for example Claude Code worktrees under `.claude/worktrees/`) were
+  silently skipped by `aiadev metrics --tokens` before.
+- The `context:` line ignores the zero-usage `<synthetic>` line Claude Code
+  writes after an interrupt, so a long session that was just interrupted still
+  shows its real context and the `checkpoint:` warning.
+
+### Breaking
+
+- `implement` now dispatches the bundled `implementer` agent. A project that
+  already has its own `.claude/agents/implementer.md` (or the equivalent on
+  another platform) keeps it: `aiadev sync` reports a file conflict, and the
+  skill's prompt no longer carries the test-first flow and the status list.
+  Rename your agent, or run `aiadev sync --force` to take the bundled one. A
+  project that has not run `aiadev sync` yet has no `implementer` agent until
+  it does.
+- On OpenCode the bundled agents carry `model: sonnet`, which OpenCode does not
+  resolve as a model id (the reviewers already had this); fixing the OpenCode
+  agent format is a follow-up.
 
 ## [0.25.0] - 2026-10-14
 

@@ -62,13 +62,13 @@ from __future__ import annotations
 import dataclasses
 import json
 import pathlib
+import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 def slug_for(workspace: pathlib.Path) -> str:
     """Return the transcript directory name Claude Code uses for ``workspace``."""
-    text = str(workspace.resolve())
-    return text.replace("\\", "-").replace("/", "-")
+    return re.sub(r"[^A-Za-z0-9]", "-", str(workspace.resolve()))
 
 
 def default_transcripts_dir(workspace: pathlib.Path, home: Optional[pathlib.Path] = None) -> pathlib.Path:
@@ -174,7 +174,7 @@ class SubagentTokens(_EquivalentCost):
     cache_write_5m_tokens: int = 0
     cache_write_1h_tokens: int = 0
     role: str = ROLE_UNCLASSIFIED
-    # Requests and context tokens by ``BANDS`` label, and context + output tokens by
+    # Requests and context tokens by ``BANDS`` label, and context tokens by
     # model (``unknown`` when the transcript names none), over the messages this
     # transcript claimed after deduplication.
     band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
@@ -229,7 +229,7 @@ class SessionTokens(_EquivalentCost):
     models: List[str] = dataclasses.field(default_factory=list)
     by_tool: Dict[str, ToolUsage] = dataclasses.field(default_factory=dict)
     subagents: List[SubagentTokens] = dataclasses.field(default_factory=list)
-    # Requests and context tokens by ``BANDS`` label, and context + output tokens by
+    # Requests and context tokens by ``BANDS`` label, and context tokens by
     # model (``unknown`` when the transcript names none), over the messages this
     # transcript claimed after deduplication.
     band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())

@@ -44,6 +44,9 @@ def _usage_of(raw: bytes) -> tuple[str | None, tuple[int, int, int]] | None:
         return None
     mid = message.get("id")
     counters = (_int(usage.get(_FIELDS[0])), _int(usage.get(_FIELDS[1])), _int(usage.get(_FIELDS[2])))
+    model = message.get("model")
+    if (isinstance(model, str) and model.startswith("<")) or not any(counters):
+        return None  # synthetic / zero-usage line (e.g. written after an interrupt): not a real request
     return (mid if isinstance(mid, str) else None), counters
 
 

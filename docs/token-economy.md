@@ -104,7 +104,7 @@ read from the local Claude Code transcripts) before and after enabling it.
 Cost per request grows with the context it re-reads, and a long session pays
 that on every turn: context size times turns. In this repository, one-off
 measurement of 2026-10-15: about 97% of total tokens were cache reads, and
-requests above 200k tokens were about 26% of requests but about 62% of tokens.
+requests above 200k tokens were about 26% of requests but about 65% of tokens.
 
 - **`context:` line.** `aiadev next` and `aiadev tasks done` show the context
   size of the current session's last request, read from the tail of the local
