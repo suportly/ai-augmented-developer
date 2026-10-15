@@ -117,8 +117,8 @@ Antes de aceitar presets e extensões de um catálogo remoto, exigir HTTPS, pin 
 
 ### R014 — Higiene de contexto: ver onde o contexto se acumula e avisar a hora de cortar a sessão
 
-- **Status:** planned
+- **Status:** done
 - **Spec:** 0031-context-hygiene
 - **Depends on:** R008
 
-Mostrar, com os transcripts locais, quanto do custo vem de sessões de contexto longo e dar ao agente um aviso determinístico de que é hora de cortar a sessão, porque o custo medido nos transcripts deste repositório está na thread principal (contexto médio de 250k a 400k por request, máximo 741k; requests acima de 200k são 25,6% das requests e 62,2% dos tokens), não no número de subagentes. Fontes: artigo https://dev.to/alairjt/i-burned-95-of-my-ai-coding-quota-in-2-days-heres-what-the-logs-revealed-2omf; medição sobre os 3 transcripts de ~/.claude/projects/ deste repositório em 2026-10-15; src/aiadev/token_metrics.py:424-484 (só agrega, não guarda o contexto por request); src/aiadev/commands/next.py (sem informação de sessão); skills/implement/SKILL.md (nenhuma instrução de compactar ou cortar sessão).
+Mostrar, com os transcripts locais, quanto do custo vem de sessões de contexto longo e dar ao agente um aviso determinístico de que é hora de cortar a sessão, porque o custo medido nos transcripts deste repositório está na thread principal (contexto médio de 250k a 400k por request, máximo 741k; requests acima de 200k são 25,6% das requests e 62,2% dos tokens), não no número de subagentes. Fontes: artigo https://dev.to/alairjt/i-burned-95-of-my-ai-coding-quota-in-2-days-heres-what-the-logs-revealed-2omf; medição sobre os 3 transcripts de ~/.claude/projects/ deste repositório em 2026-10-15; src/aiadev/token_metrics.py:424-484 (só agrega, não guarda o contexto por request); src/aiadev/commands/next.py (sem informação de sessão); skills/implement/SKILL.md (nenhuma instrução de compactar ou cortar sessão). Status `done`: mesclada na `main` pela PR #59 (commit `9ffe2e3`).
