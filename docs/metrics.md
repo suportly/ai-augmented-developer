@@ -212,7 +212,7 @@ ordenado por custo equivalente (empate pelo id da sessão).
 No JSON (`--format json`) entram cinco chaves novas no objeto de topo, sem
 alterar as existentes: `context_distribution` (`all` e `main_thread`, cada um
 com `requests` e `context_tokens` por faixa), `top_sessions`
-(`session_id`, `cost`, `share`), `model_shares` (`model`, `tokens`, `share`) e
+(`session_id`, `cost`, `share`), `model_shares` (`model`, `tokens`, `share`),
 `subagent_share` (`requests`, `tokens`; frações de 0 a 1) e
 `unclassified_share` (fração do custo dos subagentes sem papel).
 
