@@ -39,6 +39,7 @@ O framework já reduziu turnos e despachos (spec 0030), mas continua sem duas co
 - `aiadev metrics --tokens` (texto e JSON) informa: requests e tokens por faixa de contexto, contando todas as requests (thread principal e subagentes) e mostrando também a parte da thread principal; a participação das 3 sessões de maior custo no total (custo = custo equivalente de `cost_model()`); a participação de cada modelo nos tokens; e a participação dos subagentes em requests e em tokens. O contexto de uma request é `input + cache_creation + cache_read` da request deduplicada. As faixas são `< 50k` (contexto < 50.000), `50k–150k` (50.000 ≤ contexto < 150.000), `150k–200k` (150.000 ≤ contexto ≤ 200.000) e `> 200k` (contexto > 200.000); somam o total, e o total confere, dentro de 1%, com a deduplicação manual da mesma sessão (mesma regra de `tests/test_token_metrics_manual_rule.py`).
 - `aiadev next` e `aiadev tasks done` imprimem uma linha `context: <N>k tokens (session <id de 8 caracteres>, <idade>)` com o contexto da última request da sessão corrente e, acima do limiar (padrão 150k tokens, variável `AIADEV_CONTEXT_WARN` em tokens), uma linha `checkpoint:` que diz que o estado está em `tasks.md` e no git e que a sessão pode ser compactada ou recomeçada retomando com `aiadev next`. A sessão corrente é o transcript modificado mais recentemente no diretório do projeto; se outro transcript do mesmo diretório foi modificado nos últimos 10 minutos, o comando imprime uma linha `context:` por sessão ativa, cada uma com o seu id. Sem transcript legível, nada é impresso e o código de saída não muda.
 - A leitura do transcript para essas linhas lê só um trecho de tamanho fixo do fim do arquivo e mantém `aiadev next` dentro do orçamento de 200 ms já fixado pela spec 0030, medido com um transcript de 50 MB.
+- O `implement` despacha o implementer por um agent próprio, `agents/implementer.md`, com `model: sonnet` no frontmatter (como os revisores), e o orçamento de instruções não sobe nenhum teto de `docs/instruction-budget.json` além da descrição do novo agent, que é compensada.
 - Os revisores de documento passam a ter papel próprio, `doc-review`: as skills `specify` e `plan` documentam o prefixo `doc-review:` na `description` do despacho, `_subagent_role` em `src/aiadev/token_metrics.py` o reconhece, e o relatório de `--tokens` avisa quando mais de 30% do custo de subagentes é não classificado.
 - Nada sai da máquina e nada é gravado: a leitura usa só campos de uso e modelo, nunca o corpo de `tool_result` (teste de privacidade existente mantido).
 
@@ -88,10 +89,21 @@ Como mantenedor, quero que os revisores de documento tenham papel próprio no re
 2. Given subagentes sem prefixo reconhecido que somam mais de 30% do custo de subagentes, When rodo o relatório, Then uma linha de aviso informa a participação e o critério.
 3. Given subagentes com os prefixos `implement:` e `review:`, When rodo o relatório, Then a classificação de hoje não muda.
 
+### Story 4 — Implementer com modelo definido (P2)
+
+Como mantenedor, quero que o implementer tenha agent e modelo próprios, para que o custo de implementação não herde o modelo mais caro da sessão.
+
+**Acceptance scenarios** (≥ 3 per story):
+
+1. Given um projeto com o framework instalado, When o `implement` despacha a task, Then o despacho usa o agent `implementer`, cujo frontmatter declara `model: sonnet`, em vez de `general-purpose`.
+2. Given o agent `implementer` instalado em cada plataforma com suporte a agents, When rodo `aiadev install` e `aiadev sync`, Then o arquivo chega a cada uma, sem remover nem alterar os agents existentes.
+3. Given o orçamento de instruções, When rodo `scripts/instruction_budget.py --check`, Then nenhum teto sobe além do necessário para a descrição do novo agent, e o percurso `specify → finish` não cresce.
+4. Given que a `description` do despacho segue a convenção `implement:`, When o agent `implementer` é usado, Then o relatório de `--tokens` continua classificando o subagente no papel `implement`.
+
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 Os subagentes de rotina (implementer e revisores) devem usar um modelo menor por padrão? Em transcripts deste repositório, Opus e Fable somam 39% dos tokens, e o `implement` despacha o implementer sem definir modelo (os revisores já têm `model: sonnet`). Se sim, entra nesta spec — por um agent `implementer` com `model:` no frontmatter ou por uma frase no despacho — ou fica fora, como decisão do consumidor?]
+- cl-1 — Os subagentes de rotina usam modelo menor por padrão: o framework passa a ter um agent `implementer` (`agents/implementer.md`) com `model: sonnet` no frontmatter, e o `implement` despacha o implementer por ele; os três revisores já têm `model: sonnet`. A escolha é por agent, e não por frase no despacho, para não consumir texto de `skills/implement/SKILL.md` (teto de 1.500 tokens sem folga). Resposta do mantenedor em 2026-10-15.
 
 <!-- section: Data touched -->
 ## Data touched
