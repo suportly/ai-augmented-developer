@@ -119,7 +119,7 @@
 
 ### T008 — Linhas de contexto em `aiadev next`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `src/aiadev/commands/next.py`
