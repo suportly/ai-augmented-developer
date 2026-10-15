@@ -27,6 +27,7 @@ from pathlib import Path
 
 import click
 
+from ..session_context import context_lines
 from ..tasks_status import TasksMdError, mark_done, parse, restore_status
 
 
@@ -141,3 +142,5 @@ def done_command(task_id: str, feature: str, message: str, files: tuple[str, ...
         _fail("; ".join(causes))
 
     click.echo(summary)
+    for line in context_lines(repo):
+        click.echo(line)

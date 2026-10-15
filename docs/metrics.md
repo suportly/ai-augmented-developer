@@ -148,11 +148,11 @@ os subagentes aparecem no bloco "Subagents by role" (texto) e em `subagents`,
 `subagent_totals` e `subagents_by_role` (JSON).
 
 O papel vem do campo `description` do `agent-<id>.meta.json` ao lado do
-transcript, pelo prefixo `implement:` ou `review:` (sem diferenciar maiúsculas,
+transcript, pelo prefixo `implement:`, `review:` ou `doc-review:` (sem diferenciar maiúsculas,
 espaços iniciais tolerados, os dois pontos são obrigatórios). Qualquer outra
 descrição, ou um `meta.json` ausente, ilegível ou malformado, deixa o subagente
 como `unclassified`, e o relatório informa quantos ficaram assim
-(`Unclassified subagents: N` / `unclassified_subagents`). Nem o texto das
+(`Unclassified subagents: N` / `unclassified_subagents`; acima de 30% do custo dos subagentes o texto avisa e o JSON traz `unclassified_share`). Nem o texto das
 mensagens nem o `agentType` entram na decisão. Para o relatório agrupar, quem
 despacha o subagente precisa pôr esse prefixo na descrição.
 
@@ -177,6 +177,45 @@ a nota com os pesos e o JSON traz `cost_model` (`approximation: true`, `unit`,
 `weights`). Os pesos são as constantes `WEIGHT_*` de
 `src/aiadev/token_metrics.py`; a nota e o JSON são montados a partir delas.
 
+### Distribuição de contexto (spec 0031)
+
+Além dos blocos acima, `--tokens` mostra, depois do custo equivalente e antes de
+"Top tools by result chars", quatro seções. Todas somam a thread principal e os
+subagentes, exceto onde está dito.
+
+- **Context distribution**: quantas requests (e quantos tokens de contexto)
+  caíram em cada faixa de tamanho do contexto da própria request. Tabela com as
+  quatro faixas, colunas `requests`/`tokens` (todas as requests) e
+  `main requests`/`main tokens` (só a thread principal) e linha `TOTAL`. As
+  faixas ficam sempre presentes, com zero quando vazias.
+- **Top sessions by cost**: as 3 sessões mais caras (id cortado em 8
+  caracteres), com o custo equivalente da thread principal mais os subagentes
+  da mesma sessão e a participação (%).
+- **Tokens by model**: tokens de contexto por modelo, em ordem decrescente, com
+  a participação (%). Request sem modelo conta como `unknown`.
+- **Subagent share**: `x% of requests, y% of tokens` que passaram por subagentes.
+
+Faixas (contexto da request): `<50k` (menos de 50.000), `50k-150k`
+(\[50.000, 150.000)), `150k-200k` (\[150.000, 200.000], o 200.000 inclusive) e
+`>200k` (mais de 200.000).
+
+**Contexto** de uma request é `input + cache_creation + cache_read` da request
+já deduplicada por `message.id` (a saída não entra). A soma dos tokens das
+faixas é, portanto, o `total_input_tokens` da thread principal mais o dos
+subagentes, e a soma das requests é o total de turnos dos dois.
+
+**Participação** é a fração do total: na sessão, o custo equivalente dela sobre
+`total_equivalent_cost`; no modelo, os tokens dele sobre os tokens de todos os
+modelos; no subagente, requests e tokens dos subagentes sobre os totais. O top é
+ordenado por custo equivalente (empate pelo id da sessão).
+
+No JSON (`--format json`) entram cinco chaves novas no objeto de topo, sem
+alterar as existentes: `context_distribution` (`all` e `main_thread`, cada um
+com `requests` e `context_tokens` por faixa), `top_sessions`
+(`session_id`, `cost`, `share`), `model_shares` (`model`, `tokens`, `share`),
+`subagent_share` (`requests`, `tokens`; frações de 0 a 1) e
+`unclassified_share` (fração do custo dos subagentes sem papel).
+
 ### Chaves do JSON
 
 Mantidas como estavam: `transcripts_dir`, `sessions[]` e `totals` (só a thread
@@ -187,9 +226,14 @@ principal). Acrescentadas:
 | `sessions[].equivalent_cost`, `totals.equivalent_cost` | Custo equivalente da thread principal. |
 | `sessions[].subagents[]` | `agent_id`, `role`, `turns`, `input_tokens`, `cache_creation_tokens`, `cache_read_tokens`, `output_tokens`, `equivalent_cost`. |
 | `subagent_totals` | Soma de todos os subagentes (`agents`, os mesmos campos de uso e `equivalent_cost`). |
-| `subagents_by_role` | `implement`, `review` e `unclassified` (sempre os três, com zeros quando vazios): `agents`, os campos de uso e `equivalent_cost`. |
+| `subagents_by_role` | `implement`, `review`, `doc-review` e `unclassified` (sempre os quatro, com zeros quando vazios): `agents`, os campos de uso e `equivalent_cost`. |
 | `unclassified_subagents` | Quantos subagentes ficaram sem papel. |
 | `total_equivalent_cost` | Thread principal mais subagentes: o número para comparar entre sessões. |
+| `context_distribution` | `all` e `main_thread`, cada um com `requests` e `context_tokens` por faixa (`<50k`, `50k-150k`, `150k-200k`, `>200k`). |
+| `top_sessions` | As 3 sessões de maior custo: `session_id`, `cost`, `share`. |
+| `model_shares` | `model`, `tokens`, `share`, por tokens decrescentes. |
+| `subagent_share` | `requests` e `tokens`, frações de 0 a 1. |
+| `unclassified_share` | Fração do custo dos subagentes sem papel. |
 | `cost_model` | `approximation: true`, `unit` e `weights`. |
 
 `sidechain_turns` continua somando duas coisas: turnos da thread principal

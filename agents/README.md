@@ -17,7 +17,7 @@ groups in this repository:
 | [`plan-document-reviewer`](./plan-document-reviewer.md) | `plan` | Reviews `plan.md` for TDD compliance, exact file paths, and step granularity. |
 | [`code-reviewer`](./code-reviewer.md) | `implement`, `requesting-code-review` | Reviews code for security, spec alignment, and quality. |
 
-These three are the only agents guaranteed to exist on every install.
+These three reviewers, plus `implementer` (task executor, `model: sonnet`, dispatched by `implement`), are the agents guaranteed on every install.
 
 ## The multi-discipline catalog (design / engineering / marketing / …)
 

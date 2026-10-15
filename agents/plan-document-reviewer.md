@@ -1,6 +1,6 @@
 ---
 name: plan-document-reviewer
-description: Reviews plan.md documents for spec alignment, task granularity, and TDD/DRY/YAGNI compliance. Returns APPROVED or CHANGES_REQUESTED.
+description: Reviews plan.md for spec alignment, granularity, TDD. Returns APPROVED or CHANGES_REQUESTED.
 tools: Read, Glob, Grep
 model: sonnet
 ---

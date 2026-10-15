@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Spec **0031 — context-hygiene**. `aiadev metrics --tokens` now reports the
+  distribution of requests and tokens by context size (the band keys
+  `<50k`, `50k-150k`, `150k-200k` and `>200k`), for all requests and for the main thread only, plus
+  the three costliest sessions, the share per model and the subagents' share
+  of the total. The JSON output gains the keys `context_distribution`,
+  `top_sessions`, `model_shares`, `subagent_share` and `unclassified_share`;
+  no existing key changed.
+- `aiadev next` and `aiadev tasks done` print a `context:` line (context size
+  of the current session's last request) and a `checkpoint:` line that warns
+  above 150k tokens. The threshold is tunable with `AIADEV_CONTEXT_WARN`. Only
+  the tail of the local transcript is read; nothing is written or sent.
+- A `doc-review` role for document reviewers (the `description` convention
+  `doc-review: spec|plan <slug>`, now in `specify` and `plan`), and a warning
+  when more than 30% of subagent cost is unclassified.
+- A bundled `implementer` agent (`agents/implementer.md`, `model: sonnet`,
+  no `tools:` restriction).
+
+  **Why:** cost grows with context size times turns, and nothing showed the
+  user when a session had become expensive or where the cost went.
+
+### Changed
+
+- `implement` dispatches the implementer through the new agent, and the
+  skill's prompt carries only the task fields; the test-first flow and the
+  status list moved into the agent. The measured pipeline path dropped from
+  12715 (0.25.0) to 12624 (`python3 scripts/instruction_budget.py`,
+  `path:total`).
+- `agents/code-reviewer.md` now carries the conformance and quality checklists
+  in full (part of them used to live in the skill's prompt).
+- `plan` no longer says "Do not enumerate tasks" and no longer ends with a
+  "Report in 3-5 lines" step, and `specify` no longer mentions
+  `aiadev init --feature`; the text was trimmed to pay for the `doc-review:`
+  dispatch convention without raising any instruction budget.
+- `slug_for` (the transcript directory name) now replaces every
+  non-alphanumeric character with `-`, as Claude Code does; projects whose path
+  has dots (for example Claude Code worktrees under `.claude/worktrees/`) were
+  silently skipped by `aiadev metrics --tokens` before.
+- The `context:` line ignores the zero-usage `<synthetic>` line Claude Code
+  writes after an interrupt, so a long session that was just interrupted still
+  shows its real context and the `checkpoint:` warning.
+
+### Breaking
+
+- `implement` now dispatches the bundled `implementer` agent. A project that
+  already has its own `.claude/agents/implementer.md` (or the equivalent on
+  another platform) keeps it: `aiadev sync` reports a file conflict, and the
+  skill's prompt no longer carries the test-first flow and the status list.
+  Rename your agent, or run `aiadev sync --force` to take the bundled one. A
+  project that has not run `aiadev sync` yet has no `implementer` agent until
+  it does.
+- On OpenCode the bundled agents carry `model: sonnet`, which OpenCode does not
+  resolve as a model id (the reviewers already had this); fixing the OpenCode
+  agent format is a follow-up.
+
 ## [0.25.0] - 2026-10-14
 
 ### Added

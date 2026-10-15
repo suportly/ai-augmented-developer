@@ -1,0 +1,2 @@
+{"type": "assistant", "timestamp": "2026-09-16T10:00:01.000Z", "message": {"id": "msg_SHARED", "model": "claude-opus-5", "usage": {"input_tokens": 10, "cache_creation_input_tokens": 20000, "cache_read_input_tokens": 40000, "output_tokens": 100}, "content": [{"type": "text", "text": "x"}]}}
+{"type": "assistant", "timestamp": "2026-09-16T10:00:02.000Z", "message": {"id": "msg_MAIN", "model": "claude-opus-5", "usage": {"input_tokens": 5, "cache_creation_input_tokens": 1000, "cache_read_input_tokens": 170000, "output_tokens": 50}, "content": [{"type": "text", "text": "x"}]}}

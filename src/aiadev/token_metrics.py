@@ -35,7 +35,7 @@ goes through the same ``message.id`` deduplication, including across files.
 
 Subagent role (spec ``0030-lean-pipeline``, Story 1): each ``agent-<id>.jsonl``
 may have an ``agent-<id>.meta.json`` next to it whose ``description`` starts
-with ``implement:`` or ``review:`` (case-insensitive, leading whitespace
+with ``implement:``, ``review:`` or ``doc-review:`` (case-insensitive, leading whitespace
 tolerated; the colon is required). That prefix is the **only** source of the
 role: message text and ``agentType`` are never consulted, and the description
 itself is not kept, only the derived role. A missing, unreadable or malformed
@@ -62,13 +62,13 @@ from __future__ import annotations
 import dataclasses
 import json
 import pathlib
+import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 def slug_for(workspace: pathlib.Path) -> str:
     """Return the transcript directory name Claude Code uses for ``workspace``."""
-    text = str(workspace.resolve())
-    return text.replace("\\", "-").replace("/", "-")
+    return re.sub(r"[^A-Za-z0-9]", "-", str(workspace.resolve()))
 
 
 def default_transcripts_dir(workspace: pathlib.Path, home: Optional[pathlib.Path] = None) -> pathlib.Path:
@@ -85,8 +85,11 @@ class ToolUsage:
 
 ROLE_IMPLEMENT = "implement"
 ROLE_REVIEW = "review"
+ROLE_DOC_REVIEW = "doc-review"
 ROLE_UNCLASSIFIED = "unclassified"
-ROLES = (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_UNCLASSIFIED)
+ROLES = (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_DOC_REVIEW, ROLE_UNCLASSIFIED)
+# Above this share of the subagents' equivalent cost, ``format_text`` warns (spec 0031, Story 3).
+UNCLASSIFIED_WARN_SHARE = 0.30
 
 # Cost weights (plan D7): the price of each usage component relative to a plain
 # input token, so a cost reads as "equivalent input tokens". One documented set
@@ -158,7 +161,7 @@ def cost_model() -> Dict[str, Any]:
 class SubagentTokens(_EquivalentCost):
     """Usage of one subagent transcript (``agent-<agent_id>.jsonl``).
 
-    ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW`` or ``ROLE_UNCLASSIFIED``.
+    ``role`` is ``ROLE_IMPLEMENT``, ``ROLE_REVIEW``, ``ROLE_DOC_REVIEW`` or ``ROLE_UNCLASSIFIED``.
     The cache-write tier fields mean what they do on ``SessionTokens``.
     """
 
@@ -171,6 +174,12 @@ class SubagentTokens(_EquivalentCost):
     cache_write_5m_tokens: int = 0
     cache_write_1h_tokens: int = 0
     role: str = ROLE_UNCLASSIFIED
+    # Requests and context tokens by ``BANDS`` label, and context tokens by
+    # model (``unknown`` when the transcript names none), over the messages this
+    # transcript claimed after deduplication.
+    band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    band_context_tokens: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    model_tokens: Dict[str, int] = dataclasses.field(default_factory=dict)  # context tokens per model, same definition as the bands
 
     @property
     def total_input_tokens(self) -> int:
@@ -220,6 +229,12 @@ class SessionTokens(_EquivalentCost):
     models: List[str] = dataclasses.field(default_factory=list)
     by_tool: Dict[str, ToolUsage] = dataclasses.field(default_factory=dict)
     subagents: List[SubagentTokens] = dataclasses.field(default_factory=list)
+    # Requests and context tokens by ``BANDS`` label, and context tokens by
+    # model (``unknown`` when the transcript names none), over the messages this
+    # transcript claimed after deduplication.
+    band_requests: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    band_context_tokens: Dict[str, int] = dataclasses.field(default_factory=lambda: _zero_bands())
+    model_tokens: Dict[str, int] = dataclasses.field(default_factory=dict)
 
     @property
     def total_input_tokens(self) -> int:
@@ -230,6 +245,9 @@ class SessionTokens(_EquivalentCost):
         # The tier split also holds the cache writes the transcript does not break down
         # (see the cost rule above), so only ``equivalent_cost`` is exposed.
         for name in ("cache_write_5m_tokens", "cache_write_1h_tokens"):
+            d.pop(name)
+        # The shares by band and model are not serialized yet (the report exposes them later).
+        for name in ("band_requests", "band_context_tokens", "model_tokens"):
             d.pop(name)
         d["total_input_tokens"] = self.total_input_tokens
         d["by_tool"] = {k: dataclasses.asdict(v) for k, v in sorted(self.by_tool.items())}
@@ -276,6 +294,14 @@ class TokenReport:
         return self.subagents_by_role[ROLE_UNCLASSIFIED].agents
 
     @property
+    def unclassified_share(self) -> float:
+        """Fraction (0..1) of the subagents' equivalent cost spent by unclassified ones; 0 without cost."""
+        total = self.subagent_totals.equivalent_cost
+        if not total:
+            return 0.0
+        return self.subagents_by_role[ROLE_UNCLASSIFIED].equivalent_cost / total
+
+    @property
     def subagent_count(self) -> int:
         return sum(len(s.subagents) for s in self.sessions)
 
@@ -302,6 +328,78 @@ class TokenReport:
         """Main thread plus subagents: the figure to compare between sessions."""
         return round(self.totals.equivalent_cost + self.subagent_totals.equivalent_cost, 2)
 
+    def _sum_bands(self, field: str, include_subagents: bool) -> Dict[str, int]:
+        bands = _zero_bands()
+        for s in self.sessions:
+            owners: List[Any] = [s, *s.subagents] if include_subagents else [s]
+            for owner in owners:
+                for band, n in getattr(owner, field).items():
+                    bands[band] += n
+        return bands
+
+    @property
+    def band_requests(self) -> Dict[str, int]:
+        """Requests per context band, main thread plus subagents; every band is present."""
+        return self._sum_bands("band_requests", True)
+
+    @property
+    def band_context_tokens(self) -> Dict[str, int]:
+        """Context tokens per band, main thread plus subagents; every band is present."""
+        return self._sum_bands("band_context_tokens", True)
+
+    @property
+    def main_band_requests(self) -> Dict[str, int]:
+        """Requests per context band, main thread only."""
+        return self._sum_bands("band_requests", False)
+
+    @property
+    def main_band_context_tokens(self) -> Dict[str, int]:
+        """Context tokens per band, main thread only."""
+        return self._sum_bands("band_context_tokens", False)
+
+    @property
+    def subagent_share(self) -> Dict[str, float]:
+        """Fraction (0..1) of requests and of context tokens that went through subagents."""
+        sub = self.subagent_totals
+        main = self.totals
+        requests = main.turns + sub.turns
+        tokens = main.total_input_tokens + sub.total_input_tokens
+        return {
+            "requests": sub.turns / requests if requests else 0.0,
+            "tokens": sub.total_input_tokens / tokens if tokens else 0.0,
+        }
+
+    @property
+    def model_shares(self) -> List[Dict[str, Any]]:
+        """Context tokens per model, main thread plus subagents, with each one's fraction of the total.
+
+        Largest first (ties by model name); models with no tokens are left out.
+        """
+        by_model: Dict[str, int] = {}
+        for s in self.sessions:
+            for owner in (s, *s.subagents):
+                for model, n in owner.model_tokens.items():
+                    by_model[model] = by_model.get(model, 0) + n
+        total = sum(by_model.values())
+        ranked = sorted(((m, n) for m, n in by_model.items() if n > 0), key=lambda mn: (-mn[1], mn[0]))
+        return [{"model": m, "tokens": n, "share": n / total} for m, n in ranked]
+
+    def top_sessions(self, top: int = 3) -> List[Dict[str, Any]]:
+        """The ``top`` costliest sessions, main thread plus that session's own subagents.
+
+        ``share`` is the session cost over ``total_equivalent_cost``. Ties break by session id.
+        """
+        total = self.total_equivalent_cost
+        costs = [
+            (s.session_id, round(s.equivalent_cost + sum(a.equivalent_cost for a in s.subagents), 2))
+            for s in self.sessions
+        ]
+        costs.sort(key=lambda sc: (-sc[1], sc[0]))
+        return [
+            {"session_id": sid, "cost": cost, "share": cost / total if total else 0.0}
+            for sid, cost in costs[:top]
+        ]
+
     def to_dict(self) -> Dict[str, Any]:
         totals = self.totals.to_dict()
         totals.pop("subagents")  # the totals row is the main thread; subagents sit at the report level
@@ -312,8 +410,16 @@ class TokenReport:
             "subagent_totals": {"agents": self.subagent_count, **_usage_dict(self.subagent_totals)},
             "subagents_by_role": {role: r.to_dict() for role, r in self.subagents_by_role.items()},
             "unclassified_subagents": self.unclassified_subagents,
+            "unclassified_share": self.unclassified_share,
             "total_equivalent_cost": self.total_equivalent_cost,
             "cost_model": cost_model(),
+            "context_distribution": {
+                "all": {"requests": self.band_requests, "context_tokens": self.band_context_tokens},
+                "main_thread": {"requests": self.main_band_requests, "context_tokens": self.main_band_context_tokens},
+            },
+            "top_sessions": self.top_sessions(),
+            "model_shares": self.model_shares,
+            "subagent_share": self.subagent_share,
         }
 
 
@@ -354,12 +460,36 @@ _TOKEN_FIELDS = (
 )
 
 
+BANDS = ("<50k", "50k-150k", "150k-200k", ">200k")
+
+
+def context_band(context: int) -> str:
+    """Band of one request's context: <50k, 50k-150k, 150k-200k (200000 inclusive) or >200k."""
+    if context < 50_000:
+        return BANDS[0]
+    if context < 150_000:
+        return BANDS[1]
+    if context <= 200_000:
+        return BANDS[2]
+    return BANDS[3]
+
+
+UNKNOWN_MODEL = "unknown"
+
+
+def _zero_bands() -> Dict[str, int]:
+    return {band: 0 for band in BANDS}
+
+
 @dataclasses.dataclass
 class _MessageUsage:
     """``usage`` of one assistant message, named after the ``SessionTokens`` fields.
 
     The two ``cache_write_*`` fields hold the transcript's tier detail as
     written (``usage.cache_creation``) until ``resolved()`` is applied.
+
+    ``model`` is "" when the transcript has none or only ``<synthetic>``;
+    the shares by model count "" as ``unknown`` (it is born there, not here).
     """
 
     input_tokens: int = 0
@@ -369,9 +499,15 @@ class _MessageUsage:
     cache_write_5m_tokens: int = 0
     cache_write_1h_tokens: int = 0
     sidechain: bool = False
+    model: str = ""
+
+    @property
+    def context(self) -> int:
+        """Prompt size of the request: everything read or written to cache plus fresh input, no output."""
+        return self.input_tokens + self.cache_creation_tokens + self.cache_read_tokens
 
     @classmethod
-    def from_event(cls, usage: Dict[str, Any], sidechain: bool) -> "_MessageUsage":
+    def from_event(cls, usage: Dict[str, Any], sidechain: bool, model: Any = None) -> "_MessageUsage":
         detail = usage.get("cache_creation")
         if not isinstance(detail, dict):
             detail = {}
@@ -383,6 +519,7 @@ class _MessageUsage:
             cache_write_5m_tokens=_int(detail.get("ephemeral_5m_input_tokens")),
             cache_write_1h_tokens=_int(detail.get("ephemeral_1h_input_tokens")),
             sidechain=sidechain,
+            model=model if isinstance(model, str) and not model.startswith("<") else "",
         )
 
     def resolved(self) -> "_MessageUsage":
@@ -393,7 +530,9 @@ class _MessageUsage:
     def merged(self, other: "_MessageUsage") -> "_MessageUsage":
         """Field-wise maximum: streaming ``usage`` only grows, so max == final."""
         values = {f: max(getattr(self, f), getattr(other, f)) for f in _TOKEN_FIELDS}
-        return _MessageUsage(sidechain=self.sidechain or other.sidechain, **values)
+        return _MessageUsage(
+            sidechain=self.sidechain or other.sidechain, model=other.model or self.model, **values
+        )
 
 
 def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
@@ -403,6 +542,11 @@ def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
         session.sidechain_turns += 1
     for name in _TOKEN_FIELDS:
         setattr(session, name, getattr(session, name) + getattr(message, name))
+    band = context_band(message.context)
+    session.band_requests[band] += 1
+    session.band_context_tokens[band] += message.context
+    model = message.model or UNKNOWN_MODEL
+    session.model_tokens[model] = session.model_tokens.get(model, 0) + message.context
 
 
 def _iter_lines(path: pathlib.Path) -> Iterable[Dict[str, Any]]:
@@ -450,7 +594,9 @@ def _read_transcript(path: pathlib.Path) -> Tuple[SessionTokens, Dict[str, _Mess
         if kind == "assistant":
             usage = message.get("usage")
             if isinstance(usage, dict):
-                current = _MessageUsage.from_event(usage, sidechain=event.get("isSidechain") is True)
+                current = _MessageUsage.from_event(
+                    usage, sidechain=event.get("isSidechain") is True, model=message.get("model")
+                )
                 message_id = message.get("id")
                 if isinstance(message_id, str) and message_id:
                     seen = messages.get(message_id)
@@ -528,7 +674,7 @@ def _subagent_role(agent_path: pathlib.Path) -> str:
     """Role of ``agent-<id>.jsonl`` from ``description`` in the ``agent-<id>.meta.json`` beside it.
 
     Only that field is read, never message text. Anything that is not an
-    ``implement:`` / ``review:`` prefix (including a file that is missing,
+    ``implement:`` / ``review:`` / ``doc-review:`` prefix (including a file that is missing,
     unreadable or not a JSON object) is ``ROLE_UNCLASSIFIED``; never raises.
     """
     meta_path = agent_path.with_name(agent_path.stem + ".meta.json")
@@ -541,7 +687,7 @@ def _subagent_role(agent_path: pathlib.Path) -> str:
     description = meta.get("description") if isinstance(meta, dict) else None
     if isinstance(description, str):
         head = description.lstrip().lower()
-        for role in (ROLE_IMPLEMENT, ROLE_REVIEW):
+        for role in (ROLE_IMPLEMENT, ROLE_REVIEW, ROLE_DOC_REVIEW):
             if head.startswith(role + ":"):
                 return role
     return ROLE_UNCLASSIFIED
@@ -580,7 +726,17 @@ def _attach_subagents(session: SessionTokens, agents: List[_Agent]) -> None:
             continue  # nothing countable: garbage file, or every message was counted elsewhere
         agent_id = agent.session_id.removeprefix("agent-")
         usage = {name: getattr(agent, name) for name in _TOKEN_FIELDS}
-        session.subagents.append(SubagentTokens(agent_id=agent_id, turns=agent.turns, role=role, **usage))
+        session.subagents.append(
+            SubagentTokens(
+                agent_id=agent_id,
+                turns=agent.turns,
+                role=role,
+                band_requests=dict(agent.band_requests),
+                band_context_tokens=dict(agent.band_context_tokens),
+                model_tokens=dict(agent.model_tokens),
+                **usage,
+            )
+        )
         session.sidechain_turns += agent.turns
 
 
@@ -684,8 +840,14 @@ def _subagent_lines(report: TokenReport) -> List[str]:
     lines.extend([rule, render(total)])
     lines.append(
         f"Unclassified subagents: {report.unclassified_subagents} "
-        '(description without an "implement:" or "review:" prefix, or no readable meta.json)'
+        '(description without a "doc-review:", "implement:" or "review:" prefix, or no readable meta.json)'
     )
+    if report.unclassified_share > UNCLASSIFIED_WARN_SHARE:
+        lines.append(
+            f"Warning: unclassified subagents are {report.unclassified_share:.0%} of subagent cost "
+            f"(threshold {UNCLASSIFIED_WARN_SHARE:.0%}); dispatch with a "
+            '"doc-review:", "implement:" or "review:" description prefix to classify them.'
+        )
     return lines
 
 
@@ -703,6 +865,51 @@ def _cost_lines(report: TokenReport) -> List[str]:
         f"cache write {_fmt_weight(w['cache_write_5m'])} (5 min) / {_fmt_weight(w['cache_write_1h'])} (1 h); "
         "a cache write without tier detail counts as 5 min.",
     ]
+
+
+def _pct(fraction: float) -> str:
+    return f"{fraction * 100:.1f}%"
+
+
+def _context_lines(report: TokenReport) -> List[str]:
+    """Context distribution by band, top sessions by cost, tokens by model and the subagent share."""
+    columns = ("band", "requests", "tokens", "main requests", "main tokens")
+    all_r, all_t = report.band_requests, report.band_context_tokens
+    main_r, main_t = report.main_band_requests, report.main_band_context_tokens
+    rows = [[b, _fmt(all_r[b]), _fmt(all_t[b]), _fmt(main_r[b]), _fmt(main_t[b])] for b in BANDS]
+    total = [
+        "TOTAL", _fmt(sum(all_r.values())), _fmt(sum(all_t.values())),
+        _fmt(sum(main_r.values())), _fmt(sum(main_t.values())),
+    ]
+    widths = [max(len(c), len(total[i]), *(len(r[i]) for r in rows)) for i, c in enumerate(columns)]
+
+    def render(cells: Iterable[str]) -> str:
+        return " ".join(c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths)))
+
+    header = render(columns)
+    rule = "-" * len(header)
+    lines = [
+        "Context distribution (requests and context tokens by size of each request's context):",
+        header, rule, *(render(r) for r in rows), rule, render(total), "",
+        "Top sessions by cost (equivalent cost, main thread plus its subagents):",
+    ]
+    top = report.top_sessions()
+    if top:
+        lines.append(f"  {'session':<8} {'cost':>12} {'share':>7}")
+    lines.extend(f"  {t['session_id'][:8]:<8} {_fmt_cost(t['cost']):>12} {_pct(t['share']):>7}" for t in top)
+    if not top:
+        lines.append("  (none)")
+    lines.extend(["", "Tokens by model:"])
+    shares = report.model_shares
+    width = max([len(m["model"]) for m in shares] + [len("model")])
+    if shares:
+        lines.append(f"  {'model':<{width}} {'tokens':>14} {'share':>7}")
+    lines.extend(f"  {m['model']:<{width}} {_fmt(m['tokens']):>14} {_pct(m['share']):>7}" for m in shares)
+    if not shares:
+        lines.append("  (none)")
+    sub = report.subagent_share
+    lines.extend(["", f"Subagent share: {_pct(sub['requests'])} of requests, {_pct(sub['tokens'])} of tokens"])
+    return lines
 
 
 def format_text(report: TokenReport, top_tools: int = 8) -> str:
@@ -748,6 +955,8 @@ def format_text(report: TokenReport, top_tools: int = 8) -> str:
     lines.extend(_subagent_lines(report))
     lines.append("")
     lines.extend(_cost_lines(report))
+    lines.append("")
+    lines.extend(_context_lines(report))
     if t.by_tool:
         lines.append("")
         lines.append(f"Top tools by result chars (chars entering context):")

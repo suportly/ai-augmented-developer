@@ -25,6 +25,13 @@ not the total, and is tested in ``tests/test_token_metrics.py``
 (``test_message_id_repeated_between_main_and_subagent_counts_once`` and
 ``test_message_id_repeated_between_two_subagents_counts_once``).
 
+Spec 0031 (context hygiene), success criterion #1 extends the same comparison to the
+context distribution: ``reference_distribution`` below puts every deduplicated request
+in a band (``<50k``, ``50k-150k``, ``150k-200k``, ``>200k`` by prompt size, the edges
+50.000 / 150.000 / 200.000 / 200.001 included), and the report's bands, main-thread
+bands, shares by model and subagent share must equal it. A message counts as main
+thread when any of its occurrences is in a main file (the main thread claims first).
+
 The transcripts come from a seeded ``random.Random``, so every run writes the
 same files. Each seed keeps a fixed skeleton (every shape of repetition the
 spec names is always there) and fills it with random values, filler messages
@@ -90,6 +97,12 @@ NOT_TRANSCRIPTS = ("main-a/subagents/workflows/wf_one/journal.jsonl", "orphan/su
 
 SEEDS = list(range(20))
 
+# Models the generated messages are spread over (``<synthetic>`` reads as ``unknown``).
+MODELS = ("claude-opus-5", "claude-sonnet-5", "claude-haiku-5", "<synthetic>")
+
+# Prompt sizes of the band skeleton: inside every band and on each edge of the bands.
+CONTEXT_TARGETS = (10, 49_999, 50_000, 149_999, 150_000, 200_000, 200_001, 260_000)
+
 # The streaming chain of the spec (output 1, then 40, then 214).
 STREAMING_CHAIN = [
     {"input_tokens": 3, "cache_creation_input_tokens": 500, "cache_read_input_tokens": 0, "output_tokens": out}
@@ -113,6 +126,7 @@ class Planned:
     message_id: Optional[str]
     files: List[str]
     chain: Optional[List[Dict[str, int]]] = None
+    model: Optional[str] = None
 
 
 def _plan(rng: random.Random) -> List[Planned]:
@@ -139,7 +153,36 @@ def _plan(rng: random.Random) -> List[Planned]:
     # Random filler: other ids, one to four occurrences each, anywhere.
     for index in range(rng.randint(15, 30)):
         plan.append(Planned(f"msg_filler_{index:02d}", [rng.choice(ALL_FILES) for _ in range(rng.randint(1, 4))]))
+    # Context spread over the bands: each target as main only, subagent only and shared by both.
+    for index, target in enumerate(CONTEXT_TARGETS):
+        main = MAIN_A if index % 2 == 0 else MAIN_B
+        agent = rng.choice(AGENT_FILES)
+        plan.append(Planned(f"msg_ctx_main_{index}", [main, main], _context_chain(rng, target, 2)))
+        plan.append(Planned(f"msg_ctx_agent_{index}", [agent], _context_chain(rng, target, 1)))
+        plan.append(Planned(f"msg_ctx_shared_{index}", [agent, main], _context_chain(rng, target, 2)))
+        plan.append(Planned(None, [rng.choice(ALL_FILES)], _context_chain(rng, target, 1)))
     return plan
+
+
+def _context_chain(rng: random.Random, context: int, occurrences: int) -> List[Dict[str, int]]:
+    """Partials of one message whose final prompt size (the three input fields) is exactly ``context``.
+
+    Earlier partials are smaller, so the band of a partial is often lower than the final one.
+    """
+    fresh = rng.randint(0, min(context, 50))
+    written = rng.randint(0, min(context - fresh, 6_000))
+    final = {
+        "input_tokens": fresh,
+        "cache_creation_input_tokens": written,
+        "cache_read_input_tokens": context - fresh - written,
+        "output_tokens": rng.randint(2, 4_000),
+    }
+    columns = {
+        key: sorted(rng.randint(0, final[key]) for _ in range(occurrences - 1)) + [final[key]] for key in USAGE_KEYS
+    }
+    if occurrences > 1:
+        columns["output_tokens"][0] = 1
+    return [{key: columns[key][i] for key in USAGE_KEYS} for i in range(occurrences)]
 
 
 def _chain(rng: random.Random, occurrences: int) -> List[Dict[str, int]]:
@@ -157,7 +200,9 @@ def _chain(rng: random.Random, occurrences: int) -> List[Dict[str, int]]:
     return [{key: columns[key][i] for key in USAGE_KEYS} for i in range(occurrences)]
 
 
-def _event(second: int, message_id: Optional[str], usage: Dict[str, int], sidechain: bool) -> Dict[str, Any]:
+def _event(
+    second: int, message_id: Optional[str], usage: Dict[str, int], sidechain: bool, model: Optional[str] = None
+) -> Dict[str, Any]:
     event = _assistant(
         f"2026-09-16T10:{second // 60:02d}:{second % 60:02d}.000Z",
         message_id=message_id,
@@ -166,6 +211,8 @@ def _event(second: int, message_id: Optional[str], usage: Dict[str, int], sidech
         cache_r=usage["cache_read_input_tokens"],
         output=usage["output_tokens"],
     )
+    if model is not None:
+        event["message"]["model"] = model
     return dict(event, isSidechain=True) if sidechain else event
 
 
@@ -176,9 +223,12 @@ def build_transcripts(root: pathlib.Path, seed: int) -> None:
     second = 0
     for planned in _plan(rng):
         chain = planned.chain or _chain(rng, len(planned.files))
+        planned.model = rng.choice(MODELS)
         for name, usage in zip(planned.files, chain):
             second += 1
-            events[name].append(_event(second, planned.message_id, usage, sidechain=name in AGENT_FILES))
+            events[name].append(
+                _event(second, planned.message_id, usage, sidechain=name in AGENT_FILES, model=planned.model)
+            )
 
     for name, file_events in events.items():
         # main-a keeps the natural streaming order; the other files are shuffled for about half
@@ -237,6 +287,90 @@ def manual_dedupe(root: pathlib.Path) -> Manual:
     return Manual(combined=combined, counted=len(best) + anonymous, naive=naive)
 
 
+@dataclasses.dataclass
+class Reference:
+    """The context distribution of the manual rule: every figure is an int or a dict of ints."""
+
+    requests: Dict[str, int]  # per band, main thread plus subagents
+    tokens: Dict[str, int]
+    main_requests: Dict[str, int]  # per band, main thread only
+    main_tokens: Dict[str, int]
+    model_tokens: Dict[str, int]  # per model, models with no tokens left out
+    sub_requests: int
+    sub_tokens: int
+    total_requests: int
+    total_tokens: int
+
+
+LABELS = ("<50k", "50k-150k", "150k-200k", ">200k")
+
+
+def _band_of(context: int) -> str:
+    """Written out by hand from the spec: 50.000 and 150.000 open a band, 200.000 still closes one."""
+    if context < 50_000:
+        return "<50k"
+    if context < 150_000:
+        return "50k-150k"
+    if context <= 200_000:
+        return "150k-200k"
+    return ">200k"
+
+
+def reference_distribution(root: pathlib.Path) -> Reference:
+    """Dedupe by ``message.id`` (max per field), then band, split and total the requests by hand."""
+    mains = sorted(root.glob("*.jsonl"))
+    files = [(p, True) for p in mains]
+    files += [(p, False) for m in mains for p in sorted((root / m.stem).glob("subagents/**/agent-*.jsonl"))]
+
+    best: Dict[str, Dict[str, int]] = {}
+    is_main: Dict[str, bool] = {}
+    model_of: Dict[str, str] = {}
+    requests: List[Any] = []  # (usage, is_main, model) of every event without message.id
+    for path, main in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            message = json.loads(line)["message"]
+            model = message.get("model")
+            model = "unknown" if not isinstance(model, str) or model.startswith("<") else model
+            usage = {key: message["usage"][key] for key in USAGE_KEYS}
+            if message.get("id") is None:
+                requests.append((usage, main, model))
+                continue
+            kept = best.setdefault(message["id"], dict.fromkeys(USAGE_KEYS, 0))
+            for key in USAGE_KEYS:
+                kept[key] = max(kept[key], usage[key])
+            is_main[message["id"]] = is_main.get(message["id"], False) or main
+            model_of[message["id"]] = model
+    requests += [(best[i], is_main[i], model_of[i]) for i in best]
+
+    ref = Reference(
+        requests=dict.fromkeys(LABELS, 0),
+        tokens=dict.fromkeys(LABELS, 0),
+        main_requests=dict.fromkeys(LABELS, 0),
+        main_tokens=dict.fromkeys(LABELS, 0),
+        model_tokens={},
+        sub_requests=0,
+        sub_tokens=0,
+        total_requests=0,
+        total_tokens=0,
+    )
+    for usage, main, model in requests:
+        context = usage["input_tokens"] + usage["cache_creation_input_tokens"] + usage["cache_read_input_tokens"]
+        band = _band_of(context)
+        ref.total_requests += 1
+        ref.total_tokens += context
+        ref.requests[band] += 1
+        ref.tokens[band] += context
+        if main:
+            ref.main_requests[band] += 1
+            ref.main_tokens[band] += context
+        else:
+            ref.sub_requests += 1
+            ref.sub_tokens += context
+        if context:
+            ref.model_tokens[model] = ref.model_tokens.get(model, 0) + context
+    return ref
+
+
 # ---------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------
@@ -286,3 +420,90 @@ def test_cli_json_total_equals_the_independent_manual_dedupe(tmp_path: pathlib.P
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
     _assert_report_matches(manual, data["totals"], data["subagent_totals"])
+
+
+def _assert_distribution_matches(
+    ref: Reference,
+    main_row: Any,
+    agents_row: Any,
+    all_bands: Dict[str, Dict[str, int]],
+    main_bands: Dict[str, Dict[str, int]],
+    model_shares: List[Dict[str, Any]],
+    subagent_share: Dict[str, float],
+) -> None:
+    """``all_bands`` / ``main_bands`` are ``{"requests": {...}, "context_tokens": {...}}``."""
+    thread, agents = _figures(main_row), _figures(agents_row)
+    input_keys = ("input_tokens", "cache_creation_tokens", "cache_read_tokens")
+    total_input = sum(thread[k] + agents[k] for k in input_keys)
+    total_turns = thread["turns"] + agents["turns"]
+
+    # (a) context per band, exactly, and the four bands add up to the input total (the spec's 1% is slack).
+    assert all_bands["context_tokens"] == ref.tokens
+    assert sum(all_bands["context_tokens"].values()) == total_input == ref.total_tokens
+    assert abs(sum(all_bands["context_tokens"].values()) - ref.total_tokens) <= ref.total_tokens * 0.01
+
+    # (b) requests per band, and they add up to the turns of the main thread plus the subagents.
+    assert all_bands["requests"] == ref.requests
+    assert sum(all_bands["requests"].values()) == total_turns == ref.total_requests
+
+    # (c) the main thread alone.
+    assert main_bands["requests"] == ref.main_requests
+    assert main_bands["context_tokens"] == ref.main_tokens
+    assert sum(main_bands["context_tokens"].values()) == sum(thread[k] for k in input_keys)
+    assert sum(main_bands["requests"].values()) == thread["turns"]
+
+    # (d) shares by model: the same tokens per model, largest first, adding up to the input total.
+    assert {row["model"]: row["tokens"] for row in model_shares} == ref.model_tokens
+    assert [row["tokens"] for row in model_shares] == sorted((row["tokens"] for row in model_shares), reverse=True)
+    assert sum(row["tokens"] for row in model_shares) == total_input
+    for row in model_shares:
+        assert row["share"] == pytest.approx(row["tokens"] / ref.total_tokens)
+
+    # (e) the subagent share.
+    assert subagent_share["requests"] == pytest.approx(ref.sub_requests / ref.total_requests)
+    assert subagent_share["tokens"] == pytest.approx(ref.sub_tokens / ref.total_tokens)
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_context_distribution_equals_the_independent_reference(tmp_path: pathlib.Path, seed: int) -> None:
+    build_transcripts(tmp_path, seed)
+    ref = reference_distribution(tmp_path)
+    # The fixture discriminates: every band, main thread and subagents, has requests; the edges are in.
+    assert all(ref.requests[label] > 0 and ref.main_requests[label] > 0 for label in LABELS)
+    assert ref.sub_requests > 0 and len(ref.model_tokens) > 1
+    assert {_band_of(c) for c in CONTEXT_TARGETS} == set(LABELS)
+
+    report = tm.build_token_report(tmp_path)
+
+    _assert_distribution_matches(
+        ref,
+        report.totals,
+        report.subagent_totals,
+        {"requests": report.band_requests, "context_tokens": report.band_context_tokens},
+        {"requests": report.main_band_requests, "context_tokens": report.main_band_context_tokens},
+        report.model_shares,
+        report.subagent_share,
+    )
+
+
+@pytest.mark.parametrize("seed", [0, 7, 13])
+def test_cli_json_context_distribution_equals_the_independent_reference(tmp_path: pathlib.Path, seed: int) -> None:
+    build_transcripts(tmp_path, seed)
+    ref = reference_distribution(tmp_path)
+
+    result = CliRunner().invoke(
+        main, ["metrics", "--tokens", "--transcripts-dir", str(tmp_path), "--format", "json"]
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    distribution = data["context_distribution"]
+    _assert_distribution_matches(
+        ref,
+        data["totals"],
+        data["subagent_totals"],
+        distribution["all"],
+        distribution["main_thread"],
+        data["model_shares"],
+        data["subagent_share"],
+    )

@@ -40,48 +40,38 @@ The **orchestrator** (you), not the implementer, owns every step that reads or m
 1. **Read the row** with the rules of `aiadev.tasks_status` (owner of the `**Status:**` grammar). Malformed status, a value outside `pending|in_progress|blocked|done`, or a `done`-prefix violation: halt non-zero, surface the error verbatim, no auto-repair.
 2. **Skip if `done`** (resume guard). `in_progress` counts as `pending` (crashed run): re-dispatch.
 3. **Task context.** When `task_context: true` in `preset.yaml` or `--task-context`, read `references/task-context.md` and follow it; otherwise skip this step.
-4. **Dispatch implementer** with the prompt below, `description` `implement: <TID> <title>` (reviewer: `review: <TID> <title>`). Hand-craft the context; no conversation history.
+4. **Dispatch the `implementer` agent** with the prompt below, `description` `implement: <TID> <title>` (reviewer: `review: <TID> <title>`). Hand-craft the context, no history.
 5. **Act on the return status** (below).
 6. **Prose tier: no reviewer.** If every file of the task is prose markdown under `docs/` or root docs (README, CHANGELOG, CONTRIBUTING), run `npx markdownlint-cli2 <files>` (plus `python3 scripts/validate_skills.py` if it exists), record the result in the commit message and do not dispatch a reviewer. Not prose: `docs/instruction-budget.json`, `docs/pipeline-path.yaml`, anything under `skills/`, `agents/`, `rules/`, `templates/`, `commands/`, `src/`, `tests/`.
    Otherwise dispatch the single reviewer only after `DONE` (prompt below).
 7. **Close the task, atomically**, one commit with code, tests and the status flip:
    `aiadev tasks done <TID> --feature <slug> --commit "<TID> <subject>" FILES...`
-   It flips `pending` → `done`, stages FILES plus `tasks.md`, commits, and on failure (hook rejection, signing error) rolls the marker back and unstages; refuses if those paths are already staged. Never `--no-verify`.
+   It flips `pending` → `done`, stages FILES plus `tasks.md`, commits, and on failure (hook rejection, signing error) rolls the marker back and unstages; refuses if already staged. Never `--no-verify`.
    Fallback: `aiadev.tasks_status.mark_done`, `git add` files and `tasks.md` together, commit; on commit failure `git restore --staged tasks.md && git checkout -- tasks.md`.
-8. `ISSUES` or `BLOCKED`: fix and re-dispatch; the row stays `pending` until step 7 lands a green commit.
+8. Not green: fix and re-dispatch; the row stays `pending` until step 7 lands a green commit.
 
 After the last task, hand off to `analyze` and then `requesting-code-review` (owns the branch review).
 
 ## Implementer prompt
 
 ```markdown
-You are implementing Task N of an approved plan.
-
 Task: <task title from tasks.md>
 
 Spec context (relevant excerpt only):
 <minimum spec slice this task depends on>
 
 Plan context:
-<the full task entry from plan.md, including acceptance criteria>
+<full task entry from plan.md, with acceptance criteria>
 
 Files to create or modify:
 <exact file list, no wildcards>
-
-Workflow: test-first. Write a failing test, confirm it fails for the
-right reason, implement the minimum code to pass, confirm it passes.
-Run only the tests that exercise the changed code.
-
-Return exactly one status as the first line of your response:
-- DONE — complete, task-scoped tests passing
-- DONE_WITH_CONCERNS — complete, with concerns [list]
-- NEEDS_CONTEXT — cannot proceed without [list]
-- BLOCKED — cannot proceed because [specific cause]
 ```
+
+The agent carries the test-first flow and the status list; the prompt carries only what changes per task.
 
 ## Status handling
 
-- **DONE** — advance to review.
+- **DONE** — complete, tests passing: advance to review.
 - **DONE_WITH_CONCERNS** — blocks the spec? fix before review; else pass to the reviewer.
 - **NEEDS_CONTEXT** — provide exactly what was asked; never guess.
 - **BLOCKED** — find the root cause first (task order, design conflict: escalate, environment: `systematic-debugging`).
@@ -96,14 +86,9 @@ You are the single reviewer for one task. Two passes, in order.
 Inputs, embedded (excerpts only, no whole files): acceptance scenarios,
 the diff, the test output, preset `CLAUDE.md` rules.
 
-Pass 1 — conformance. Each acceptance scenario is exercised by a test;
-API shape, data model and error paths match the spec; nothing beyond the
-task's scope was added.
+The agent carries both checklists: pass 1 conformance, pass 2 quality.
 If pass 1 has findings: STOP. Return CHANGES_REQUESTED with only those
 findings and skip quality.
-
-Pass 2 — quality. Preset patterns; security; performance traps; error
-handling; no gratuitous abstraction; tests cover happy path and a failure.
 
 First line: APPROVED or CHANGES_REQUESTED, then file:line fixes.
 ```

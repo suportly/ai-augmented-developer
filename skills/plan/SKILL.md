@@ -38,10 +38,9 @@ Write the implementation plan from a clean `spec.md`: **how** it will be realize
 3. **Constitution Check.** One row per applicable article: `PASS`, `FAIL`, or `N/A` with concrete evidence (file path, test name, or "no provider added"). Any `FAIL` needs a **Complexity tracking** row with the waiver reason.
 4. **Architecture decisions.** Short ADR entries: decision, rationale, trade-off.
 5. **Project structure changes.** Diff-style list of files to create, modify, remove.
-6. **Phase breakdown.** Phases whose order matters; tasks within one are independent. Do not enumerate tasks.
+6. **Phase breakdown.** Phases whose order matters; tasks within one are independent.
 7. **Write `plan.md` only**; `research.md`, `data-model.md`, `contracts/` are follow-up invocations (honour any *Single required artifact* directive).
-8. **Dispatch `plan-document-reviewer`** if available; iterate until approved.
-9. **Report** in 3-5 lines.
+8. **Dispatch `plan-document-reviewer`** if available, with `description` `doc-review: plan <slug>`; iterate until approved.
 
 ## Rules
 

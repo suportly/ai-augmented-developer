@@ -98,3 +98,22 @@ output, always propagating the exit code. `aiadev install` still does not write
 manual step. To see whether it pays in your project, compare
 `aiadev metrics --tokens` (tokens per session, characters returned per tool,
 read from the local Claude Code transcripts) before and after enabling it.
+
+## Context hygiene
+
+Cost per request grows with the context it re-reads, and a long session pays
+that on every turn: context size times turns. In this repository, one-off
+measurement of 2026-10-15: about 97% of total tokens were cache reads, and
+requests above 200k tokens were about 26% of requests but about 65% of tokens.
+
+- **`context:` line.** `aiadev next` and `aiadev tasks done` show the context
+  size of the current session's last request, read from the tail of the local
+  transcript (nothing is written or sent).
+- **`checkpoint:` line.** Appears above 150k tokens (override with
+  `AIADEV_CONTEXT_WARN`). It is a cue to compact or restart the session.
+- **Why restarting is safe.** The state of the work lives in `tasks.md` and in
+  git, not in the conversation: resume with `aiadev next`.
+- **Reading the report.** `aiadev metrics --tokens` shows requests and tokens
+  per context band (all requests and main thread only), the three costliest
+  sessions, the share per model and the subagents' share. A high `> 200k` band
+  is the signal to cut sessions earlier. See [metrics.md](metrics.md).

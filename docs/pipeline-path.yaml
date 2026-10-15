@@ -43,6 +43,7 @@ stages:
     files:
       - skills/implement/SKILL.md
       - skills/test-driven-development/SKILL.md
+      - agents/implementer.md
       - agents/code-reviewer.md
 
   - name: requesting-code-review

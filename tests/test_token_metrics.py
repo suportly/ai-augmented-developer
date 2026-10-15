@@ -577,6 +577,12 @@ def test_subagent_role_comes_from_the_meta_json_description_prefix(subagent_dir:
         ("review: branch feature/0030-lean-pipeline", "review"),
         ("  IMPLEMENT: T003", "implement"),  # case-insensitive, leading whitespace tolerated
         ("\tReview: T003", "review"),
+        ("doc-review: spec 0031", "doc-review"),  # spec 0031 T010
+        ("Doc-Review: plan x", "doc-review"),
+        ("  DOC-REVIEW: tasks", "doc-review"),
+        ("doc-review spec", "unclassified"),  # the colon is required
+        ("doc-review : spec", "unclassified"),
+        ("doc-reviewer: spec", "unclassified"),
         ("implement:", "implement"),  # the prefix alone is enough
         ("implement T003", "unclassified"),  # the colon is required
         ("implement : T003", "unclassified"),
@@ -971,7 +977,7 @@ def _role_rows(text: str) -> Dict[str, List[str]]:
         if not line.strip():
             break
         cells = line.split()
-        if cells[0] in ("implement", "review", "unclassified", "TOTAL"):
+        if cells[0] in ("implement", "review", "doc-review", "unclassified", "TOTAL"):
             rows[cells[0]] = cells[1:]
     return rows
 
@@ -1010,8 +1016,13 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
         "subagent_totals",
         "subagents_by_role",
         "unclassified_subagents",
+        "unclassified_share",  # spec 0031 T010
         "total_equivalent_cost",
         "cost_model",
+        "context_distribution",  # spec 0031 T004
+        "top_sessions",
+        "model_shares",
+        "subagent_share",
     }
 
     # main thread: 1.0*15 + 1.25*100 + 0.1*100 + 5.0*150
@@ -1023,7 +1034,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
     assert data["total_equivalent_cost"] == 900.0 + 872.5
 
     by_role = data["subagents_by_role"]
-    assert set(by_role) == {"implement", "review", "unclassified"}
+    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}  # JSON keys are sorted
     assert by_role["implement"] == {
         "agents": 1,
         "turns": 2,
@@ -1034,6 +1045,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
         "equivalent_cost": 525.0,
     }
     assert by_role["review"]["agents"] == 1 and by_role["review"]["equivalent_cost"] == 347.5
+    assert by_role["doc-review"]["agents"] == 0 and by_role["doc-review"]["equivalent_cost"] == 0
     assert by_role["unclassified"]["agents"] == 0 and by_role["unclassified"]["equivalent_cost"] == 0
     assert data["unclassified_subagents"] == 0
 
@@ -1077,7 +1089,12 @@ def test_json_by_role_sums_to_the_subagent_totals_across_sessions(tmp_path: path
 
     data = _json(tmp_path)
     by_role = data["subagents_by_role"]
-    assert {role: by_role[role]["agents"] for role in by_role} == {"implement": 2, "review": 1, "unclassified": 1}
+    assert {role: by_role[role]["agents"] for role in by_role} == {
+        "implement": 2,
+        "review": 1,
+        "doc-review": 0,
+        "unclassified": 1,
+    }
     assert data["unclassified_subagents"] == 1
     for field in ("agents", "turns", "input_tokens", "output_tokens", "equivalent_cost"):
         assert sum(r[field] for r in by_role.values()) == pytest.approx(data["subagent_totals"][field])
@@ -1443,11 +1460,11 @@ def test_subagent_table_stays_aligned_with_large_sums(tmp_path: pathlib.Path) ->
 
     lines = text.splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith("Subagents by role"))
-    header, rule, *rows = lines[start + 1 : start + 1 + 7]  # header, rule, 3 roles, rule, TOTAL
+    header, rule, *rows = lines[start + 1 : start + 1 + 8]  # header, rule, 4 roles, rule, TOTAL
     assert header.split() == ["role", "agents", "turns", "input", "cache_w", "cache_r", "output", "cost"]
     assert set(rule) == {"-"}
     data_rows = [row for row in rows if set(row) != {"-"}]
-    assert [row.split()[0] for row in data_rows] == ["implement", "review", "unclassified", "TOTAL"]
+    assert [row.split()[0] for row in data_rows] == ["implement", "review", "doc-review", "unclassified", "TOTAL"]
     # Every line has the same length, and every right-aligned column ends where its header ends.
     assert len({len(line) for line in [header, rule, *rows]}) == 1
     header_ends = _numbers_by_end(header)
@@ -1476,3 +1493,500 @@ def test_a_role_outside_the_convention_is_counted_as_unclassified_once(tmp_path:
     assert by_role[tm.ROLE_UNCLASSIFIED].agents == 2 and by_role[tm.ROLE_UNCLASSIFIED].output_tokens == 14
     assert by_role[tm.ROLE_IMPLEMENT].agents == 1
     assert sum(r.agents for r in by_role.values()) == report.subagent_count == 3
+
+
+def test_message_usage_context_excludes_output() -> None:
+    usage = tm._MessageUsage(input_tokens=10, cache_creation_tokens=200, cache_read_tokens=3000, output_tokens=99999)
+    assert usage.context == 3210
+
+
+def test_message_usage_from_event_carries_model_and_defaults_to_empty() -> None:
+    assert tm._MessageUsage.from_event({}, sidechain=False, model="claude-sonnet-5").model == "claude-sonnet-5"
+    assert tm._MessageUsage.from_event({}, sidechain=False).model == ""
+
+
+def test_message_usage_merged_keeps_last_non_empty_model_and_field_max() -> None:
+    a = tm._MessageUsage(input_tokens=5, output_tokens=1, model="m-a")
+    b = tm._MessageUsage(input_tokens=3, output_tokens=9, model="")
+    c = tm._MessageUsage(input_tokens=1, model="m-c")
+    assert a.merged(b).model == "m-a"
+    assert a.merged(c).model == "m-c"
+    merged = a.merged(b)
+    assert (merged.input_tokens, merged.output_tokens) == (5, 9)
+
+
+def test_message_usage_merged_keeps_sidechain_from_either_side() -> None:
+    main = tm._MessageUsage(input_tokens=1, sidechain=False)
+    side = tm._MessageUsage(input_tokens=1, sidechain=True)
+    assert main.merged(side).sidechain is True
+    assert side.merged(main).sidechain is True
+    assert main.merged(main).sidechain is False
+
+
+def test_read_transcript_passes_model_and_drops_synthetic(tmp_path: pathlib.Path) -> None:
+    def line(mid: str, model: str) -> str:
+        return json.dumps({"type": "assistant", "message": {"id": mid, "model": model, "usage": {"input_tokens": 1}}})
+
+    path = tmp_path / "s.jsonl"
+    path.write_text(line("a", "claude-opus-4") + "\n" + line("b", "<synthetic>") + "\n")
+    _, messages = tm._read_transcript(path)
+    assert messages["a"].model == "claude-opus-4"
+    assert messages["b"].model == ""
+
+
+@pytest.mark.parametrize(
+    ("context", "band"),
+    [
+        (0, "<50k"),
+        (30_000, "<50k"),
+        (49_999, "<50k"),
+        (50_000, "50k-150k"),
+        (120_000, "50k-150k"),
+        (149_999, "50k-150k"),
+        (150_000, "150k-200k"),
+        (200_000, "150k-200k"),
+        (200_001, ">200k"),
+        (250_000, ">200k"),
+    ],
+)
+def test_context_band_boundaries(context: int, band: str) -> None:
+    assert tm.context_band(context) == band
+    assert band in tm.BANDS
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T002 — bands and models per session and per subagent
+# ---------------------------------------------------------------------
+
+def _ctx_event(ts: str, *, message_id: Optional[str], context: int, model: Optional[str] = "claude-opus-5",
+               output: int = 1, **usage: int) -> Dict[str, Any]:
+    event = _assistant(ts, message_id=message_id, output=output, cache_r=context)
+    if model is None:
+        del event["message"]["model"]
+    else:
+        event["message"]["model"] = model
+    event["message"]["usage"].update(usage)
+    return event
+
+
+def _ts(i: int) -> str:
+    return f"2026-09-16T10:00:{i:02d}.000Z"
+
+
+def _zero() -> Dict[str, int]:
+    return {band: 0 for band in tm.BANDS}
+
+
+def test_session_counts_requests_and_context_tokens_per_band(tmp_path: pathlib.Path) -> None:
+    contexts = [30_000, 50_000, 120_000, 150_000, 200_000, 250_000]
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [_ctx_event(_ts(i), message_id=f"m{i}", context=c) for i, c in enumerate(contexts)],
+    )
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.band_requests == {"<50k": 1, "50k-150k": 2, "150k-200k": 2, ">200k": 1}
+    assert s.band_context_tokens == {
+        "<50k": 30_000, "50k-150k": 170_000, "150k-200k": 350_000, ">200k": 250_000,
+    }
+    assert sum(s.band_context_tokens.values()) == s.total_input_tokens
+
+
+def test_bands_start_at_zero_for_every_label_and_are_not_shared(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="a", context=10)])
+    a = tm.read_session(tmp_path / "s.jsonl")
+    b = tm.SessionTokens(session_id="x", file="")
+    assert b.band_requests == _zero() and b.band_context_tokens == _zero() and b.model_tokens == {}
+    assert a.band_requests["<50k"] == 1 and b.band_requests["<50k"] == 0
+
+
+def test_missing_model_counts_as_unknown_and_tokens_are_kept_per_model(tmp_path: pathlib.Path) -> None:
+    _write_transcript(
+        tmp_path / "s.jsonl",
+        [
+            _ctx_event(_ts(1), message_id="a", context=100, output=5),
+            _ctx_event(_ts(2), message_id="b", context=200, output=7, model=None),
+            _ctx_event(_ts(3), message_id="c", context=300, output=9, model="<synthetic>"),
+        ],
+    )
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.model_tokens == {"claude-opus-5": 100, "unknown": 200 + 300}
+    assert s.models == ["claude-opus-5"]  # unchanged: only real model names
+
+
+def test_streaming_partials_without_message_id_land_in_the_band_of_the_max(tmp_path: pathlib.Path) -> None:
+    # Same request, three partials with growing usage, no id: each counts as its own event
+    # (as today); with an id, they merge by field maximum and fall in the band of that maximum.
+    events = [
+        _ctx_event(_ts(1), message_id="m", context=10_000, output=1),
+        _ctx_event(_ts(2), message_id="m", context=0, output=5, cache_creation_input_tokens=0, input_tokens=60_000),
+        _ctx_event(_ts(3), message_id="m", context=120_000, output=9),
+    ]
+    _write_transcript(tmp_path / "s.jsonl", events)
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.turns == 1
+    # max per field (cache_read 120k, input 60k) = 180k, not the last partial (120k) nor the first (10k)
+    assert s.band_requests == {"<50k": 0, "50k-150k": 0, "150k-200k": 1, ">200k": 0}
+    assert s.band_context_tokens["150k-200k"] == 180_000
+    noid = [dict(e) for e in events]
+    for e in noid:
+        e["message"] = {k: v for k, v in e["message"].items() if k != "id"}
+    _write_transcript(tmp_path / "t.jsonl", noid)
+    t = tm.read_session(tmp_path / "t.jsonl")
+    assert t.turns == 3 and sum(t.band_requests.values()) == 3
+
+
+def test_partial_usage_without_id_does_not_raise(tmp_path: pathlib.Path) -> None:
+    event = {"type": "assistant", "timestamp": _ts(1), "message": {"usage": {"output_tokens": 4}}}
+    _write_transcript(tmp_path / "s.jsonl", [event])
+    s = tm.read_session(tmp_path / "s.jsonl")
+    assert s.band_requests["<50k"] == 1 and s.model_tokens == {"unknown": 0}
+
+
+def test_subagent_keeps_its_own_bands_and_models(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="main", context=60_000)])
+    _write_agent(
+        tmp_path, "s", "agent-a.jsonl",
+        [
+            _ctx_event(_ts(2), message_id="a1", context=10_000, model="claude-sonnet-5"),
+            _ctx_event(_ts(3), message_id="a2", context=160_000, model="claude-sonnet-5"),
+            _ctx_event(_ts(4), message_id="a3", context=250_000, model=None),
+        ],
+    )
+    main = tm.read_session(tmp_path / "s.jsonl")
+    (sub,) = main.subagents
+    assert sub.band_requests == {"<50k": 1, "50k-150k": 0, "150k-200k": 1, ">200k": 1}
+    assert sub.band_context_tokens == {"<50k": 10_000, "50k-150k": 0, "150k-200k": 160_000, ">200k": 250_000}
+    assert sub.model_tokens == {"claude-sonnet-5": 10_000 + 160_000, "unknown": 250_000}
+    assert main.band_requests == {"<50k": 0, "50k-150k": 1, "150k-200k": 0, ">200k": 0}  # main only
+
+
+def test_message_shared_by_main_and_subagent_counts_once_as_main_and_bands_sum_to_totals() -> None:
+    report = tm.build_token_report(FIXTURES / "shared_message")
+    (main,) = report.sessions
+    (sub,) = main.subagents
+    # main claims SHARED (60,010) and MAIN (171,005); the subagent keeps SUB (30,002) and SUB2 (230,002)
+    assert main.turns == 2 and sub.turns == 2
+    assert main.band_requests == {"<50k": 0, "50k-150k": 1, "150k-200k": 1, ">200k": 0}
+    assert sub.band_requests == {"<50k": 1, "50k-150k": 0, "150k-200k": 0, ">200k": 1}
+    assert main.model_tokens == {"claude-opus-5": 60_010 + 171_005}
+    assert sub.model_tokens == {"claude-sonnet-5": 30_002 + 230_002}
+    both = report.totals.total_input_tokens + report.subagent_totals.total_input_tokens
+    assert sum(main.band_context_tokens.values()) + sum(sub.band_context_tokens.values()) == both
+    assert sum(main.band_requests.values()) + sum(sub.band_requests.values()) == (
+        report.totals.turns + report.subagent_totals.turns
+    ) == 4
+
+
+def test_bands_and_models_are_not_serialized_yet(tmp_path: pathlib.Path) -> None:
+    d = tm.build_token_report(FIXTURES / "shared_message").to_dict()
+    for name in ("band_requests", "band_context_tokens", "model_tokens"):
+        assert name not in d["totals"] and name not in d["sessions"][0]
+        assert name not in d["sessions"][0]["subagents"][0]
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T003 — shares by band, subagent, model and session
+# ---------------------------------------------------------------------
+
+def _share_report(tmp_path: pathlib.Path) -> tm.TokenReport:
+    """Five sessions, two models. Costs (0.1 per context token + 5 per request):
+    B 55020 (cheap main, heavy sonnet subagents), A 20010, D 14010, C 12015 (main only), E 505."""
+    n = iter(range(1, 60))
+
+    def main(session: str, contexts: List[int]) -> None:
+        _write_transcript(
+            tmp_path / f"{session}.jsonl",
+            [_ctx_event(_ts(next(n)), message_id=f"{session}{i}", context=c) for i, c in enumerate(contexts)],
+        )
+
+    def agent(session: str, contexts: List[int]) -> None:
+        _write_agent(
+            tmp_path, session, f"agent-{session}.jsonl",
+            [_ctx_event(_ts(next(n)), message_id=f"{session}s{i}", context=c, model="claude-sonnet-5")
+             for i, c in enumerate(contexts)],
+        )
+
+    main("A", [100_000, 100_000])
+    main("B", [10_000])
+    agent("B", [200_000, 300_000, 40_000])
+    main("C", [40_000, 40_000, 40_000])
+    main("D", [20_000])
+    agent("D", [120_000])
+    main("E", [5_000])
+    return tm.build_token_report(tmp_path)
+
+
+def test_band_distribution_all_requests_and_main_thread(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    assert r.band_requests == {"<50k": 7, "50k-150k": 3, "150k-200k": 1, ">200k": 1}
+    assert r.band_context_tokens == {
+        "<50k": 195_000, "50k-150k": 320_000, "150k-200k": 200_000, ">200k": 300_000,
+    }
+    assert r.main_band_requests == {"<50k": 6, "50k-150k": 2, "150k-200k": 0, ">200k": 0}
+    assert r.main_band_context_tokens == {
+        "<50k": 155_000, "50k-150k": 200_000, "150k-200k": 0, ">200k": 0,
+    }
+    assert sum(r.band_context_tokens.values()) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+
+
+def test_subagent_share_in_requests_and_tokens(tmp_path: pathlib.Path) -> None:
+    share = _share_report(tmp_path).subagent_share
+    assert share["requests"] == pytest.approx(4 / 12)
+    assert share["tokens"] == pytest.approx(660_000 / 1_015_000)
+
+
+def test_subagent_share_is_zero_without_subagents_or_sessions(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="m", context=1_000)])
+    assert tm.build_token_report(tmp_path).subagent_share == {"requests": 0.0, "tokens": 0.0}
+    only_empty = tm.TokenReport(transcripts_dir="", sessions=[])
+    assert only_empty.subagent_share == {"requests": 0.0, "tokens": 0.0}
+
+
+def test_model_shares_sorted_summing_to_the_total(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    shares = r.model_shares
+    assert [(m["model"], m["tokens"]) for m in shares] == [
+        ("claude-sonnet-5", 660_000), ("claude-opus-5", 355_000),
+    ]
+    assert shares[0]["share"] == pytest.approx(660_000 / 1_015_000)
+    assert sum(m["tokens"] for m in shares) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+    assert sum(m["share"] for m in shares) == pytest.approx(1.0, abs=1e-9)
+
+
+def test_model_shares_tie_by_name_and_omit_zero_tokens() -> None:
+    def session(sid: str, models: Dict[str, int]) -> tm.SessionTokens:
+        return tm.SessionTokens(session_id=sid, file="", model_tokens=models)
+
+    r = tm.TokenReport("", [session("a", {"zeta": 10, "alpha": 10, "idle": 0})])
+    assert [m["model"] for m in r.model_shares] == ["alpha", "zeta"]
+
+
+def test_top_sessions_count_subagent_cost_of_the_same_session(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    assert r.total_equivalent_cost == 101_560.0
+    top = r.top_sessions()
+    assert [t["session_id"] for t in top] == ["B", "A", "D"]  # C (main only, 12015) falls out
+    assert [t["cost"] for t in top] == [55_020.0, 20_010.0, 14_010.0]
+    assert [t["share"] for t in top] == pytest.approx([55_020 / 101_560, 20_010 / 101_560, 14_010 / 101_560])
+    assert [t["session_id"] for t in r.top_sessions(top=1)] == ["B"]
+
+
+def test_top_sessions_tie_by_id_and_empty_report() -> None:
+    def session(sid: str) -> tm.SessionTokens:
+        return tm.SessionTokens(session_id=sid, file="", input_tokens=100)
+
+    r = tm.TokenReport("", [session("z"), session("b"), session("m"), session("a")])
+    assert [t["session_id"] for t in r.top_sessions()] == ["a", "b", "m"]
+    empty = tm.TokenReport("", [])
+    assert empty.top_sessions() == [] and empty.model_shares == []
+    assert empty.band_requests == {band: 0 for band in tm.BANDS}
+    assert empty.main_band_context_tokens == {band: 0 for band in tm.BANDS}
+
+
+def test_top_sessions_with_zero_total_cost_does_not_divide_by_zero() -> None:
+    report = tm.TokenReport("", [tm.SessionTokens("a", "a.jsonl")])
+    assert report.top_sessions() == [{"session_id": "a", "cost": 0.0, "share": 0.0}]
+
+
+# ---------------------------------------------------------------------
+# Spec 0031 T004 — context report in text and JSON
+# ---------------------------------------------------------------------
+
+# JSON of ``with_subagents/`` produced before T004 (without ``transcripts_dir``).
+_GOLDEN_BEFORE_T004 = json.loads(
+    '{"cost_model": {"approximation": true, "unit": "equivalent_input_tokens", "weights": {"cache_read": 0.1, '
+    '"cache_write_1h": 2.0, "cache_write_5m": 1.25, "input": 1.0, "output": 5.0}}, "sessions": [{"by_tool": '
+    '{"Bash": {"calls": 1, "result_chars": 2}}, "cache_creation_tokens": 100, "cache_read_tokens": 100, '
+    '"ended_at": "2026-10-01T10:00:09.000Z", "equivalent_cost": 900.0, "file": "sess-main.jsonl", '
+    '"input_tokens": 15, "models": ["claude-opus-5"], "output_tokens": 150, "session_id": "sess-main", '
+    '"sidechain_turns": 4, "started_at": "2026-10-01T10:00:00.000Z", "subagents": [{"agent_id": "aaa", '
+    '"cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": 525.0, "input_tokens": 5, '
+    '"output_tokens": 50, "role": "implement", "turns": 2}, {"agent_id": "bbb", "cache_creation_tokens": 50, '
+    '"cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, "output_tokens": 50, '
+    '"role": "review", "turns": 2}], "tool_calls": 1, "tool_result_chars": 2, "total_input_tokens": 215, '
+    '"turns": 2}], "subagent_totals": {"agents": 2, "cache_creation_tokens": 250, "cache_read_tokens": 500, '
+    '"equivalent_cost": 872.5, "input_tokens": 10, "output_tokens": 100, "turns": 4}, "subagents_by_role": '
+    '{"doc-review": {"agents": 0, "cache_creation_tokens": 0, "cache_read_tokens": 0, "equivalent_cost": 0.0, '
+    '"input_tokens": 0, "output_tokens": 0, "turns": 0}, '
+    '"implement": {"agents": 1, "cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": '
+    '525.0, "input_tokens": 5, "output_tokens": 50, "turns": 2}, "review": {"agents": 1, '
+    '"cache_creation_tokens": 50, "cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, '
+    '"output_tokens": 50, "turns": 2}, "unclassified": {"agents": 0, "cache_creation_tokens": 0, '
+    '"cache_read_tokens": 0, "equivalent_cost": 0.0, "input_tokens": 0, "output_tokens": 0, "turns": 0}}, '
+    '"total_equivalent_cost": 1772.5, "totals": {"by_tool": {"Bash": {"calls": 1, "result_chars": 2}}, '
+    '"cache_creation_tokens": 100, "cache_read_tokens": 100, "ended_at": null, "equivalent_cost": 900.0, '
+    '"file": "", "input_tokens": 15, "models": [], "output_tokens": 150, "session_id": "TOTAL", '
+    '"sidechain_turns": 4, "started_at": null, "tool_calls": 1, "tool_result_chars": 2, '
+    '"total_input_tokens": 215, "turns": 2}, "unclassified_subagents": 0}'
+)
+_NEW_KEYS = {"context_distribution", "top_sessions", "model_shares", "subagent_share", "unclassified_share"}
+
+
+def test_json_keeps_every_previous_key_and_value_and_adds_the_context_keys(subagent_dir: pathlib.Path) -> None:
+    d = json.loads(tm.format_json(tm.build_token_report(subagent_dir)))
+    assert set(d) == set(_GOLDEN_BEFORE_T004) | _NEW_KEYS | {"transcripts_dir"}
+    for key, value in _GOLDEN_BEFORE_T004.items():
+        assert d[key] == value, key
+
+
+def test_json_context_distribution_has_the_four_bands_always(tmp_path: pathlib.Path) -> None:
+    d = json.loads(tm.format_json(_share_report(tmp_path)))
+    assert d["context_distribution"] == {
+        "all": {
+            "requests": {"<50k": 7, "50k-150k": 3, "150k-200k": 1, ">200k": 1},
+            "context_tokens": {"<50k": 195_000, "50k-150k": 320_000, "150k-200k": 200_000, ">200k": 300_000},
+        },
+        "main_thread": {
+            "requests": {"<50k": 6, "50k-150k": 2, "150k-200k": 0, ">200k": 0},
+            "context_tokens": {"<50k": 155_000, "50k-150k": 200_000, "150k-200k": 0, ">200k": 0},
+        },
+    }
+    assert [t["session_id"] for t in d["top_sessions"]] == ["B", "A", "D"]
+    assert [m["model"] for m in d["model_shares"]] == ["claude-sonnet-5", "claude-opus-5"]
+    assert d["subagent_share"]["requests"] == pytest.approx(4 / 12)
+
+
+def test_json_of_an_empty_report_still_has_the_bands_at_zero() -> None:
+    d = json.loads(tm.format_json(tm.TokenReport("x", [])))
+    zero = {band: 0 for band in tm.BANDS}
+    assert d["context_distribution"] == {
+        "all": {"requests": zero, "context_tokens": zero},
+        "main_thread": {"requests": zero, "context_tokens": zero},
+    }
+    assert d["top_sessions"] == [] and d["model_shares"] == []
+    assert d["subagent_share"] == {"requests": 0.0, "tokens": 0.0}
+
+
+def test_text_has_the_four_context_sections_with_exact_numbers(tmp_path: pathlib.Path) -> None:
+    text = tm.format_text(_share_report(tmp_path))
+    lines = text.splitlines()
+    start = next(i for i, ln in enumerate(lines) if ln.startswith("Context distribution (requests and context"))
+    assert "size of each request's context" in lines[start]
+    rows = {ln.split()[0]: ln.split()[1:] for ln in lines[start + 1:start + 12] if ln.split()[:1] and
+            ln.split()[0] in (*tm.BANDS, "TOTAL")}
+    assert rows == {
+        "<50k": ["7", "195,000", "6", "155,000"],
+        "50k-150k": ["3", "320,000", "2", "200,000"],
+        "150k-200k": ["1", "200,000", "0", "0"],
+        ">200k": ["1", "300,000", "0", "0"],
+        "TOTAL": ["12", "1,015,000", "8", "355,000"],
+    }
+    top = lines.index("Top sessions by cost (equivalent cost, main thread plus its subagents):")
+    assert lines[top + 1].split() == ["session", "cost", "share"]
+    assert [ln.split() for ln in lines[top + 2:top + 5]] == [
+        ["B", "55,020.00", "54.2%"], ["A", "20,010.00", "19.7%"], ["D", "14,010.00", "13.8%"],
+    ]
+    models = lines.index("Tokens by model:")
+    assert lines[models + 1].split() == ["model", "tokens", "share"]
+    assert [ln.split() for ln in lines[models + 2:models + 4]] == [
+        ["claude-sonnet-5", "660,000", "65.0%"], ["claude-opus-5", "355,000", "35.0%"],
+    ]
+    assert "Subagent share: 33.3% of requests, 65.0% of tokens" in lines
+    # what was there before stays, and the new sections sit before the tool table
+    assert text.index("Equivalent cost (approximation)") < text.index("Context distribution")
+
+
+def test_text_top_session_id_is_cut_at_eight_characters(tmp_path: pathlib.Path) -> None:
+    _write_transcript(tmp_path / "0123456789abcdef.jsonl", [_ctx_event(_ts(1), message_id="m", context=10)])
+    text = tm.format_text(tm.build_token_report(tmp_path))
+    assert "  01234567 " in text and "012345678" not in text.split("Top sessions by cost")[1]
+
+
+def test_text_context_bands_sum_to_the_requests_and_input_tokens(tmp_path: pathlib.Path) -> None:
+    r = _share_report(tmp_path)
+    total = next(ln.split() for ln in tm.format_text(r).splitlines() if ln.startswith("TOTAL") and "1,015,000" in ln)
+    assert int(total[1]) == r.totals.turns + r.subagent_totals.turns
+    assert int(total[2].replace(",", "")) == r.totals.total_input_tokens + r.subagent_totals.total_input_tokens
+
+
+def test_text_without_sessions_or_subagents_does_not_break(tmp_path: pathlib.Path) -> None:
+    empty = tm.format_text(tm.TokenReport("x", []))
+    assert "Context distribution" in empty and "Subagent share: 0.0% of requests, 0.0% of tokens" in empty
+    assert empty.count("  (none)") == 2, "top sessions and models both print (none)"
+    _write_transcript(tmp_path / "s.jsonl", [_ctx_event(_ts(1), message_id="m", context=1_000)])
+    text = tm.format_text(tm.build_token_report(tmp_path))
+    assert "Subagent share: 0.0% of requests, 0.0% of tokens" in text
+
+
+def test_text_top_sessions_and_models_have_headers_and_aligned_columns(tmp_path: pathlib.Path) -> None:
+    text = tm.format_text(tm.build_token_report(FIXTURES / "with_subagents"))
+    assert "  session" in text and "  model" in text
+    rows = [ln for ln in text.splitlines() if ln.startswith("  ") and ln.rstrip().endswith("%")]
+    widths = {len(ln) for ln in rows}
+    assert len(widths) <= 2, "model rows share one width"
+
+
+# ---------------------------------------------------------------------
+# Spec 0031, Story 3 sc1-3 — doc-review role and the unclassified warning
+# ---------------------------------------------------------------------
+
+
+def _agents_report(tmp_path: pathlib.Path, descriptions: List[Any]) -> tm.TokenReport:
+    """One equal-cost subagent per description (``None``: no meta.json)."""
+    names = [f"a{i}" for i in range(len(descriptions))]
+    _session_with_agents(tmp_path, names)
+    for name, description in zip(names, descriptions):
+        if description is not None:
+            _write_meta(tmp_path, name, {"description": description})
+    return tm.build_token_report(tmp_path)
+
+
+def test_review_prefix_does_not_capture_doc_review_and_vice_versa(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["review: branch", "doc-review: spec 0031", "implement: T010"])
+    assert [a.role for a in report.sessions[0].subagents] == ["review", "doc-review", "implement"]
+
+
+def test_doc_review_row_in_text_and_json(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["doc-review: spec", "Doc-Review: plan x", "review: b"])
+    rows = _role_rows(tm.format_text(report))
+    assert rows["doc-review"][0] == "2" and rows["review"][0] == "1"
+    by_role = report.to_dict()["subagents_by_role"]
+    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}
+    assert by_role["doc-review"]["agents"] == 2
+    assert report.unclassified_subagents == 0
+
+
+def test_warning_when_unclassified_cost_passes_30_percent(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a", None, None, None, None, None, None, None, None, None])
+    text = tm.format_text(report)
+    assert report.unclassified_share == pytest.approx(0.9)
+    warnings = [line for line in text.splitlines() if line.startswith("Warning: unclassified subagents")]
+    assert len(warnings) == 1
+    assert "are 90% of" in warnings[0] and "threshold 30%" in warnings[0] and '"doc-review:"' in warnings[0]
+    lines = text.splitlines()
+    unclassified_line = next(i for i, line in enumerate(lines) if line.startswith("Unclassified subagents:"))
+    assert lines[unclassified_line + 1] == warnings[0]
+    assert report.to_dict()["unclassified_share"] == pytest.approx(0.9)
+
+
+def test_warning_shows_the_share_as_a_rounded_percentage(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a", "review: b", "doc-review: c"] + [None] * 10)
+    assert "are 77% of subagent cost" in tm.format_text(report)
+
+
+def test_no_warning_at_exactly_30_percent(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["implement: a"] * 7 + [None] * 3)
+    assert report.unclassified_share == 0.3
+    assert "Warning:" not in tm.format_text(report)
+    assert report.to_dict()["unclassified_share"] == 0.3
+
+
+def test_no_warning_and_zero_share_without_subagents(pinned_dir: pathlib.Path) -> None:
+    report = tm.build_token_report(pinned_dir)
+    assert report.unclassified_share == 0.0
+    assert "Warning:" not in tm.format_text(report)
+    assert report.to_dict()["unclassified_share"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("path", "slug"),
+    [
+        ("/Users/a/Workspace/maycrm/.claude/worktrees/0183-x", "-Users-a-Workspace-maycrm--claude-worktrees-0183-x"),
+        ("/Users/a/my.project/sub_dir", "-Users-a-my-project-sub-dir"),
+        ("/Users/a/with space/x", "-Users-a-with-space-x"),
+    ],
+)
+def test_slug_for_maps_every_non_alphanumeric_character(tmp_path: pathlib.Path, monkeypatch, path: str, slug: str) -> None:
+    """Claude Code names the transcript directory after the cwd with every non-alphanumeric char as ``-``."""
+    monkeypatch.setattr(pathlib.Path, "resolve", lambda self, *a, **k: self)
+    assert tm.slug_for(pathlib.Path(path)) == slug

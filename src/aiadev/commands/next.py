@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.markup import escape
 
 from ..pipeline_state import PipelineSnapshot, pipeline_snapshot
+from ..session_context import context_lines
 
 
 def _state_lines(snap: PipelineSnapshot) -> list[str]:
@@ -46,3 +47,5 @@ def next_command(feature: str | None) -> None:
         console.print(escape(line))
     console.print(f"next: {escape(snap.command)}")
     console.print(f"reason: {escape(snap.reason)}")
+    for line in context_lines(Path.cwd()):
+        console.print(escape(line))

@@ -169,8 +169,17 @@ def test_code_reviewer_agent_absorbs_conformance_checklist() -> None:
     assert re.search(r"branch[^\n]{0,160}stop rule does not apply", agent, re.I)
     assert re.search(r"Scope under review: a task or the branch", agent)
     assert re.search(r"each acceptance", agent, re.I)
+    assert "IDOR" in agent and "XSS" in agent, "security checks missing"
+    assert re.search(r"paginate", agent), "performance check missing"
+    assert re.search(r"First line `APPROVED` or `CHANGES_REQUESTED`", agent), "verdict line missing"
     assert "architectural refactors beyond the scope" in agent
     assert "weren't in the spec" in agent
+    # items moved out of the implement skill's reviewer prompt (spec 0031 T013)
+    assert "data model and error paths match the spec" in agent
+    assert re.search(r"preset patterns and the preset `CLAUDE\.md` rules", agent, re.I)
+    assert "error handling" in agent
+    assert "no gratuitous abstraction" in agent
+    assert "the happy path and a failure" in agent
 
 
 GATE = "skills/requesting-code-review/references/review-gate.md"
