@@ -134,7 +134,7 @@
 
 ### T009 — Linhas de contexto em `aiadev tasks done`
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `src/aiadev/commands/tasks.py`

@@ -207,3 +207,82 @@ def test_rollback_restores_original_in_progress_status(repo: Path) -> None:
     res = _run("T001", "--feature", SLUG, "--commit", "m", "a.py")
     assert res.exit_code == 1
     assert _status(repo) == "in_progress"
+
+
+# --- T009: context lines after the commit (spec 0031, Story 2) --------------
+
+
+def _transcript(
+    repo: Path, home: Path, tokens: int, age_s: int = 180, sid: str = "abcd1234-0000"
+) -> None:
+    import json
+    import os
+    import time
+
+    from aiadev.token_metrics import slug_for
+
+    d = home / ".claude" / "projects" / slug_for(repo.resolve())
+    d.mkdir(parents=True)
+    f = d / f"{sid}.jsonl"
+    line = {
+        "type": "assistant",
+        "message": {"id": "m", "role": "assistant", "usage": {"cache_read_input_tokens": tokens}},
+    }
+    f.write_text(json.dumps(line) + "\n", encoding="utf-8")
+    t = time.time() - age_s
+    os.utime(f, (t, t))
+
+
+@pytest.fixture
+def home(tmp_path_factory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    h = tmp_path_factory.mktemp("home")
+    monkeypatch.setenv("HOME", str(h))
+    monkeypatch.delenv("AIADEV_CONTEXT_WARN", raising=False)
+    return h
+
+
+def test_context_and_checkpoint_after_summary(repo: Path, home: Path) -> None:
+    _transcript(repo, home, 412_000)
+    (repo / "a.py").write_text("x\n")
+    res = _run("T001", "--feature", SLUG, "--commit", "feat: T001 a", "a.py")
+    assert res.exit_code == 0, res.output
+    lines = res.output.splitlines()
+    assert lines[0].endswith(" feat: T001 a")
+    assert lines[1] == "context: 412k tokens (session abcd1234, 3 min ago)"
+    assert lines[2].startswith("checkpoint:") and len(lines) == 3
+
+
+def test_below_threshold_only_context_line(repo: Path, home: Path) -> None:
+    _transcript(repo, home, 100_000)
+    res = _run("T001", "--feature", SLUG, "--commit", "m")
+    assert res.exit_code == 0, res.output
+    lines = res.output.splitlines()
+    assert len(lines) == 2 and lines[1].startswith("context: 100k tokens")
+
+
+def test_no_transcript_output_is_just_the_summary(repo: Path, home: Path) -> None:
+    res = _run("T001", "--feature", SLUG, "--commit", "m")
+    assert res.exit_code == 0, res.output
+    assert len(res.output.splitlines()) == 1
+
+
+def test_failed_commit_prints_no_context_lines(repo: Path, home: Path) -> None:
+    _transcript(repo, home, 412_000)
+    _failing_hook(repo)
+    res = _run("T001", "--feature", SLUG, "--commit", "m")
+    assert res.exit_code == 1
+    assert "context:" not in res.output and "checkpoint:" not in res.output
+    assert _status(repo) == "pending"
+
+
+def test_context_uses_repo_root_from_subdir(
+    repo: Path, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _transcript(repo, home, 200_000)
+    sub = repo / "pkg"
+    sub.mkdir()
+    (sub / "m.py").write_text("x\n")
+    monkeypatch.chdir(sub)
+    res = _run("T001", "--feature", SLUG, "--commit", "m", "m.py")
+    assert res.exit_code == 0, res.output
+    assert "context: 200k tokens" in res.output
