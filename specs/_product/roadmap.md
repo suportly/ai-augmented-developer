@@ -69,11 +69,11 @@ Fazer `specify`, `plan` e `tasks` passarem o trabalho só pelos arquivos, para q
 
 ### R008 — Pipeline enxuto: menos turnos, menos texto e medição correta de custo
 
-- **Status:** planned
-- **Spec:**
+- **Status:** done
+- **Spec:** 0030-lean-pipeline
 - **Depends on:**
 
-Reduzir o custo por feature (turnos da thread principal e dispatches de revisão pesam mais que o texto das skills) sem remover nenhum gate, e corrigir a medição que hoje soma usage por evento e ignora subagentes, para que todo ganho seja provado por custo por feature e nunca por "tokens salvos". Inclui os gates mecânicos novos (cobertura cenário→task e bloqueio por checklist no preflight de implement), a triagem em specify e clarify, o conteúdo de stack movido para os presets, a remoção, pelo sync, de arquivos que o framework deixou de distribuir e a remoção do terse-mode, das skills help e using-ai-augmented-developer e do review-context.md. Fontes: src/aiadev/token_metrics.py:153-159 (usage somado por evento, sem dedupe por message.id); skills/implement/SKILL.md:74,233 (seções condicionais e gate de re-dispatch repetido); skills/requesting-code-review/SKILL.md:29-31 (review-context.md); comparação com github/spec-kit@6c62e10.
+Reduzir o custo por feature (turnos da thread principal e dispatches de revisão pesam mais que o texto das skills) sem remover nenhum gate, e corrigir a medição que hoje soma usage por evento e ignora subagentes, para que todo ganho seja provado por custo por feature e nunca por "tokens salvos". Inclui os gates mecânicos novos (cobertura cenário→task e bloqueio por checklist no preflight de implement), a triagem em specify e clarify, o conteúdo de stack movido para os presets, a remoção, pelo sync, de arquivos que o framework deixou de distribuir e a remoção do terse-mode, das skills help e using-ai-augmented-developer e do review-context.md. Fontes: src/aiadev/token_metrics.py:153-159 (usage somado por evento, sem dedupe por message.id); skills/implement/SKILL.md:74,233 (seções condicionais e gate de re-dispatch repetido); skills/requesting-code-review/SKILL.md:29-31 (review-context.md); comparação com github/spec-kit@6c62e10. Status `done`: mesclada na `main` pela PR #58 (commit `2ee682f`), release 0.25.0 (`c7bfa65`).
 
 ### R009 — Faixa rápida: spec compacto e lane de bug para mudanças pequenas
 
@@ -114,3 +114,11 @@ Reduzir tempo de relógio executando juntas as tasks sem dependência e com arqu
 - **Depends on:**
 
 Antes de aceitar presets e extensões de um catálogo remoto, exigir HTTPS, pin de sha256 e limites de download, porque eles carregam prompts executáveis. Fontes: src/aiadev/extensions.py:170-172 (`git clone --depth 1` de URL sem pin); github/spec-kit@6c62e10 docs/reference/extensions.md.
+
+### R014 — Higiene de contexto: ver onde o contexto se acumula e avisar a hora de cortar a sessão
+
+- **Status:** planned
+- **Spec:** 0031-context-hygiene
+- **Depends on:** R008
+
+Mostrar, com os transcripts locais, quanto do custo vem de sessões de contexto longo e dar ao agente um aviso determinístico de que é hora de cortar a sessão, porque o custo medido nos transcripts deste repositório está na thread principal (contexto médio de 250k a 400k por request, máximo 741k; requests acima de 200k são 25,6% das requests e 62,2% dos tokens), não no número de subagentes. Fontes: artigo https://dev.to/alairjt/i-burned-95-of-my-ai-coding-quota-in-2-days-heres-what-the-logs-revealed-2omf; medição sobre os 3 transcripts de ~/.claude/projects/ deste repositório em 2026-10-15; src/aiadev/token_metrics.py:424-484 (só agrega, não guarda o contexto por request); src/aiadev/commands/next.py (sem informação de sessão); skills/implement/SKILL.md (nenhuma instrução de compactar ou cortar sessão).
