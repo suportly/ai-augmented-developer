@@ -354,12 +354,29 @@ _TOKEN_FIELDS = (
 )
 
 
+BANDS = ("<50k", "50k-150k", "150k-200k", ">200k")
+
+
+def context_band(context: int) -> str:
+    """Band of one request's context: <50k, 50k-150k, 150k-200k (200000 inclusive) or >200k."""
+    if context < 50_000:
+        return BANDS[0]
+    if context < 150_000:
+        return BANDS[1]
+    if context <= 200_000:
+        return BANDS[2]
+    return BANDS[3]
+
+
 @dataclasses.dataclass
 class _MessageUsage:
     """``usage`` of one assistant message, named after the ``SessionTokens`` fields.
 
     The two ``cache_write_*`` fields hold the transcript's tier detail as
     written (``usage.cache_creation``) until ``resolved()`` is applied.
+
+    ``model`` is "" when the transcript has none or only ``<synthetic>``;
+    the shares by model count "" as ``unknown`` (it is born there, not here).
     """
 
     input_tokens: int = 0
@@ -369,9 +386,15 @@ class _MessageUsage:
     cache_write_5m_tokens: int = 0
     cache_write_1h_tokens: int = 0
     sidechain: bool = False
+    model: str = ""
+
+    @property
+    def context(self) -> int:
+        """Prompt size of the request: everything read or written to cache plus fresh input, no output."""
+        return self.input_tokens + self.cache_creation_tokens + self.cache_read_tokens
 
     @classmethod
-    def from_event(cls, usage: Dict[str, Any], sidechain: bool) -> "_MessageUsage":
+    def from_event(cls, usage: Dict[str, Any], sidechain: bool, model: Any = None) -> "_MessageUsage":
         detail = usage.get("cache_creation")
         if not isinstance(detail, dict):
             detail = {}
@@ -383,6 +406,7 @@ class _MessageUsage:
             cache_write_5m_tokens=_int(detail.get("ephemeral_5m_input_tokens")),
             cache_write_1h_tokens=_int(detail.get("ephemeral_1h_input_tokens")),
             sidechain=sidechain,
+            model=model if isinstance(model, str) and not model.startswith("<") else "",
         )
 
     def resolved(self) -> "_MessageUsage":
@@ -393,7 +417,9 @@ class _MessageUsage:
     def merged(self, other: "_MessageUsage") -> "_MessageUsage":
         """Field-wise maximum: streaming ``usage`` only grows, so max == final."""
         values = {f: max(getattr(self, f), getattr(other, f)) for f in _TOKEN_FIELDS}
-        return _MessageUsage(sidechain=self.sidechain or other.sidechain, **values)
+        return _MessageUsage(
+            sidechain=self.sidechain or other.sidechain, model=other.model or self.model, **values
+        )
 
 
 def _add_message(session: SessionTokens, message: _MessageUsage) -> None:
@@ -450,7 +476,9 @@ def _read_transcript(path: pathlib.Path) -> Tuple[SessionTokens, Dict[str, _Mess
         if kind == "assistant":
             usage = message.get("usage")
             if isinstance(usage, dict):
-                current = _MessageUsage.from_event(usage, sidechain=event.get("isSidechain") is True)
+                current = _MessageUsage.from_event(
+                    usage, sidechain=event.get("isSidechain") is True, model=message.get("model")
+                )
                 message_id = message.get("id")
                 if isinstance(message_id, str) and message_id:
                     seen = messages.get(message_id)

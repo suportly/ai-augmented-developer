@@ -1476,3 +1476,62 @@ def test_a_role_outside_the_convention_is_counted_as_unclassified_once(tmp_path:
     assert by_role[tm.ROLE_UNCLASSIFIED].agents == 2 and by_role[tm.ROLE_UNCLASSIFIED].output_tokens == 14
     assert by_role[tm.ROLE_IMPLEMENT].agents == 1
     assert sum(r.agents for r in by_role.values()) == report.subagent_count == 3
+
+
+def test_message_usage_context_excludes_output() -> None:
+    usage = tm._MessageUsage(input_tokens=10, cache_creation_tokens=200, cache_read_tokens=3000, output_tokens=99999)
+    assert usage.context == 3210
+
+
+def test_message_usage_from_event_carries_model_and_defaults_to_empty() -> None:
+    assert tm._MessageUsage.from_event({}, sidechain=False, model="claude-sonnet-5").model == "claude-sonnet-5"
+    assert tm._MessageUsage.from_event({}, sidechain=False).model == ""
+
+
+def test_message_usage_merged_keeps_last_non_empty_model_and_field_max() -> None:
+    a = tm._MessageUsage(input_tokens=5, output_tokens=1, model="m-a")
+    b = tm._MessageUsage(input_tokens=3, output_tokens=9, model="")
+    c = tm._MessageUsage(input_tokens=1, model="m-c")
+    assert a.merged(b).model == "m-a"
+    assert a.merged(c).model == "m-c"
+    merged = a.merged(b)
+    assert (merged.input_tokens, merged.output_tokens) == (5, 9)
+
+
+def test_message_usage_merged_keeps_sidechain_from_either_side() -> None:
+    main = tm._MessageUsage(input_tokens=1, sidechain=False)
+    side = tm._MessageUsage(input_tokens=1, sidechain=True)
+    assert main.merged(side).sidechain is True
+    assert side.merged(main).sidechain is True
+    assert main.merged(main).sidechain is False
+
+
+def test_read_transcript_passes_model_and_drops_synthetic(tmp_path: pathlib.Path) -> None:
+    def line(mid: str, model: str) -> str:
+        return json.dumps({"type": "assistant", "message": {"id": mid, "model": model, "usage": {"input_tokens": 1}}})
+
+    path = tmp_path / "s.jsonl"
+    path.write_text(line("a", "claude-opus-4") + "\n" + line("b", "<synthetic>") + "\n")
+    _, messages = tm._read_transcript(path)
+    assert messages["a"].model == "claude-opus-4"
+    assert messages["b"].model == ""
+
+
+@pytest.mark.parametrize(
+    ("context", "band"),
+    [
+        (0, "<50k"),
+        (30_000, "<50k"),
+        (49_999, "<50k"),
+        (50_000, "50k-150k"),
+        (120_000, "50k-150k"),
+        (149_999, "50k-150k"),
+        (150_000, "150k-200k"),
+        (200_000, "150k-200k"),
+        (200_001, ">200k"),
+        (250_000, ">200k"),
+    ],
+)
+def test_context_band_boundaries(context: int, band: str) -> None:
+    assert tm.context_band(context) == band
+    assert band in tm.BANDS

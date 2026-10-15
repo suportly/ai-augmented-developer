@@ -21,7 +21,7 @@
 
 ### T001 — Contexto, modelo e faixa de cada request
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`
