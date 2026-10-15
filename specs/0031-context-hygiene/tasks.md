@@ -91,7 +91,7 @@
 
 ### T006 — Ler o fim do transcript
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `src/aiadev/session_context.py`
