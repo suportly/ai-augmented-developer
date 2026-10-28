@@ -112,7 +112,7 @@
 
 ### T007 — Orçamento: tetos pelo custo medido, com razão
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T004, T005, T006
 - **Files:**
   - modify: `docs/instruction-budget.json`
