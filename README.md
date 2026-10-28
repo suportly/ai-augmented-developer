@@ -299,7 +299,7 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 
 ## What's Inside
 
-### Skills (14 generic + preset)
+### Skills (16 generic + preset)
 
 **Pipeline**
 - **product** — Bootstraps or updates `specs/_product/mission.md`, `tech-stack.md`, and `roadmap.md` from the repository; runs once per project before `specify`.
@@ -307,6 +307,7 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 - **clarify** — Surfaces those markers one at a time and rewrites the spec with the answers.
 - **plan** — Turns an approved spec into `plan.md` with a mandatory Constitution Check.
 - **tasks** — Ordered `tasks.md`; one task = one test + one implementation + one commit.
+- **design** — Optional, after `tasks`, for specs that declare `**UI:** yes`: `/aia:design` turns the interface tasks into a private prototype in Claude Design (or markdown wireframes where the `Artifact` tool is absent) and records it in `design.md`.
 - **implement** — Fresh subagent per task with a single review per task (conformance first, then quality).
 - **analyze** — Gap report between spec, plan, tasks, and code.
 - **checklist** — Category pass: security, performance, accessibility, i18n, privacy, observability.

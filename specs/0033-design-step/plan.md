@@ -70,7 +70,6 @@ docs/instruction-budget.json                (modified: tetos de listagem, skill:
 CREDITS.md                                  (sem mudança)
 CHANGELOG.md                                (modified)
 README.md                                   (modified: skill e comando)
-CLAUDE.md                                   (modified: linha na tabela de skills)
 tests/test_design_state.py                  (new)
 tests/test_design_preflight.py              (new)
 tests/test_design_skill.py                  (new)

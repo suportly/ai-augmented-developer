@@ -125,21 +125,20 @@
   - [ ] Commit message: `feat(design): T007 orçamento sobe pelo custo medido`.
 - **Notes:** a autorização de `cl-1` cobre as listagens; um excesso no percurso, se existir, vai explícito no relatório ao mantenedor.
 
-### T008 — CHANGELOG, README e CLAUDE.md
+### T008 — CHANGELOG e README
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T007
 - **Files:**
   - modify: `CHANGELOG.md`
   - modify: `README.md`
-  - modify: `CLAUDE.md`
   - test: `tests/test_design_docs.py`
 - **Spec scenarios:** Success criterion #1
 - **Acceptance:**
-  - [ ] Failing test written and observed failing for the stated reason: `[Unreleased]` menciona 0033, `/aia:design`, `**UI:**`, o aviso não bloqueante e o papel `design`; o README lista a skill e o comando; a tabela de skills do `CLAUDE.md` tem a linha do passo.
+  - [ ] Failing test written and observed failing for the stated reason: `[Unreleased]` menciona 0033, `/aia:design`, `**UI:**`, o aviso não bloqueante e o papel `design`; o README lista a skill e o comando; a tabela de skills do `CLAUDE.md` NÃO ganha a linha (ela é conferida contra `pipeline-reference.md`, gerado do percurso, e `design` fica fora dele).
   - [ ] Minimum implementation makes the test pass; um `grep` por enumerações de skills e comandos em `tests/` e `docs/` confirma que nada mais muda.
   - [ ] Full suite passes (`.venv/bin/python -m pytest`), exceto as falhas locais pré-existentes de `tests/test_mcp_server.py`.
-  - [ ] Commit message: `docs(design): T008 changelog, readme e claude.md`.
+  - [ ] Commit message: `docs(design): T008 changelog e readme`.
 
 ## Parallelization hints
 
