@@ -18,7 +18,7 @@
 
 ### T001 — Skill find-skills com regras fixadas por teste
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `skills/find-skills/SKILL.md`
