@@ -95,7 +95,7 @@
 
 ### T006 — Preflight da skill design e cobertura após emenda
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002, T005
 - **Files:**
   - modify: `src/aiadev/preflight.py`

@@ -19,6 +19,7 @@ PIPELINE_SKILLS = (
     "clarify",
     "plan",
     "tasks",
+    "design",
     "implement",
     "analyze",
     "requesting-code-review",
@@ -30,10 +31,10 @@ PIPELINE_SKILLS = (
 _REQUIRES_SPEC = tuple(s for s in PIPELINE_SKILLS if s != "specify")
 
 # Skills that consume plan.md (i.e. run after `plan`).
-_REQUIRES_PLAN = ("tasks", "implement", "analyze", "finishing-a-branch")
+_REQUIRES_PLAN = ("tasks", "design", "implement", "analyze", "finishing-a-branch")
 
 # Skills that consume tasks.md (i.e. run after `tasks`).
-_REQUIRES_TASKS = ("implement", "analyze", "finishing-a-branch")
+_REQUIRES_TASKS = ("design", "implement", "analyze", "finishing-a-branch")
 
 # Required ``<!-- section: ... -->`` anchors per artifact. These are pinned
 # literals — ``test_every_anchor_exists_in_its_template`` round-trips them
@@ -206,6 +207,7 @@ _SKILL_TEMPLATE = {
     "specify": "spec-template.md",
     "plan": "plan-template.md",
     "tasks": "tasks-template.md",
+    "design": "design-template.md",
 }
 
 

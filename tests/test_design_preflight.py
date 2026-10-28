@@ -89,3 +89,58 @@ def test_cli_exits_zero_prints_warning_and_payload_ok(tmp_path: Path, monkeypatc
     payload = json.loads(as_json.stdout)
     assert payload["ok"] is True
     assert any(WARN in i["message"] for i in payload["issues"])
+
+
+# --- T006: preflight da skill design ---------------------------------------
+
+
+def _design(tmp_path: Path, feature_name: str = "0099-demo", fmt: str = "text"):
+    return CliRunner().invoke(
+        main, ["preflight", "design", "--feature", feature_name, "--format", fmt]
+    )
+
+
+def test_design_requires_spec_plan_tasks(tmp_path: Path, monkeypatch) -> None:
+    feature = tmp_path / "specs" / "0099-demo"
+    feature.mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("AIADEV_PREFLIGHT", raising=False)
+    out = _design(tmp_path)
+    assert out.exit_code != 0
+    assert "spec.md missing — run /aia:specify first" in out.output
+    assert "plan.md missing — run /aia:plan first" in out.output
+    assert "tasks.md missing — run /aia:tasks first" in out.output
+
+
+def test_design_passes_with_all_three_and_points_to_template(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _feature(tmp_path, "yes")
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "design-template.md").write_text("t", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("AIADEV_PREFLIGHT", raising=False)
+    out = _design(tmp_path, fmt="json")
+    assert out.exit_code == 0
+    payload = json.loads(out.stdout)
+    assert payload["ok"] is True
+    assert payload["template"] == "templates/design-template.md"
+
+
+def test_design_follows_tasks_in_pipeline_order() -> None:
+    skills = preflight.PIPELINE_SKILLS
+    assert skills.index("design") == skills.index("tasks") + 1
+
+
+def test_scenario_coverage_survives_gap_task_amendment(tmp_path: Path) -> None:
+    gap = "### T002 — lacuna\n\n- **Spec scenarios:** Story 1 scenario 2\n"
+    base = "### T001 — a\n\n- **Spec scenarios:** Story 1 scenario 1\n"
+    feature = _feature(tmp_path, "no", tasks=False)
+    tasks = feature / "tasks.md"
+
+    tasks.write_text("# Tasks\n\n## Task list\n\n" + base, encoding="utf-8")
+    without = [i.message for i in _check(tmp_path, feature) if "not covered" in i.message]
+    assert without and "Story 1 scenario 2" in without[0]
+
+    tasks.write_text("# Tasks\n\n## Task list\n\n" + base + "\n" + gap, encoding="utf-8")
+    assert [i for i in _check(tmp_path, feature) if "not covered" in i.message] == []
