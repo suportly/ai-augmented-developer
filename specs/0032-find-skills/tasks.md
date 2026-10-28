@@ -80,7 +80,7 @@
 
 ### T005 — CHANGELOG e README
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001, T003
 - **Files:**
   - modify: `CHANGELOG.md`

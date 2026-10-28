@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Spec **0032 — find-skills**. A new `find-skills` skill ships with every preset
+  (it lives in the core `skills/`, which the installer copies in full): it helps
+  the agent find an existing installable skill before building a capability from
+  scratch. It only recommends: it never installs, never uses `-y`, vets each
+  candidate (install count, source repository), reads the candidate's `SKILL.md`
+  before any install and keeps the search query free of project data. Attribution
+  in `CREDITS.md`.
+
+### Changed
+
+- The instruction budget ceiling rises by the cost of the new skill: the
+  `skills` ceiling of `lean` and `django-drf-react` by 33 tokens and their
+  `total` ceiling by 7, with the reason recorded in
+  `docs/instruction-budget.json`. The pipeline path does not change.
+
 ## [0.26.0] - 2026-10-15
 
 ### Added
