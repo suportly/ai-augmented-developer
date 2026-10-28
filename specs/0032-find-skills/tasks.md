@@ -66,7 +66,7 @@
 
 ### T004 — Atribuição em CREDITS.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `CREDITS.md`
