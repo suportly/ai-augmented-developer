@@ -4,7 +4,7 @@
 
 **Branch:** `feature/0032-find-skills`
 **Created:** 2026-10-28
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Implemented <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0032 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; downstream artifacts use it. -->
 
