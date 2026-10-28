@@ -35,7 +35,7 @@ Quando o usuário pede algo especializado (testes e2e, vídeo, deploy, acessibil
 - `aiadev install` com qualquer preset instala `find-skills`; `aiadev sync` a mantém.
 - A skill nunca instala nada: apresenta a recomendação e o comando, e quem instala é o usuário, sem flag de confirmação automática.
 - O corpo da skill não cita fornecedor nem empresa, não traz exemplo de stack, e a descrição tem no máximo 30 tokens medidos por `scripts/instruction_budget.py`.
-- O aumento do teto de cada preset é exatamente o custo da descrição (Story 3, cenário 2), com razão registrada no `docs/instruction-budget.json`; o percurso do pipeline não muda.
+- O teto de `skills` de cada preset medido sobe exatamente o custo da listagem (nome e descrição) e o teto de `total` sobe só o que a medição exige (Story 3, cenário 2), com razão registrada no `docs/instruction-budget.json`; o percurso do pipeline não muda.
 - `CREDITS.md` registra a origem do material, com repositório, o que foi adaptado e a licença.
 
 <!-- section: Non-goals -->
@@ -66,7 +66,7 @@ Como usuário, quero decidir o que entra no meu projeto, porque uma skill é ins
 **Acceptance scenarios**:
 
 1. Given uma skill recomendada, When o usuário ainda não confirmou, Then o agente não executa nenhum comando de instalação.
-2. Given que o usuário confirma, When o agente instala, Then o comando não usa flag que pule a confirmação do instalador e é mostrado antes de rodar.
+2. Given que o usuário confirma, Then o agente mostra o comando de instalação, sem flag que pule a confirmação do instalador, e é o usuário quem o executa.
 3. Given uma skill candidata, When o usuário vai instalar, Then o agente lê o `SKILL.md` dela e resume o que ela manda executar, sinalizando comandos de rede, escrita fora do projeto ou instalação de pacotes.
 
 ### Story 3 — Presente em todo preset sem estourar o orçamento (P1)

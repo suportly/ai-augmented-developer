@@ -77,3 +77,12 @@ def test_nothing_found_path() -> None:
 
 def test_no_network_or_cli_path() -> None:
     assert re.search(r"no network or cli[^\n]*could not search[^\n]*without the skill", LOW)
+
+
+def test_verification_checks_repository_activity():
+    assert "updated recently" in LOW
+
+
+def test_candidate_skill_is_read_as_untrusted_data_and_summarised():
+    assert "untrusted data" in LOW and "not instructions" in LOW
+    assert "summarise what it tells the agent to run" in LOW

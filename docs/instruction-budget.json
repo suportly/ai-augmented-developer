@@ -245,8 +245,8 @@
       "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
     },
     "skill:find-skills": {
-      "baseline": 444,
-      "teto": 444
+      "baseline": 484,
+      "teto": 484
     }
   }
 }
