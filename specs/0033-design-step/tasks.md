@@ -34,7 +34,7 @@
 
 ### T002 — Aviso do preflight implement quando falta design
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `src/aiadev/preflight.py`
