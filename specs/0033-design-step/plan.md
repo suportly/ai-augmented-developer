@@ -44,7 +44,7 @@ Divergência com `tech-stack.md`/auto-stack: não há `tech-stack.md` relevante;
 
 ## Architecture decisions
 
-- **Decisão:** a UI é declarada por uma linha de cabeçalho `**UI:** yes|no` no `templates/spec-template.md`, lida por regex como `**Branch:**` e `**Language:**`; ausente ou `no` = sem UI. **Rationale:** declaração explícita, barata de ler (sem varrer a spec), e specs antigas continuam valendo. **Trade-off:** o template cresce alguns tokens no percurso (`specify`); mede-se e, se passar da folga do teto do percurso, sobe só o excesso, com razão.
+- **Decisão:** a UI é declarada por uma linha de cabeçalho `**UI:** yes|no` no `templates/spec-template.md`, lida por regex como `**Branch:**` e `**Language:**`; ausente ou `no` = sem UI. **Rationale:** declaração explícita, barata de ler (sem varrer a spec), e specs antigas continuam valendo. A linha leva o próprio comentário de preenchimento (`<!-- yes if the feature adds or changes screens -->`), então `skills/specify/SKILL.md` não muda; o regex de leitura exige `yes` literal no início do valor (`^\*\*UI:\*\*\s*yes\b`), para o placeholder não preenchido não contar como UI. **Trade-off:** o template cresce alguns tokens no percurso (`specify`): sobem juntos `path:templates/spec-template.md` e `path:total` (hoje 549/549 e 12624/12637, folga de 13), só pelo excesso medido e com razão; o excesso é informado ao mantenedor porque `cl-1` autorizou apenas o custo das listagens.
 - **Decisão:** `/aia:design` só é recomendado quando UI = yes, `tasks.md` existe, nenhuma task está `done` e não há `design.md`. **Rationale:** depois de começar a implementar, recomendar design seria ruído; o usuário ainda pode rodar o comando à mão. **Trade-off:** quem já implementou metade sem design não é lembrado.
 - **Decisão:** o aviso do `preflight implement` é `would_abort=False`. **Rationale:** a spec exige que nenhum gate seja enfraquecido ou criado como bloqueio; é só lembrete. **Trade-off:** pode ser ignorado, aceito.
 - **Decisão:** a skill pede o tipo de protótipo pela chamada `Artifact` com `action: quickstart` e `intent: design`, e segue o resultado, em vez de fixar a URL do tipo no texto. **Rationale:** a URL e o contrato do canvas mudam; o quickstart devolve o tipo vigente. **Trade-off:** depende de a plataforma expor o quickstart; sem a ferramenta, cai no caminho de wireframes (Story 5).
@@ -61,8 +61,10 @@ templates/design-template.md                (new, lido só sob demanda)
 templates/spec-template.md                  (modified: linha **UI:**)
 src/aiadev/pipeline_state.py                (modified: campo ui, recomendação /aia:design)
 src/aiadev/commands/next.py                 (modified: linha "ui:" no estado, se necessário)
-src/aiadev/preflight.py                     (modified: skill design, aviso em implement, template)
-src/aiadev/token_metrics.py                 (modified: papel design)
+src/aiadev/preflight.py                     (modified: design em PIPELINE_SKILLS logo depois de tasks, em _REQUIRES_TASKS, aviso em implement, template; só na Phase 2)
+src/aiadev/commands/preflight.py            (sem mudança de código; a mensagem 'expected one of' passa a listar design)
+src/aiadev/token_metrics.py                 (modified: constante e ROLES, laço de _subagent_role, docstrings e as duas mensagens com a lista de prefixos)
+skills/specify/SKILL.md, skills/plan/SKILL.md  (sem mudança de comportamento; só se citarem a lista de prefixos e o teste de convenção exigir)
 docs/metrics.md                             (modified: papel design)
 docs/instruction-budget.json                (modified: tetos de listagem, skill:design, razão)
 CREDITS.md                                  (sem mudança)
@@ -74,7 +76,8 @@ tests/test_design_preflight.py              (new)
 tests/test_design_skill.py                  (new)
 tests/test_design_budget.py                 (new)
 tests/test_dispatch_description_convention.py  (modified: design:)
-tests/test_token_metrics.py                 (modified: papel design)
+tests/test_token_metrics.py                 (modified: os testes que fixam quatro papéis, a tabela de oito linhas e o +1+8)
+tests/test_preflight.py                     (modified: mensagem exata de 'unknown skill' com design)
 ```
 
 ## Phase breakdown
@@ -82,16 +85,16 @@ tests/test_token_metrics.py                 (modified: papel design)
 ### Phase 1 — Código: estado, preflight e papel
 
 - Testes que falham: `pipeline_snapshot` recomenda `/aia:design` só com UI yes + `tasks.md` + zero tasks done + sem `design.md`; volta a `/aia:implement` com `design.md`; igual a hoje sem UI; `preflight design` exige spec, plan e tasks; `preflight implement` avisa (código 0) com UI yes e sem `design.md`; `design:` é classificado como papel `design`.
-- Implementar o mínimo em `pipeline_state.py`, `preflight.py`, `token_metrics.py` e a linha `**UI:**` no template da spec.
+- Implementar o mínimo em `pipeline_state.py` (campo `ui` em `PipelineSnapshot` e no dict `state`; recomendação com `total == pending and total > 0` entre `total is None` e `if pending`), no aviso do `preflight implement` (`would_abort=False`, precedente em `_coverage_issues`), em `token_metrics.py` (todos os pontos listados em Project structure changes) e a linha `**UI:**` no template da spec. A entrada `design` em `PIPELINE_SKILLS` e `_REQUIRES_TASKS` fica para a Phase 2, porque `tests/test_preflight_requirements_coverage.py` exige `skills/design/SKILL.md` para cada item da tupla.
 
 ### Phase 2 — Skill, comando e template
 
 - Testes que falham: a skill existe, valida, tem as regras (lista de tasks de interface confirmada pelo usuário, brief só com conteúdo de tela e sem caminho/commit/id/módulo, confirmação antes de publicar, canvas privado, subagente `design: <slug>`, quickstart `intent: design`, emenda de tasks só com aprovação, degradação para wireframes, nenhum link falso na falha); o comando existe e invoca a skill; o template tem os blocos link, mapa e lacunas.
-- Escrever `skills/design/SKILL.md`, `commands/design.md` e `templates/design-template.md`.
+- Escrever `skills/design/SKILL.md`, `commands/design.md` e `templates/design-template.md`, e só então acrescentar `design` ao `preflight` (testes de `preflight design` e da mensagem `unknown skill`).
 
 ### Phase 3 — Orçamento e documentação
 
-- Teste que falha: medir com `scripts/instruction_budget.py --check`; os tetos de `skills` e `commands` sobem exatamente pelo custo das listagens, `total` pelo que a medição exige, `skill:design` entra com baseline == teto, e `path:total` só muda pela linha do template (excesso, se houver, com razão).
+- Teste que falha: medir com `scripts/instruction_budget.py --check`; os tetos de `skills` e `commands` sobem exatamente pelo custo das listagens, `total` pelo que a medição exige, `skill:design` entra com baseline == teto, e `path:total` e `path:templates/spec-template.md` sobem juntos, só pelo excesso medido da linha do template, com razão.
 - Atualizar `docs/instruction-budget.json` à mão (nunca `--write-baseline --force`), CHANGELOG, README, CLAUDE.md e `docs/metrics.md`.
 
 ## Risks and mitigations
