@@ -35,7 +35,7 @@
 
 ### T002 — Skill presente em todo preset do catálogo
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - test: `tests/test_find_skills_install.py`
