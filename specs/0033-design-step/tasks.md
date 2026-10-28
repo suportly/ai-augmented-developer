@@ -48,7 +48,7 @@
 
 ### T003 — Papel design em token_metrics
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/token_metrics.py`
