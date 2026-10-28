@@ -80,7 +80,7 @@
 
 ### T005 — Comando /aia:design e template do design.md
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T004
 - **Files:**
   - create: `commands/design.md`
