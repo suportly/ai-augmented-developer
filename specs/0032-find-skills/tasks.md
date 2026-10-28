@@ -49,7 +49,7 @@
 
 ### T003 — Orçamento: teto sobe pelo custo da descrição, com razão
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `docs/instruction-budget.json`
