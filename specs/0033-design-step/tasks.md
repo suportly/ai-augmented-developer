@@ -65,7 +65,7 @@
 
 ### T004 — Skill design com as regras fixadas por teste
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - create: `skills/design/SKILL.md`
