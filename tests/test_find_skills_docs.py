@@ -5,9 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_unreleased_records_0032_find_skills():
+def test_release_0_27_0_records_0032_find_skills():
     body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    section = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    section = body.split("## [0.27.0]", 1)[1].split("\n## [", 1)[0]
     assert "0032" in section and "find-skills" in section
     for needle in ("every preset", "never installs", "ceiling"):
         assert needle in section, needle
