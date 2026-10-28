@@ -51,7 +51,7 @@ Numa feature com interface, o pipeline vai de `tasks` direto para `implement`: a
 - Um comando `aiadev design brief` que monte o brief por código: o agente monta o brief nesta versão; só vale se a medição mostrar que isso é caro.
 - Gerar código a partir do protótipo ou integrar o `design:design-handoff`; a saída é o protótipo e o `design.md`.
 - Tornar o passo obrigatório, ou bloquear `implement` por falta de design.
-- Depender do claude.ai/design standalone, que fecha em 14/12/2026; o caminho é o Artifact do tipo Design.
+- Depender do claude.ai/design standalone, que o aviso da ferramenta de design da sessão informa estar programado para fechar; o caminho é o Artifact do tipo Design.
 - Sincronizar design system (`DesignSync`); se o usuário tiver um design system padrão, o próprio Claude Design o aplica.
 
 <!-- section: User stories -->
@@ -113,14 +113,14 @@ Como usuário de outra plataforma, quero o mesmo passo mesmo sem a ferramenta de
 <!-- section: Clarifications -->
 ## Clarifications
 
-- [NEEDS CLARIFICATION:cl-1 A skill e o comando entram no núcleo, instalados em todo preset (sobe o teto de instrução, o que exige autorização explícita do mantenedor), ou ficam num preset opcional (custo zero para quem não usa)?]
+- **cl-1 (resolvida em 2026-10-28):** a skill `design` e o comando `/aia:design` entram no núcleo, instalados em todo preset. O mantenedor escolheu essa opção sabendo que ela sobe o teto de instrução, e isso vale como autorização explícita para subir os tetos afetados em `docs/instruction-budget.json`, com razão registrada e só pelo custo da listagem (skill e comando).
 
 ## Assumptions
 
 - A declaração de UI na spec é um campo explícito preenchido pelo `specify`, lido por máquina; a forma exata (linha de cabeçalho ou âncora) é decisão do plan. [impact: low]
 - O brief é montado pelo agente nesta versão; um `aiadev design brief` determinístico fica para depois. [impact: low]
 - A escolha das tasks de interface é do agente, sempre confirmada pelo usuário; nenhuma heurística por palavra-chave no código. [impact: low]
-- O protótipo vive no claude.ai e pode mudar de acesso ou sumir; o `design.md` guarda o link e o mapa, não os arquivos do canvas. [impact: medium]
+- O protótipo vive no claude.ai e pode mudar de acesso ou sumir; o `design.md` guarda o link e o mapa, não os arquivos do canvas, e o mapa continua útil sem o link. [impact: low]
 
 <!-- section: Data touched -->
 ## Data touched
@@ -133,7 +133,7 @@ Como usuário de outra plataforma, quero o mesmo passo mesmo sem a ferramenta de
 ## Out-of-band effects
 
 - Rede: criar o protótipo publica um canvas privado no claude.ai da conta do usuário; nada sai sem confirmação.
-- Custo: gerar artboards consome muitos tokens; o dispatch com `description` `design: <slug>` permite medi-lo por papel em `aiadev metrics --tokens`.
+- Custo: o dispatch com `description` `design: <slug>` permite medir o custo do passo por papel em `aiadev metrics --tokens`; a decisão de manter o passo opcional se apoia nessa medição, sem limiar fixado nesta spec.
 
 <!-- section: Open risks -->
 ## Open risks
@@ -141,7 +141,7 @@ Como usuário de outra plataforma, quero o mesmo passo mesmo sem a ferramenta de
 - Vazamento de contexto interno no brief: mitigado por regra explícita, confirmação antes de publicar e teste que fixa a regra no texto da skill.
 - Brief que descreve tela por analogia e não pela spec (Art. I): o brief só pode citar cenários e textos que estão na spec.
 - Link do protótipo que deixa de abrir: aceito; o mapa no `design.md` continua útil sem ele.
-- Custo de instrução dos novos comando e skill: depende da resposta a cl-1.
+- Custo de instrução dos novos comando e skill: sobe o teto de cada preset pelo custo da listagem (autorizado em cl-1); a medição vai para o plan.
 - Deriva do Claude Design (mudança de tipo ou de contrato do canvas): a skill descreve o resultado esperado e delega o formato ao próprio tipo, sem copiar as regras dele.
 
 <!-- section: Traceability -->
