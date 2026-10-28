@@ -4,7 +4,7 @@
 
 **Branch:** `feature/0033-design-step`
 **Created:** 2026-10-28
-**Status:** Draft <!-- Draft | In review | Approved | Implemented -->
+**Status:** Implemented <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0033 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; downstream artifacts use it. -->
 
@@ -95,7 +95,7 @@ Como desenvolvedor, quero que `aiadev next` me lembre do design quando faz senti
 
 **Acceptance scenarios**:
 
-1. Given uma spec que declara UI, com `tasks.md` e sem `design.md`, When rodo `aiadev next`, Then a recomendação é `/aia:design`, com o motivo.
+1. Given uma spec que declara UI, com `tasks.md`, nenhuma task iniciada e sem `design.md`, When rodo `aiadev next`, Then a recomendação é `/aia:design`, com o motivo; com alguma task já feita a recomendação é a do fluxo normal.
 2. Given a mesma feature com `design.md` presente, When rodo `aiadev next`, Then a recomendação volta a ser a do fluxo normal (`/aia:implement`).
 3. Given uma spec sem UI declarada, When rodo `aiadev next`, Then o resultado é idêntico ao de hoje.
 4. Given uma spec com UI declarada e sem `design.md`, When rodo `aiadev preflight implement`, Then sai com aviso e código de saída 0, e o `implement` continua possível.

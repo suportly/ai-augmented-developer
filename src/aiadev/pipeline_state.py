@@ -30,7 +30,7 @@ __all__ = [
 
 
 _BRANCH_LINE_RE = re.compile(r"^\*\*Branch:\*\*\s*`([^`]+)`", re.MULTILINE)
-_UI_RE = re.compile(r"^\*\*UI:\*\*\s*yes\b(?!\|)", re.MULTILINE | re.IGNORECASE)
+_UI_RE = re.compile(r"^\*\*UI:\*\*\s*yes\b(?!\s*\|)", re.MULTILINE | re.IGNORECASE)
 _MARKER = "[NEEDS CLARIFICATION"
 _TASK_STATUS_RE = re.compile(
     r"^- \*\*Status:\*\*\s*(pending|in_progress|blocked|done)\b",

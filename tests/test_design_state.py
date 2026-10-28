@@ -37,7 +37,7 @@ def test_ui_yes_with_design_goes_to_implement(tmp_path):
 
 @pytest.mark.parametrize(
     "line",
-    ["**UI:** no <!-- yes if the feature adds or changes screens -->", "", "**UI:** yes|no"],
+    ["**UI:** no <!-- yes if the feature adds or changes screens -->", "", "**UI:** yes|no", "**UI:** yes | no"],
 )
 def test_no_ui_unchanged(tmp_path, line):
     snap = pipeline_snapshot(_feature(tmp_path, line), feature="0001-x")
@@ -56,6 +56,7 @@ def test_declares_ui_variants():
     assert declares_ui("a\n**UI:** yes\n")
     assert declares_ui("**UI:** yes <!-- c -->")
     assert not declares_ui("**UI:** yes|no")
+    assert not declares_ui("**UI:** yes | no")
     assert not declares_ui("**UI:** no")
 
 

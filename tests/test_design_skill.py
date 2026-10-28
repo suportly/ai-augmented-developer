@@ -80,6 +80,7 @@ def test_artifact_quickstart_design_intent() -> None:
 def test_subagent_description_and_return() -> None:
     assert "`description` `design: <slug>`" in LOW
     assert "returns only the link and the screen map" in LOW
+    assert "receives only the confirmed brief" in LOW
 
 
 def test_no_design_system_setup() -> None:

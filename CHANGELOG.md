@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spec header line on the pipeline path. Reasons are in
   `docs/instruction-budget.json`.
 
+### Known limitations
+
+- The `**UI:**` value is filled from the comment in the spec template; the
+  `specify` skill has no instruction of its own for it (kept off the pipeline
+  path to save tokens), so a UI feature can be left at the default `no`.
+- `templates/design-template.md` is not installed in consumer projects, like
+  the other templates; `aiadev preflight design` reports `template: null` there.
+- `aiadev preflight --all` warns about every older UI feature that has tasks and
+  no `design.md`, even finished ones (not blocking).
+
 ## [0.27.0] - 2026-10-28
 
 ### Added

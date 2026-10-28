@@ -94,7 +94,7 @@ tests/test_preflight.py                     (modified: mensagem exata de 'unknow
 ### Phase 3 — Orçamento e documentação
 
 - Teste que falha: medir com `scripts/instruction_budget.py --check`; os tetos de `skills` e `commands` sobem exatamente pelo custo das listagens, `total` pelo que a medição exige, `skill:design` entra com baseline == teto, e `path:total` e `path:templates/spec-template.md` sobem juntos, só pelo excesso medido da linha do template, com razão.
-- Atualizar `docs/instruction-budget.json` à mão (nunca `--write-baseline --force`), CHANGELOG, README, CLAUDE.md e `docs/metrics.md`.
+- Atualizar `docs/instruction-budget.json` à mão (nunca `--write-baseline --force`), CHANGELOG, README e `docs/metrics.md`.
 
 ## Risks and mitigations
 

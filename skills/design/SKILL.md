@@ -34,7 +34,7 @@ Make a prototype of the interface tasks and record it in `design.md`.
 2. **Pick tasks.** Read `spec.md`, `plan.md` and `tasks.md`. Select the tasks that have an interface. Show the list and continue only after the user confirms or adjusts it.
 3. **Write the brief** with screen content only: screens, Given/When/Then scenarios, states (empty, error, loading) and texts defined in the spec. Never include file paths, commit hashes, task ids or internal module names. Quote only scenarios and texts present in the spec.
 4. **Confirm.** Show exactly what will be sent. Publish only after explicit user confirmation. The canvas is private, one artboard per screen.
-5. **Create the prototype** with the `Artifact` tool: `action: quickstart` with `intent: design`, then follow its result. Run it in a subagent with `description` `design: <slug>` that returns only the link and the screen map. Do not configure or ask for a design system.
+5. **Create the prototype** with the `Artifact` tool: `action: quickstart` with `intent: design`, then follow its result. Run it in a subagent with `description` `design: <slug>` that receives only the confirmed brief and returns only the link and the screen map. Do not configure or ask for a design system.
 6. **Record.** Write `specs/<feature>/design.md` from `templates/design-template.md`: the link, a screen to scenario to task map, and gaps. Each gap cites the spec scenario that motivates it, or says there is none.
 7. **Amend.** Turn gaps into proposed new tasks. Add them to `tasks.md` only after approval, through the `tasks` skill.
 
