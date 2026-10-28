@@ -318,6 +318,7 @@ The server exposes the same 8 skills as both MCP `prompts` and `tools`. Requires
 - **requesting-code-review** — Pre-PR checklist and reviewer agent dispatch.
 - **finishing-a-branch** — PR creation, merge decision, cleanup.
 - **task-context** — Opt-in per-task context file composed before each implementer dispatch.
+- **find-skills** — Find an existing installable skill for a capability and recommend it; installs nothing unasked. Ships with every preset.
 
 **Stack skills (via presets)**
 

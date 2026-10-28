@@ -26,8 +26,8 @@
     "preset:lean:total": {
       "origin": 5115,
       "baseline": 2921,
-      "teto": 2921,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 2928,
+      "reason": "0032: find-skills entra em todo preset por pedido do mantenedor (autorizado em 2026-10-28); a listagem (nome + descricao) custa 33 tokens; o total sobe 7 porque o teto de agents estava 26 acima do medido"
     },
     "preset:lean:agent_file": {
       "baseline": 504,
@@ -45,8 +45,8 @@
     },
     "preset:lean:skills": {
       "baseline": 566,
-      "teto": 566,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 599,
+      "reason": "0032: find-skills entra em todo preset por pedido do mantenedor (autorizado em 2026-10-28); a listagem (nome + descricao) custa 33 tokens"
     },
     "preset:lean:commands": {
       "baseline": 429,
@@ -60,8 +60,8 @@
     "preset:django-drf-react:total": {
       "origin": 5725,
       "baseline": 3621,
-      "teto": 3621,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 3628,
+      "reason": "0032: find-skills entra em todo preset por pedido do mantenedor (autorizado em 2026-10-28); a listagem (nome + descricao) custa 33 tokens; o total sobe 7 porque o teto de agents estava 26 acima do medido"
     },
     "preset:django-drf-react:agent_file": {
       "baseline": 866,
@@ -79,8 +79,8 @@
     },
     "preset:django-drf-react:skills": {
       "baseline": 873,
-      "teto": 873,
-      "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+      "teto": 906,
+      "reason": "0032: find-skills entra em todo preset por pedido do mantenedor (autorizado em 2026-10-28); a listagem (nome + descricao) custa 33 tokens"
     },
     "preset:django-drf-react:commands": {
       "baseline": 460,
@@ -243,6 +243,10 @@
       "baseline": 358,
       "teto": 358,
       "reason": "T056: baseline rebaixado ap\u00f3s a meta de 40%"
+    },
+    "skill:find-skills": {
+      "baseline": 484,
+      "teto": 484
     }
   }
 }

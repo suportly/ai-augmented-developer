@@ -63,6 +63,10 @@ tool — reimplementing a compressor would violate Article III; the framework
 stays compressor-agnostic. Licenses per the upstream repositories at time of
 adaptation (`rtk`: Apache-2.0).
 
+### [vercel-labs/skills](https://github.com/vercel-labs/skills)
+
+The `find-skills` skill (feature `0032-find-skills`) is adapted from that repository's `find-skills` skill (MIT license): the idea of searching the open skills ecosystem with the `npx skills` CLI and presenting vetted candidates. We rewrote it much shorter and changed its contract: it only recommends (never installs, never `-y`), reads the candidate's `SKILL.md` before any install, and keeps the query free of project data. We do not bundle the original skill or the CLI; `find-skills` only refers to the CLI as an external tool.
+
 ### [github/spec-kit](https://github.com/github/spec-kit)
 
 Starting in v0.2, this project adopts spec-kit's architecture for spec-driven development: the `constitution.md` contract, the command taxonomy (`specify`/`clarify`/`plan`/`tasks`/`analyze`/`checklist`/`implement`), the `[NEEDS CLARIFICATION]` marker convention, the per-branch `specs/<branch>/` artifact layout, and the template-based gate checks are all derived from spec-kit (MIT).
