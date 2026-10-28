@@ -23,12 +23,14 @@ from typing import Any
 __all__ = [
     "PipelineSnapshot",
     "count_needs_clarification",
+    "declares_ui",
     "pipeline_snapshot",
     "recommend_next_command",
 ]
 
 
 _BRANCH_LINE_RE = re.compile(r"^\*\*Branch:\*\*\s*`([^`]+)`", re.MULTILINE)
+_UI_RE = re.compile(r"^\*\*UI:\*\*\s*yes\b(?!\|)", re.MULTILINE | re.IGNORECASE)
 _MARKER = "[NEEDS CLARIFICATION"
 _TASK_STATUS_RE = re.compile(
     r"^- \*\*Status:\*\*\s*(pending|in_progress|blocked|done)\b",
@@ -48,6 +50,12 @@ class PipelineSnapshot:
     tasks_pending: int | None
     command: str
     reason: str
+    ui: bool = False
+
+
+def declares_ui(text: str) -> bool:
+    """True when the spec header says ``**UI:** yes`` (not the ``yes|no`` placeholder)."""
+    return _UI_RE.search(text) is not None
 
 
 def count_needs_clarification(text: str) -> int:
@@ -100,7 +108,9 @@ def pipeline_snapshot(
             "/aia:specify", "active spec dir is missing spec.md", feature=active.name
         )
 
-    markers = count_needs_clarification(spec_md.read_text(encoding="utf-8"))
+    spec_text = spec_md.read_text(encoding="utf-8")
+    markers = count_needs_clarification(spec_text)
+    ui = declares_ui(spec_text)
     has_plan = _is_file_strict(active / "plan.md")
     tasks_md = active / "tasks.md"
     total = pending = None
@@ -112,6 +122,7 @@ def pipeline_snapshot(
     state = {
         "feature": active.name, "has_spec": True, "open_markers": markers,
         "has_plan": has_plan, "tasks_total": total, "tasks_pending": pending,
+        "ui": ui,
     }
 
     if markers:
@@ -124,6 +135,12 @@ def pipeline_snapshot(
         return snap("/aia:plan", "spec.md is clean; plan.md missing", **state)
     if total is None:
         return snap("/aia:tasks", "plan.md ticked; tasks.md missing", **state)
+    if ui and total > 0 and pending == total and not _is_file_strict(active / "design.md"):
+        return snap(
+            "/aia:design",
+            "spec.md declares **UI:** yes; no task started and design.md missing",
+            **state,
+        )
     if pending:
         return snap(
             "/aia:implement", f"tasks.md has {pending} pending task(s)", **state

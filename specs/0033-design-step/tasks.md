@@ -18,7 +18,7 @@
 
 ### T001 — Linha UI na spec e recomendação de /aia:design em aiadev next
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `templates/spec-template.md`
