@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Spec **0033 — design-step**. A new optional step `/aia:design` between `tasks`
+  and `implement`, for specs that declare `**UI:** yes` (a new header line in the
+  spec template). The `design` skill picks the interface tasks (the user confirms
+  the list), writes a brief with screen content only (no file paths, commit
+  hashes, task ids or internal module names), asks for confirmation, and creates
+  a private prototype in Claude Design through a `design: <slug>` subagent, then
+  records the link, the screen map and the gaps in `design.md`. Gaps become
+  tasks only after approval. Without the `Artifact` tool it writes markdown
+  wireframes. `aiadev next` recommends `/aia:design` when the spec declares UI,
+  tasks exist, none is done and `design.md` is missing; `aiadev preflight implement`
+  only warns (not blocking). `aiadev metrics --tokens` has a new `design` role.
+
+### Changed
+
+- The instruction budget ceilings rise by the measured cost: listings of the
+  new skill (31) and command (24) in each preset, plus 16 tokens for the new
+  spec header line on the pipeline path. Reasons are in
+  `docs/instruction-budget.json`.
+
+### Known limitations
+
+- The `**UI:**` value is filled from the comment in the spec template; the
+  `specify` skill has no instruction of its own for it (kept off the pipeline
+  path to save tokens), so a UI feature can be left at the default `no`.
+- `templates/design-template.md` is not installed in consumer projects, like
+  the other templates; `aiadev preflight design` reports `template: null` there.
+- `aiadev preflight --all` warns about every older UI feature that has tasks and
+  no `design.md`, even finished ones (not blocking).
+
 ## [0.27.0] - 2026-10-28
 
 ### Added

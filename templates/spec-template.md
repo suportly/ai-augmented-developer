@@ -7,6 +7,7 @@
 **Status:** Draft <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** {{SPEC_ID}} <!-- auto-incrementing integer -->
 **Language:** {{DOC_LANGUAGE}} <!-- BCP-47 tag; downstream artifacts use it. -->
+**UI:** no <!-- yes if the feature adds or changes screens -->
 
 ---
 

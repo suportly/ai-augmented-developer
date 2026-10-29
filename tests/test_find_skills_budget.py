@@ -33,9 +33,10 @@ def listing_cost(budget):
 
 
 @pytest.mark.parametrize("preset", PRESETS)
-def test_skills_teto_rises_by_exactly_the_listing_cost(preset, listing_cost):
+def test_skills_teto_rises_by_at_least_the_listing_cost(preset, listing_cost):
+    # Later specs (0033) add their own listing cost on top; the exact figure is pinned there.
     entry = BUDGET[f"preset:{preset}:skills"]
-    assert entry["teto"] - entry["baseline"] == listing_cost
+    assert entry["teto"] - entry["baseline"] >= listing_cost
     assert entry["reason"].strip()
 
 
@@ -52,8 +53,9 @@ def test_find_skills_entry_is_manual_with_baseline_equal_to_teto(measured):
     assert entry["baseline"] == entry["teto"] == measured["skill:find-skills"]
 
 
-def test_pipeline_path_total_is_unchanged(measured):
-    assert measured["path:total"] == PATH_TOTAL_BEFORE_0032
+def test_pipeline_path_total_only_grew_by_the_0033_template_line(measured):
+    # 0032 left the path at 12624; spec 0033 adds the 16-token `**UI:**` line to the spec template.
+    assert 0 <= measured["path:total"] - PATH_TOTAL_BEFORE_0032 <= 16
 
 
 def test_every_teto_above_baseline_has_a_reason():

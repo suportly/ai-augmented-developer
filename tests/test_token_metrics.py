@@ -583,6 +583,10 @@ def test_subagent_role_comes_from_the_meta_json_description_prefix(subagent_dir:
         ("doc-review spec", "unclassified"),  # the colon is required
         ("doc-review : spec", "unclassified"),
         ("doc-reviewer: spec", "unclassified"),
+        ("design: 0033-x", "design"),  # spec 0033 T003
+        ("  Design: 0033-x", "design"),
+        ("design 0033-x", "unclassified"),  # the colon is required
+        ("designer: x", "unclassified"),
         ("implement:", "implement"),  # the prefix alone is enough
         ("implement T003", "unclassified"),  # the colon is required
         ("implement : T003", "unclassified"),
@@ -977,7 +981,7 @@ def _role_rows(text: str) -> Dict[str, List[str]]:
         if not line.strip():
             break
         cells = line.split()
-        if cells[0] in ("implement", "review", "doc-review", "unclassified", "TOTAL"):
+        if cells[0] in ("implement", "review", "doc-review", "design", "unclassified", "TOTAL"):
             rows[cells[0]] = cells[1:]
     return rows
 
@@ -1034,7 +1038,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
     assert data["total_equivalent_cost"] == 900.0 + 872.5
 
     by_role = data["subagents_by_role"]
-    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}  # JSON keys are sorted
+    assert set(by_role) == {"implement", "review", "doc-review", "design", "unclassified"}  # JSON keys are sorted
     assert by_role["implement"] == {
         "agents": 1,
         "turns": 2,
@@ -1046,6 +1050,7 @@ def test_json_report_level_subagent_and_cost_keys(subagent_dir: pathlib.Path) ->
     }
     assert by_role["review"]["agents"] == 1 and by_role["review"]["equivalent_cost"] == 347.5
     assert by_role["doc-review"]["agents"] == 0 and by_role["doc-review"]["equivalent_cost"] == 0
+    assert by_role["design"]["agents"] == 0 and by_role["design"]["equivalent_cost"] == 0
     assert by_role["unclassified"]["agents"] == 0 and by_role["unclassified"]["equivalent_cost"] == 0
     assert data["unclassified_subagents"] == 0
 
@@ -1093,6 +1098,7 @@ def test_json_by_role_sums_to_the_subagent_totals_across_sessions(tmp_path: path
         "implement": 2,
         "review": 1,
         "doc-review": 0,
+        "design": 0,
         "unclassified": 1,
     }
     assert data["unclassified_subagents"] == 1
@@ -1460,11 +1466,11 @@ def test_subagent_table_stays_aligned_with_large_sums(tmp_path: pathlib.Path) ->
 
     lines = text.splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith("Subagents by role"))
-    header, rule, *rows = lines[start + 1 : start + 1 + 8]  # header, rule, 4 roles, rule, TOTAL
+    header, rule, *rows = lines[start + 1 : start + 1 + 9]  # header, rule, 5 roles, rule, TOTAL
     assert header.split() == ["role", "agents", "turns", "input", "cache_w", "cache_r", "output", "cost"]
     assert set(rule) == {"-"}
     data_rows = [row for row in rows if set(row) != {"-"}]
-    assert [row.split()[0] for row in data_rows] == ["implement", "review", "doc-review", "unclassified", "TOTAL"]
+    assert [row.split()[0] for row in data_rows] == ["implement", "review", "doc-review", "design", "unclassified", "TOTAL"]
     # Every line has the same length, and every right-aligned column ends where its header ends.
     assert len({len(line) for line in [header, rule, *rows]}) == 1
     header_ends = _numbers_by_end(header)
@@ -1806,8 +1812,9 @@ _GOLDEN_BEFORE_T004 = json.loads(
     '"role": "review", "turns": 2}], "tool_calls": 1, "tool_result_chars": 2, "total_input_tokens": 215, '
     '"turns": 2}], "subagent_totals": {"agents": 2, "cache_creation_tokens": 250, "cache_read_tokens": 500, '
     '"equivalent_cost": 872.5, "input_tokens": 10, "output_tokens": 100, "turns": 4}, "subagents_by_role": '
-    '{"doc-review": {"agents": 0, "cache_creation_tokens": 0, "cache_read_tokens": 0, "equivalent_cost": 0.0, '
-    '"input_tokens": 0, "output_tokens": 0, "turns": 0}, '
+    '{"design": {"agents": 0, "cache_creation_tokens": 0, "cache_read_tokens": 0, "equivalent_cost": 0.0, '
+    '"input_tokens": 0, "output_tokens": 0, "turns": 0}, "doc-review": {"agents": 0, "cache_creation_tokens": 0, '
+    '"cache_read_tokens": 0, "equivalent_cost": 0.0, "input_tokens": 0, "output_tokens": 0, "turns": 0}, '
     '"implement": {"agents": 1, "cache_creation_tokens": 200, "cache_read_tokens": 200, "equivalent_cost": '
     '525.0, "input_tokens": 5, "output_tokens": 50, "turns": 2}, "review": {"agents": 1, '
     '"cache_creation_tokens": 50, "cache_read_tokens": 300, "equivalent_cost": 347.5, "input_tokens": 5, '
@@ -1941,8 +1948,18 @@ def test_doc_review_row_in_text_and_json(tmp_path: pathlib.Path) -> None:
     rows = _role_rows(tm.format_text(report))
     assert rows["doc-review"][0] == "2" and rows["review"][0] == "1"
     by_role = report.to_dict()["subagents_by_role"]
-    assert set(by_role) == {"implement", "review", "doc-review", "unclassified"}
+    assert set(by_role) == {"implement", "review", "doc-review", "design", "unclassified"}
     assert by_role["doc-review"]["agents"] == 2
+    assert report.unclassified_subagents == 0
+
+
+def test_design_role_in_text_and_json(tmp_path: pathlib.Path) -> None:
+    report = _agents_report(tmp_path, ["design: 0033-x", "Design: 0034-y", "doc-review: spec", "review: b"])
+    assert [a.role for a in report.sessions[0].subagents] == ["design", "design", "doc-review", "review"]
+    rows = _role_rows(tm.format_text(report))
+    assert rows["design"][0] == "2" and rows["doc-review"][0] == "1" and rows["review"][0] == "1"
+    by_role = report.to_dict()["subagents_by_role"]
+    assert by_role["design"]["agents"] == 2
     assert report.unclassified_subagents == 0
 
 

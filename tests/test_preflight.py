@@ -444,7 +444,7 @@ def test_cli_unknown_skill_lists_known_skills(
 
     assert result.exit_code != 0
     assert (
-        "unknown skill 'bogus'; expected one of: clarify, plan, tasks, implement, "
+        "unknown skill 'bogus'; expected one of: clarify, plan, tasks, design, implement, "
         "analyze, requesting-code-review, finishing-a-branch"
     ) in result.output
 
