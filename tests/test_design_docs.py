@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_unreleased_records_0033_design_step():
     body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    section = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    section = body.split("## [0.28.0]", 1)[1].split("\n## [", 1)[0]
     assert "0033" in section and "/aia:design" in section
     for needle in ("**UI:**", "design.md", "not blocking", "`design`"):
         assert needle in section, needle
