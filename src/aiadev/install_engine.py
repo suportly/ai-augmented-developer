@@ -674,8 +674,8 @@ def _resolve_artifact_target(
     Everything goes through the platform handler's ``resolve_target``,
     except a skill's companion file (``references/`` per spec 0030, plan
     D1; ``LICENSE.txt`` per spec 0035): its name is ``<skill>/<rel>`` and
-    it lands next to that skill's installed ``SKILL.md`` — the handler only knows where ``SKILL.md``
-    goes, so the reference reuses its directory. No platform handler
+    it lands next to that skill's installed ``SKILL.md`` — the handler
+    only knows where ``SKILL.md`` goes, so the file reuses its directory. No platform handler
     changes: each already maps role ``skill`` to ``.../<skill>/SKILL.md``.
     """
     if role == "skill" and "/" in name:
@@ -702,8 +702,9 @@ def _collect_artifacts(
 
     Each skill's ``references/**/*.md`` and ``LICENSE.txt`` (see
     :func:`_collect_skill_references`) travel as role ``skill`` entries
-    named ``<skill>/references/<rel>`` and ``<skill>/LICENSE.txt``, so they share the skill's
-    scope filter, manifest role and write/skip/conflict path.
+    named ``<skill>/references/<rel>`` and ``<skill>/LICENSE.txt``, so they
+    share the skill's scope filter, manifest role and write/skip/conflict
+    path.
 
     The trailing ``verbatim`` flag tells the engine whether to run
     variable substitution. Framework-generic artifacts are copied

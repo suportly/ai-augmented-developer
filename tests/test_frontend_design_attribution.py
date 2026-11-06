@@ -90,9 +90,14 @@ def test_credits_entry_for_anthropics_skills() -> None:
 def test_strivex_only_in_history_and_the_correction_note() -> None:
     import subprocess
 
-    files = subprocess.run(
-        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout.splitlines()
+    import pytest
+
+    try:
+        files = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout.splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("not a git checkout (e.g. sdist)")
     hits = []
     for name in files:
         if name in ALLOWED_STRIVEX or name.startswith("specs/"):

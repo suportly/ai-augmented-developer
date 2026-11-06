@@ -4,7 +4,7 @@
 
 **Branch:** `feature/0035-frontend-design-attribution`
 **Created:** 2026-11-06
-**Status:** Approved <!-- Draft | In review | Approved | Implemented -->
+**Status:** Implemented <!-- Draft | In review | Approved | Implemented -->
 **Spec ID:** 0035 <!-- auto-incrementing integer -->
 **Language:** pt-BR <!-- BCP-47 tag; downstream artifacts use it. -->
 **UI:** no <!-- yes if the feature adds or changes screens -->
