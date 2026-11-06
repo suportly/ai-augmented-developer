@@ -47,7 +47,7 @@
 
 ### T003 — Auditoria de 8 sinais e checklist com captura
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `presets/django-drf-react/skills/frontend-design/SKILL.md`

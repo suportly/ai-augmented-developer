@@ -6,7 +6,7 @@ license: Adapted from Strivex — Complete terms in LICENSE.txt
 
 # Frontend Design
 
-Build production-grade, visually distinctive interfaces for React (web) and React Native (mobile).
+Build distinctive, production-grade interfaces for React (web) and React Native (mobile).
 
 ## Design Thinking
 
@@ -17,7 +17,7 @@ Before writing code, understand context and commit to a **bold aesthetic directi
 - **Constraints**: MUI v5 or shadcn/ui, Framer Motion available, Tailwind (mobile), TypeScript strict
 - **Differentiation**: What makes this interface unforgettable?
 
-**CRITICAL**: Choose a clear conceptual direction and execute with precision. Bold maximalism and refined minimalism both work — the key is intentionality.
+**CRITICAL**: Choose a clear direction and execute it with precision. Bold maximalism and refined minimalism both work; intentionality is the key.
 
 ## Direction record
 
@@ -40,12 +40,10 @@ Open the rendered screen and capture success, empty, error and loading states, e
 ### Component Structure
 
 ```typescript
-// src/components/<Module>/<ComponentName>.tsx
 import { Box, Typography } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
-  // TypeScript strict — no `any`
 }
 
 export function ComponentName({ ...props }: Props) {
@@ -56,11 +54,10 @@ export function ComponentName({ ...props }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       sx={{
-        // MUI sx — use theme tokens, not hardcoded values
         background: theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.background.paper})`,
       }}
     >
-      {/* content */}
+      {/* … */}
     </Box>
   );
 }
@@ -69,7 +66,6 @@ export function ComponentName({ ...props }: Props) {
 ### TanStack Query Integration
 
 ```typescript
-// src/hooks/use<Feature>.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
@@ -77,7 +73,7 @@ export function use<Feature>() {
   return useQuery({
     queryKey: ['<feature>', /* params */],
     queryFn: () => api.get<FeatureType>('/api/v1/<endpoint>/'),
-    staleTime: 5 * 60 * 1000,  // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -103,7 +99,6 @@ export function useUpdate<Feature>() {
 ### Screen Structure
 
 ```typescript
-// src/screens/<ScreenName>.tsx
 import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 import Animated, { FadeInDown, useSharedValue } from 'react-native-reanimated';
 
@@ -112,7 +107,7 @@ export function <ScreenName>() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400).springify()}>
-          {/* content */}
+          {/* … */}
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -120,13 +115,26 @@ export function <ScreenName>() {
 }
 ```
 
+## Audit before delivering
+
+Score the rendered screen on these 8 signals of generic output. Mark each present or absent, citing the snippet or capture that supports it:
+
+1. Type with one size and weight everywhere, so nothing leads the eye.
+2. A single-hue gradient or default accent used as the whole palette.
+3. A grid of identical cards with no emphasis or variation.
+4. Text or controls under WCAG AA contrast.
+5. Interactive elements with no visible focus style.
+6. Motion that decorates without explaining a change.
+7. Spacing from stock defaults, with no rhythm between related and unrelated groups.
+8. Placeholder-quality copy (lorem, "Title", "Click here").
+
+Fix each present signal, then re-check each fixed signal before delivering. When the request requires a present signal, keep it and record the reason.
+
 ## What NEVER to Do
 
-- Generic AI aesthetics: Inter/Roboto/Arial for ALL text, purple gradients on white, cookie-cutter cards
 - Hardcoded hex colors (use theme tokens)
 - `useState` for server data (use TanStack Query)
 - Missing TypeScript types (`any`)
-- Non-accessible color contrast (WCAG AA minimum)
 - Fixed heights that break on different screen sizes
 
 ## Checklist Before Submitting
@@ -134,7 +142,5 @@ export function <ScreenName>() {
 - [ ] TypeScript compiles: `npx tsc --noEmit`
 - [ ] No hardcoded colors — all from theme
 - [ ] Responsive: tested at 375px, 768px, 1440px
-- [ ] Loading state handled (skeleton or spinner)
-- [ ] Error state handled (error boundary or error UI)
-- [ ] Empty state handled
+- [ ] Capture of each state: loading (skeleton or spinner), error (error UI), empty
 - [ ] Framer Motion animations have `reduced-motion` fallback

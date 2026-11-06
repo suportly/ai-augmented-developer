@@ -68,3 +68,39 @@ def test_no_browser_screen_not_seen() -> None:
 
 def test_captures_local_data_never_committed_no_installs() -> None:
     assert _has("test or local data", "never committed", "never install packages")
+
+
+def _audit() -> str:
+    m = re.search(r"^## [^\n]*audit[^\n]*\n(.*?)(?=^## |\Z)", BODY, re.M | re.S | re.I)
+    assert m, "audit section missing"
+    return m.group(1)
+
+
+def test_audit_has_exactly_eight_numbered_signals() -> None:
+    nums = re.findall(r"^(\d+)\. ", _audit(), re.M)
+    assert nums == [str(i) for i in range(1, 9)]
+
+
+def test_audit_marks_each_signal_present_or_absent_with_evidence() -> None:
+    a = _audit().lower()
+    assert "present or absent" in a and "snippet or capture" in a
+
+
+def test_audit_rechecks_fixed_signal_before_delivering() -> None:
+    a = _audit().lower()
+    assert "fixed signal" in a and "re-check" in a and "before delivering" in a
+
+
+def test_audit_keeps_required_signal_with_reason() -> None:
+    a = _audit().lower()
+    assert "the request requires" in a and "keep it" in a and "record the reason" in a
+
+
+def test_checklist_requires_capture_of_each_state() -> None:
+    chk = LOW.split("## checklist before submitting", 1)[1]
+    assert "capture of each state" in chk and "loading" in chk and "error" in chk and "empty" in chk
+    assert "state handled" not in chk
+
+
+def test_body_within_1400_tokens() -> None:
+    assert -(-len(BODY) // 4) <= 1400
