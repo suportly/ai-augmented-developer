@@ -32,7 +32,7 @@
 
 ### T002 — LICENSE.txt verbatim e campo license corrigido
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - create: `presets/django-drf-react/skills/frontend-design/LICENSE.txt`

@@ -1,7 +1,7 @@
 ---
 name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality. Use when building web components, pages, or React Native screens. Generates creative, polished code that avoids generic AI aesthetics.
-license: Adapted from Strivex — Complete terms in LICENSE.txt
+license: Apache-2.0 — adapted and modified from anthropics/skills (frontend-design); complete terms in LICENSE.txt
 ---
 
 # Frontend Design
