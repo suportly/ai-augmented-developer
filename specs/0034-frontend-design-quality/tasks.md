@@ -18,7 +18,7 @@
 
 ### T001 — Direção de arte antes do código
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `presets/django-drf-react/skills/frontend-design/SKILL.md`

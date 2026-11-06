@@ -19,6 +19,10 @@ Before writing code, understand context and commit to a **bold aesthetic directi
 
 **CRITICAL**: Choose a clear conceptual direction and execute with precision. Bold maximalism and refined minimalism both work — the key is intentionality.
 
+## Direction record
+
+Before generating any component file, write the direction in at most 6 lines: style, typography, palette, and the reason for each. Start from the existing theme tokens and say where it diverges. If the request already carries a direction (brand or approved prototype), use it and record only the mapping to tokens. With no theme tokens, propose the minimal tokens (colors and fonts).
+
 ## Web (React + MUI v5)
 
 ### Design Principles
