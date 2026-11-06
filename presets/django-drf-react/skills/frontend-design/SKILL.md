@@ -40,13 +40,10 @@ Open the rendered screen and capture success, empty, error and loading states, e
 ### Component Structure
 
 ```typescript
-import { Box, Typography } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Box } from '@mui/material';
+import { motion } from 'framer-motion';
 
-interface Props {
-}
-
-export function ComponentName({ ...props }: Props) {
+export function ComponentName(props: Props) {
   return (
     <Box
       component={motion.div}
@@ -66,7 +63,7 @@ export function ComponentName({ ...props }: Props) {
 ### TanStack Query Integration
 
 ```typescript
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../utils/api';
 
 export function use<Feature>() {
@@ -74,14 +71,6 @@ export function use<Feature>() {
     queryKey: ['<feature>', /* params */],
     queryFn: () => api.get<FeatureType>('/api/v1/<endpoint>/'),
     staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useUpdate<Feature>() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateInput) => api.patch('/api/v1/<endpoint>/', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['<feature>'] }),
   });
 }
 ```
@@ -99,20 +88,11 @@ export function useUpdate<Feature>() {
 ### Screen Structure
 
 ```typescript
-import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
-import Animated, { FadeInDown, useSharedValue } from 'react-native-reanimated';
-
-export function <ScreenName>() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400).springify()}>
-          {/* … */}
-        </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+<SafeAreaView style={styles.container}>
+  <ScrollView showsVerticalScrollIndicator={false}>
+    <Animated.View entering={FadeInDown.duration(400).springify()}>{/* … */}</Animated.View>
+  </ScrollView>
+</SafeAreaView>
 ```
 
 ## Audit before delivering

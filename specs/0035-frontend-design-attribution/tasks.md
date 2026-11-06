@@ -64,7 +64,7 @@
 
 ### T004 — Enxugar o corpo para ter folga
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `presets/django-drf-react/skills/frontend-design/SKILL.md`
