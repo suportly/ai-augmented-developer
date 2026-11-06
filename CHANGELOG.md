@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-06
+
 ### Changed
 
 - Spec **0034 — frontend-design-quality**. The `frontend-design` skill of the
