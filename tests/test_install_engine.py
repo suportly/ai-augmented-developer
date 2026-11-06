@@ -706,6 +706,58 @@ class TestCollectSkillReferences:
         # No framework root, and a preset without a skills/ directory.
         assert _collect_skill_references(None, tmp_path) == []
 
+    def test_license_txt_of_the_skill_is_collected(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        ref = _write(skill / "references" / "guide.md")
+        lic = _write(skill / "LICENSE.txt", "Apache License\n")
+        _make_skill(framework, "beta")  # no LICENSE.txt: nothing extra
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/LICENSE.txt", lic, True),
+            ("skill", "alpha/references/guide.md", ref, True),
+        ]
+
+    def test_license_txt_of_a_skill_without_skill_md_is_skipped(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        framework = tmp_path / "framework"
+        _write(_make_skill(framework, "orphan", skill_md=False) / "LICENSE.txt")
+        preset = tmp_path / "preset"
+        _write(_make_skill(preset, "orphan-preset", skill_md=False) / "LICENSE.txt")
+
+        assert _collect_skill_references(framework, preset) == []
+
+    def test_preset_license_txt_wins_over_framework(self, tmp_path: pathlib.Path) -> None:
+        framework = tmp_path / "framework"
+        _write(_make_skill(framework, "alpha") / "LICENSE.txt", "framework\n")
+        _write(_make_skill(framework, "beta") / "LICENSE.txt", "framework\n")
+        preset = tmp_path / "preset"
+        pr_lic = _write(_make_skill(preset, "alpha") / "LICENSE.txt", "preset\n")
+        # beta: preset ships only references/, license comes from framework
+        beta_lic = framework / "skills" / "beta" / "LICENSE.txt"
+
+        assert _collect_skill_references(framework, preset) == [
+            ("skill", "alpha/LICENSE.txt", pr_lic, False),
+            ("skill", "beta/LICENSE.txt", beta_lic, True),
+        ]
+
+    def test_license_txt_symlink_outside_the_skills_tree_is_not_followed(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        secret = _write(tmp_path / "outside" / "LICENSE.txt", "do not install me\n")
+        framework = tmp_path / "framework"
+        skill = _make_skill(framework, "alpha")
+        try:
+            (skill / "LICENSE.txt").symlink_to(secret)
+        except OSError:  # pragma: no cover - platform without symlink support
+            pytest.skip("symlinks not supported on this platform")
+        preset = tmp_path / "preset"
+        preset.mkdir()
+
+        assert _collect_skill_references(framework, preset) == []
 
 # ---------------------------------------------------------------------------
 # Skill references/ installation (spec 0030 Story 4 sc3, plan D1)
@@ -750,6 +802,42 @@ class TestInstallSkillReferences:
         assert reference in report.removed
         assert not reference.parent.exists()  # references/
         assert not (tmp_path / _SKILLS_DIR[platform]).exists()  # skill dirs went too
+
+
+def _preset_with_license(tmp_path: pathlib.Path) -> pathlib.Path:
+    preset = tmp_path / "preset"
+    shutil.copytree(FIXTURES, preset)
+    _write(preset / "skills" / "hello-world" / "LICENSE.txt", "Apache License\n")
+    return preset
+
+
+@pytest.mark.parametrize("scope", ["project", "user"])
+@pytest.mark.parametrize("platform", sorted(_SKILLS_DIR))
+class TestInstallSkillLicense:
+    def _root(self, tmp_path, scope, monkeypatch) -> pathlib.Path:
+        if scope == "user":
+            home = tmp_path / "home"
+            home.mkdir()
+            monkeypatch.setattr(pathlib.Path, "home", staticmethod(lambda: home))
+            return home
+        return tmp_path / "project"
+
+    def test_license_lands_next_to_skill_md_and_uninstall_removes_it(
+        self, tmp_path: pathlib.Path, platform: str, scope: str, monkeypatch
+    ) -> None:
+        preset = _preset_with_license(tmp_path)
+        root = self._root(tmp_path, scope, monkeypatch)
+        kwargs = {"platform": platform, "scope": scope}
+
+        install(preset, root, VARIABLES, now="2026-04-14T12:00:00Z", **kwargs)
+
+        skill_md = next(root.rglob("hello-world/SKILL.md"))
+        license_file = skill_md.parent / "LICENSE.txt"
+        assert license_file.read_text(encoding="utf-8") == "Apache License\n"
+
+        install(preset, root, VARIABLES, mode=InstallMode.UNINSTALL, **kwargs)
+
+        assert not license_file.exists()
 
 
 def test_framework_reference_is_copied_verbatim(tmp_path: pathlib.Path) -> None:

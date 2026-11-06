@@ -102,8 +102,8 @@ def test_checklist_requires_capture_of_each_state() -> None:
     assert "state handled" not in chk
 
 
-def test_body_within_1400_tokens() -> None:
-    assert -(-len(BODY) // 4) <= 1400
+def test_body_within_1300_tokens() -> None:
+    assert -(-len(BODY) // 4) <= 1300
 
 
 def _unreleased() -> str:

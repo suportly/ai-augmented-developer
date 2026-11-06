@@ -116,6 +116,19 @@ and our own `mission-template.md`, `tech-stack-template.md`, and
 Markdown-skill architecture; no text or code from the course was copied
 (the course material is not openly licensed).
 
+### [anthropics/skills](https://github.com/anthropics/skills) — `frontend-design`
+
+The `frontend-design` skill of `presets/django-drf-react/` is adapted from the
+`frontend-design` skill in `anthropics/skills`, licensed under the Apache License 2.0
+(text in `presets/django-drf-react/skills/frontend-design/LICENSE.txt`, identical to
+the upstream file checked on 2026-11-06). This project modified the file: it was
+rewritten for MUI, React Native and TanStack Query, and gained a direction record,
+a browser check and an audit of generic-interface signals (specs 0034 and 0035).
+The `license` field of the skill's frontmatter carries the same modification notice
+(Apache-2.0 section 4). Earlier versions of this repository labelled the skill
+"Adapted from Strivex"; that label was wrong (no such source was found, and the
+text matches the upstream skill) and was corrected in spec 0035.
+
 ## Bundled catalogs
 
 ### [contains-studio/agents](https://github.com/contains-studio/agents) — not bundled
