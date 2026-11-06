@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Spec **0035 — frontend-design-attribution**. The `frontend-design` skill of the
+  `django-drf-react` preset now credits its real origin, `anthropics/skills`
+  (Apache-2.0), instead of the wrong "Strivex" label: the folder carries the
+  upstream `LICENSE.txt`, the `license` field states the modification, and
+  `CREDITS.md` has an entry. The installer now copies a skill's `LICENSE.txt`
+  next to its `SKILL.md`, so consumer projects receive it. The skill body was
+  trimmed to leave headroom under the token ceiling.
+
 ## [0.29.0] - 2026-11-06
 
 ### Changed

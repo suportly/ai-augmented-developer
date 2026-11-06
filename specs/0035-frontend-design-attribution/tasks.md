@@ -49,7 +49,7 @@
 
 ### T003 — Entrada no CREDITS.md e nenhum Strivex como origem
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T002
 - **Files:**
   - modify: `CREDITS.md`

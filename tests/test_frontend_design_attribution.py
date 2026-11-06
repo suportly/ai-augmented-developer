@@ -64,3 +64,51 @@ def test_install_leaves_license_next_to_skill_md(installed: pathlib.Path) -> Non
     license_file = skill_md.parent / "LICENSE.txt"
     assert license_file.is_file()
     assert hashlib.sha256(license_file.read_bytes()).hexdigest() == UPSTREAM_LICENSE_SHA256
+
+
+ALLOWED_STRIVEX = {
+    "CHANGELOG.md",
+    "vscode-extension/CHANGELOG.md",
+    "CREDITS.md",
+    "tests/test_frontend_design_attribution.py",
+    "tests/test_frontend_design_quality.py",
+}
+
+
+def _credits_entry() -> str:
+    body = (ROOT / "CREDITS.md").read_text(encoding="utf-8")
+    return body.split("### [anthropics/skills]", 1)[1].split("\n### ", 1)[0].split("\n## ", 1)[0]
+
+
+def test_credits_entry_for_anthropics_skills() -> None:
+    entry = _credits_entry()
+    for needle in ("frontend-design", "Apache-2.0", "modified", "2026-11-06", "Strivex"):
+        assert needle in entry, needle
+    assert "mislabel" in entry.lower() or "wrong" in entry.lower()
+
+
+def test_strivex_only_in_history_and_the_correction_note() -> None:
+    import subprocess
+
+    files = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    hits = []
+    for name in files:
+        if name in ALLOWED_STRIVEX or name.startswith("specs/"):
+            continue
+        path = ROOT / name
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        if "strivex" in text.lower():
+            hits.append(name)
+    assert hits == []
+
+
+def test_changelog_unreleased_records_0035() -> None:
+    body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    sec = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    for needle in ("0035", "anthropics/skills", "LICENSE.txt", "Strivex"):
+        assert needle in sec, needle
