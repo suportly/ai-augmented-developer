@@ -108,7 +108,7 @@ def test_body_within_1400_tokens() -> None:
 
 def _unreleased() -> str:
     body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    return body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0].lower()
+    return body.split("## [0.29.0]", 1)[1].split("\n## [", 1)[0].lower()
 
 
 def test_changelog_records_0034() -> None:
