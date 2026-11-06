@@ -114,6 +114,6 @@ def test_strivex_only_in_history_and_the_correction_note() -> None:
 
 def test_changelog_unreleased_records_0035() -> None:
     body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    sec = body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    sec = body.split("## [0.30.0]", 1)[1].split("\n## [", 1)[0]
     for needle in ("0035", "anthropics/skills", "LICENSE.txt", "Strivex"):
         assert needle in sec, needle
