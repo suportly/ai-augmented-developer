@@ -672,9 +672,9 @@ def _resolve_artifact_target(
     """Return the destination of one collected artifact.
 
     Everything goes through the platform handler's ``resolve_target``,
-    except a skill's ``references/`` file (spec 0030, plan D1): its name
-    is ``<skill>/references/<rel>`` and it lands next to that skill's
-    installed ``SKILL.md`` — the handler only knows where ``SKILL.md``
+    except a skill's companion file (``references/`` per spec 0030, plan
+    D1; ``LICENSE.txt`` per spec 0035): its name is ``<skill>/<rel>`` and
+    it lands next to that skill's installed ``SKILL.md`` — the handler only knows where ``SKILL.md``
     goes, so the reference reuses its directory. No platform handler
     changes: each already maps role ``skill`` to ``.../<skill>/SKILL.md``.
     """
@@ -700,9 +700,9 @@ def _collect_artifacts(
     constitution), then command → agent → skill; within each role,
     alphabetical.
 
-    Each skill's ``references/**/*.md`` (see
+    Each skill's ``references/**/*.md`` and ``LICENSE.txt`` (see
     :func:`_collect_skill_references`) travel as role ``skill`` entries
-    named ``<skill>/references/<rel>``, so they share the skill's
+    named ``<skill>/references/<rel>`` and ``<skill>/LICENSE.txt``, so they share the skill's
     scope filter, manifest role and write/skip/conflict path.
 
     The trailing ``verbatim`` flag tells the engine whether to run
@@ -732,7 +732,7 @@ def _collect_skill_references(
     framework_root: Path | None,
     preset_path: Path,
 ) -> list[tuple[str, str, Path, bool]]:
-    """Collect every skill's ``references/**/*.md`` from framework and preset.
+    """Collect every skill's ``references/**/*.md`` and ``LICENSE.txt``.
 
     Companion to :func:`_collect_artifacts`, which only yields each
     ``SKILL.md`` (spec 0030, plan D1). Entries are ``("skill",
@@ -747,6 +747,9 @@ def _collect_skill_references(
       the generic skill without replacing it; a ``references/`` whose
       skill has no ``SKILL.md`` anywhere is skipped, not installed as an
       orphan.
+    * A skill's ``LICENSE.txt`` (spec 0035: Apache-2.0 text must travel
+      with an attributed skill) is collected as ``<skill>/LICENSE.txt``
+      under the same rules: skill must exist, same precedence.
     * A symlink whose target resolves outside the ``skills/`` tree is not
       followed.
     """
@@ -766,8 +769,12 @@ def _collect_skill_references(
         for skill_dir in skills_dir.iterdir():
             if skill_dir.name not in installed:
                 continue
-            for path in (skill_dir / "references").rglob("*"):
-                if path.suffix != ".md" or not path.is_file():
+            license_file = skill_dir / "LICENSE.txt"
+            candidates = [license_file, *(skill_dir / "references").rglob("*")]
+            for path in candidates:
+                if path != license_file and path.suffix != ".md":
+                    continue
+                if not path.is_file():
                     continue
                 if not path.resolve().is_relative_to(boundary):
                     continue

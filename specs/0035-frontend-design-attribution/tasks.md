@@ -18,7 +18,7 @@
 
 ### T001 — Instalador copia o LICENSE.txt da skill
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** —
 - **Files:**
   - modify: `src/aiadev/install_engine.py`
