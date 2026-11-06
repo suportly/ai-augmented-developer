@@ -33,7 +33,7 @@
 
 ### T002 — Verificação da tela no navegador, estado por estado
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T001
 - **Files:**
   - modify: `presets/django-drf-react/skills/frontend-design/SKILL.md`

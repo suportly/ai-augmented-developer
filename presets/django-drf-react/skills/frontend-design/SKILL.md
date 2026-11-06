@@ -23,6 +23,10 @@ Before writing code, understand context and commit to a **bold aesthetic directi
 
 Before generating any component file, write the direction in at most 6 lines: style, typography, palette, and the reason for each. Start from the existing theme tokens and say where it diverges. If the request already carries a direction (brand or approved prototype), use it and record only the mapping to tokens. With no theme tokens, propose the minimal tokens (colors and fonts).
 
+## Verify in a browser
+
+Open the rendered screen and capture success, empty, error and loading states, each checked against the direction record. A state that cannot be forced is not verified (give the reason); one absent by design is not applicable (give the reason). If the dev server fails, report its error output; the screen counts as not verified. With no browser, say the screen was not seen, list what stayed unverified, and do not declare the screen done. Use only test or local data; captures are never committed. Never install packages on your own.
+
 ## Web (React + MUI v5)
 
 ### Design Principles

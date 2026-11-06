@@ -44,3 +44,27 @@ def test_given_direction_only_maps_to_tokens() -> None:
 
 def test_no_tokens_proposes_minimal_set() -> None:
     assert _has("no theme tokens", "minimal tokens", "colors and fonts")
+
+
+def test_verify_in_browser_captures_four_states() -> None:
+    assert _has("verify in a browser", "success, empty, error and loading", "against the direction record")
+
+
+def test_unforceable_state_not_verified_with_reason() -> None:
+    assert _has("cannot be forced", "not verified", "reason")
+
+
+def test_state_absent_by_design_not_applicable() -> None:
+    assert _has("by design", "not applicable")
+
+
+def test_dev_server_failure_reported() -> None:
+    assert _has("dev server", "error output", "counts as not verified")
+
+
+def test_no_browser_screen_not_seen() -> None:
+    assert _has("no browser", "was not seen", "unverified", "not declare the screen done")
+
+
+def test_captures_local_data_never_committed_no_installs() -> None:
+    assert _has("test or local data", "never committed", "never install packages")
