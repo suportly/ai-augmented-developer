@@ -63,7 +63,7 @@
 
 ### T004 — Orçamento intacto e CHANGELOG
 
-- **Status:** pending
+- **Status:** done
 - **Depends on:** T003
 - **Files:**
   - modify: `CHANGELOG.md`

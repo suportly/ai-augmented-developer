@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Spec **0034 — frontend-design-quality**. The `frontend-design` skill of the
+  `django-drf-react` preset now asks for an art direction record (at most 6
+  lines: style, typography, palette and the reason for each) before any
+  component, a browser check that captures the success, empty, error and
+  loading states (and does not call the screen done when no browser is
+  available), and an audit of 8 named signals of generic interface before
+  delivery. The final checklist requires a capture of each state. Original text,
+  nothing copied from third-party projects. The instruction budget is unchanged
+  (the skill `description` is the same).
+
+### Known limitations
+
+- The skill still carries the inherited `license: Adapted from Strivex` line
+  with no `LICENSE.txt` and no `CREDITS.md` entry (Art. VII); regularizing it
+  is a named follow-up, out of scope here.
+
 ## [0.28.0] - 2026-10-29
 
 ### Added

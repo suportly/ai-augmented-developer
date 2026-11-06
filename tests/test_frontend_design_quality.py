@@ -104,3 +104,22 @@ def test_checklist_requires_capture_of_each_state() -> None:
 
 def test_body_within_1400_tokens() -> None:
     assert -(-len(BODY) // 4) <= 1400
+
+
+def _unreleased() -> str:
+    body = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    return body.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0].lower()
+
+
+def test_changelog_records_0034() -> None:
+    sec = _unreleased()
+    for needle in (
+        "0034",
+        "frontend-design",
+        "art direction",
+        "audit",
+        "browser",
+        "budget is unchanged",
+        "strivex",
+    ):
+        assert needle in sec, needle
